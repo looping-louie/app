@@ -12,6 +12,7 @@
         <a href="#usecases">Use cases</a>
         <a href="#api">API</a>
         <a href="#pricing">Pricing</a>
+        <NuxtLink to="/modelos" class="nav-link">Modelos</NuxtLink>
         <a href="#" class="btn-primary">Start free</a>
       </div>
     </nav>
@@ -68,6 +69,7 @@
           <div class="flow-node">⟳ Retry loop<br><span class="loop-badge">max 3 attempts</span></div>
         </div>
         <p style="color:var(--text-muted); margin-top:1.5rem;">Cheap models attempt first. Frontier models verify. Loop continues until quality passes.</p>
+        <NuxtLink to="/modelos" class="btn-outline" style="margin-top:1.5rem; display:inline-block;">Explore supported models →</NuxtLink>
       </section>
 
       <section id="usecases" class="fade-up">
