@@ -1,7 +1,7 @@
 <template>
   <div class="proyectos-page">
     <h1>Proyectos</h1>
-    <p class="page-description">Gestiona y organiza tus proyectos.</p>
+    <p class="page-description">Conecta Looping Louie con tus repositorios de GitHub o Bitbucket y sus equipos para orquestar loops directamente sobre tu código.</p>
     <div class="empty-state">
       <span class="empty-icon">📁</span>
       <p>No hay proyectos todavía.</p>
