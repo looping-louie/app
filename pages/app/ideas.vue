@@ -1,7 +1,7 @@
 <template>
   <div class="ideas-page">
     <h1>Ideas</h1>
-    <p class="page-description">Captura y desarrolla tus ideas.</p>
+    <p class="page-description">Refina tus ideas de desarrollo con un modelo y convierte el resultado en especificaciones Markdown.</p>
     <div class="empty-state">
       <span class="empty-icon">💡</span>
       <p>No hay ideas registradas.</p>
