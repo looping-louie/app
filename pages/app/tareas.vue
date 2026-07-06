@@ -1,7 +1,7 @@
 <template>
   <div class="tareas-page">
     <h1>Tareas</h1>
-    <p class="page-description">Pendientes y trabajos en curso.</p>
+    <p class="page-description">Una idea existente se discute con varios agentes y se convierte en un plan estructurado en tasks.json.</p>
     <div class="empty-state">
       <span class="empty-icon">✅</span>
       <p>No hay tareas pendientes.</p>
