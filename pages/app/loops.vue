@@ -1,7 +1,7 @@
 <template>
   <div class="loops-page">
     <h1>Loops</h1>
-    <p class="page-description">Tus flujos de generator → reviewers → aggregator.</p>
+    <p class="page-description">Combina un proyecto, una tarea y las habilidades de los revisores para configurar y ejecutar un flujo de desarrollo iterativo.</p>
     <div class="empty-state">
       <span class="empty-icon">⟳</span>
       <p>No hay loops ejecutándose.</p>
