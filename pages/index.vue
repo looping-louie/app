@@ -13,7 +13,7 @@
         <a href="#api">API</a>
         <a href="#pricing">Pricing</a>
         <NuxtLink to="/modelos" class="nav-link">Modelos</NuxtLink>
-        <a href="#" class="btn-primary">Start free</a>
+        <NuxtLink to="/app" class="btn-primary">Pruébalo</NuxtLink>
       </div>
     </nav>
 
@@ -22,7 +22,7 @@
         <h1>Run cheaper models, review with frontier models, loop until quality passes.</h1>
         <p class="subtitle">Looping Louie is the harness-as-a-service for LLM workflows. Orchestrate generator → reviewers → aggregator → retry loops with zero infrastructure pain.</p>
         <div class="hero-buttons">
-          <a href="#" class="btn-primary" style="padding:0.9rem 2rem; font-size:1rem;">Deploy your first loop</a>
+          <NuxtLink to="/app" class="btn-primary" style="padding:0.9rem 2rem; font-size:1rem;">Pruébalo</NuxtLink>
           <a href="#" class="btn-outline" style="padding:0.9rem 2rem;">View documentation</a>
         </div>
 
@@ -136,7 +136,7 @@
         <h2 style="font-size:2.5rem; margin-bottom:1rem;">Start looping today</h2>
         <p style="color:var(--text-secondary); max-width:550px; margin:0 auto 2rem;">Deploy your first LLM quality loop in under 4 minutes. No credit card required.</p>
         <div style="display:flex; gap:1rem; justify-content:center;">
-          <a href="#" class="btn-primary" style="padding:1rem 2.5rem; font-size:1.1rem;">Get started free</a>
+          <NuxtLink to="/app" class="btn-primary" style="padding:1rem 2.5rem; font-size:1.1rem;">Pruébalo</NuxtLink>
           <a href="#" class="btn-outline">Talk to sales</a>
         </div>
       </section>
