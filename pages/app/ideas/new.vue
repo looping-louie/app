@@ -52,6 +52,7 @@
             type="button"
             class="council-card"
             :class="{ selected: selectedAgents.includes(agent.name) }"
+            :aria-pressed="selectedAgents.includes(agent.name)"
             @click="toggleAgent(agent.name)"
           >
             <div class="council-illustration">
@@ -143,7 +144,11 @@ const availableAgents = [
 
 const selectedAgents = ref([])
 
-const canSubmit = computed(() => title.value.trim() !== '' && prompt.value.trim() !== '')
+const canSubmit = computed(() =>
+  title.value.trim() !== '' &&
+  prompt.value.trim() !== '' &&
+  selectedAgents.value.length > 0
+)
 
 function toggleAgent(name) {
   const index = selectedAgents.value.indexOf(name)
@@ -155,7 +160,7 @@ function toggleAgent(name) {
 }
 
 function handleSubmit() {
-  // Placeholder — will be wired to backend later
+  // Local-only placeholder — no API call or persistence yet
 }
 </script>
 
