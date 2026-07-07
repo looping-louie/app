@@ -7,7 +7,7 @@
       </div>
     </div>
 
-    <div class="empty-state">
+    <div v-if="ideas.length === 0" class="empty-state">
       <div class="empty-icon-wrapper">
         <span class="empty-icon">💡</span>
       </div>
@@ -17,6 +17,30 @@
         <span class="btn-icon">+</span>
         Crear primera idea
       </NuxtLink>
+    </div>
+
+    <div v-else class="ideas-list">
+      <NuxtLink to="/app/ideas/new" class="btn-primary">
+        <span class="btn-icon">+</span>
+        Nueva idea
+      </NuxtLink>
+
+      <div class="idea-cards">
+        <div v-for="idea in ideas" :key="idea.id" class="idea-card">
+          <div class="idea-card-header">
+            <h3 class="idea-title">{{ idea.title }}</h3>
+            <span class="idea-date">{{ formatDate(idea.createdAt) }}</span>
+          </div>
+          <p class="idea-prompt">{{ idea.prompt }}</p>
+          <div class="idea-agents">
+            <span
+              v-for="agent in idea.agents"
+              :key="agent"
+              class="agent-chip"
+            >{{ agent }}</span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -29,6 +53,17 @@ definePageMeta({
 useHead({
   title: 'Ideas · Looping Louie'
 })
+
+const ideas = ref([])
+
+onMounted(() => {
+  ideas.value = JSON.parse(localStorage.getItem('looping-louie:ideas') || '[]')
+})
+
+function formatDate(iso) {
+  const d = new Date(iso)
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
 </script>
 
 <style scoped>
@@ -119,5 +154,79 @@ useHead({
 .btn-icon {
   font-size: 1.2rem;
   line-height: 1;
+}
+
+.ideas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.idea-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.idea-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.idea-card:hover {
+  border-color: var(--accent-soft);
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+}
+
+.idea-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.idea-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.idea-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.idea-prompt {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.idea-agents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.agent-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-soft);
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: 1rem;
+  padding: 0.2rem 0.6rem;
 }
 </style>

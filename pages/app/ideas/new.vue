@@ -70,7 +70,7 @@
       <div class="form-actions">
         <NuxtLink to="/app/ideas" class="btn-secondary">Cancelar</NuxtLink>
         <button type="submit" class="btn-primary" :disabled="!canSubmit">
-          Crear idea
+          Run Council
         </button>
       </div>
     </form>
@@ -85,6 +85,8 @@ definePageMeta({
 useHead({
   title: 'Nueva idea · Looping Louie'
 })
+
+const router = useRouter()
 
 const title = ref('')
 const prompt = ref('')
@@ -160,7 +162,21 @@ function toggleAgent(name) {
 }
 
 function handleSubmit() {
-  // Local-only placeholder — no API call or persistence yet
+  if (!canSubmit.value) return
+
+  const idea = {
+    id: crypto.randomUUID(),
+    title: title.value.trim(),
+    prompt: prompt.value.trim(),
+    agents: [...selectedAgents.value],
+    createdAt: new Date().toISOString()
+  }
+
+  const stored = JSON.parse(localStorage.getItem('looping-louie:ideas') || '[]')
+  stored.push(idea)
+  localStorage.setItem('looping-louie:ideas', JSON.stringify(stored))
+
+  router.push('/app/ideas')
 }
 </script>
 
