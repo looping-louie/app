@@ -25,7 +25,7 @@
       </div>
 
       <form class="wizard-form" @submit.prevent="handleSubmit">
-        <!-- Step 0: Prompt -->
+        <!-- Step 0: Title -->
         <section
           v-show="currentStep === 0"
           class="form-section"
@@ -44,8 +44,20 @@
               v-model="title"
               type="text"
               class="form-input"
+              :class="{ 'input-error': errors.title }"
+              :aria-invalid="errors.title ? 'true' : null"
+              :aria-describedby="errors.title ? 'idea-title-error' : null"
               placeholder="Ej: Sistema de feedback para revisiones de código"
+              @input="clearError('title')"
             />
+            <p
+              v-if="errors.title"
+              id="idea-title-error"
+              class="field-error"
+              role="alert"
+            >
+              {{ errors.title }}
+            </p>
           </div>
 
           <div class="form-group">
@@ -55,12 +67,24 @@
               ref="promptInput"
               v-model="prompt"
               class="form-textarea"
+              :class="{ 'input-error': errors.prompt }"
+              :aria-invalid="errors.prompt ? 'true' : null"
+              :aria-describedby="errors.prompt ? 'idea-prompt-error' : null"
               rows="8"
               placeholder="Describe tu idea en detalle: qué problema resuelve, qué debe incluir, qué restricciones tienes..."
               @keydown.meta.enter.prevent="goNext"
               @keydown.ctrl.enter.prevent="goNext"
+              @input="clearError('prompt')"
             ></textarea>
-            <p class="field-hint">Pulsa <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> para continuar.</p>
+            <p
+              v-if="errors.prompt"
+              id="idea-prompt-error"
+              class="field-error"
+              role="alert"
+            >
+              {{ errors.prompt }}
+            </p>
+            <p v-else class="field-hint">Pulsa <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> para continuar.</p>
           </div>
         </section>
 
@@ -75,26 +99,55 @@
             <p class="section-helper">Selecciona los agentes que discutirán la idea. Cada uno aportará una perspectiva distinta — crítica, técnica, de producto — y juntos refinarán el resultado antes de convertirlo en una especificación.</p>
           </div>
 
-          <div class="council-grid" role="group" aria-label="Selecciona agentes">
+          <div class="council-summary" aria-live="polite">
+            <span class="council-count">{{ selectedAgents.length }} seleccionado{{ selectedAgents.length === 1 ? '' : 's' }}</span>
             <button
-              v-for="agent in availableAgents"
-              :key="agent.name"
+              v-if="selectedAgents.length > 0"
               type="button"
-              class="council-card"
-              :class="{ selected: selectedAgents.includes(agent.name) }"
-              :aria-pressed="selectedAgents.includes(agent.name)"
-              @click="toggleAgent(agent.name)"
+              class="council-clear"
+              @click="clearAgents"
             >
-              <div class="council-illustration">
-                <span class="illustration-icon" v-html="agent.icon"></span>
-              </div>
-              <h3 class="council-name">{{ agent.name }}</h3>
-              <p class="council-question">{{ agent.question }}</p>
-              <span class="council-check" aria-hidden="true">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.5 7.6a1 1 0 0 1-1.42.006l-3.5-3.5a1 1 0 1 1 1.414-1.414l2.793 2.793 6.793-6.893a1 1 0 0 1 1.414-.006Z"/></svg>
-              </span>
+              Limpiar selección
             </button>
           </div>
+
+          <fieldset class="council-fieldset">
+            <legend class="council-legend">Agentes disponibles</legend>
+            <div class="council-grid">
+              <label
+                v-for="agent in availableAgents"
+                :key="agent.name"
+                class="council-card"
+                :class="{ selected: selectedAgents.includes(agent.name) }"
+              >
+                <input
+                  type="checkbox"
+                  class="council-checkbox"
+                  :checked="selectedAgents.includes(agent.name)"
+                  :aria-label="agent.name"
+                  @change="toggleAgent(agent.name)"
+                />
+                <span class="council-illustration" aria-hidden="true">
+                  <span class="illustration-icon" v-html="agent.icon"></span>
+                </span>
+                <span class="council-body">
+                  <span class="council-name">{{ agent.name }}</span>
+                  <span class="council-question">{{ agent.question }}</span>
+                </span>
+                <span class="council-check" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.5 7.6a1 1 0 0 1-1.42.006l-3.5-3.5a1 1 0 1 1 1.414-1.414l2.793 2.793 6.793-6.893a1 1 0 0 1 1.414-.006Z"/></svg>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <p
+            v-if="errors.agents"
+            class="field-error"
+            role="alert"
+          >
+            {{ errors.agents }}
+          </p>
         </section>
 
         <!-- Step 2: Max iterations -->
@@ -279,6 +332,12 @@ const selectedAgents = ref([])
 const maxIterations = ref(3)
 const selectedModel = ref('')
 
+const errors = reactive({
+  title: '',
+  prompt: '',
+  agents: ''
+})
+
 const titleInput = ref(null)
 const promptInput = ref(null)
 const iterationsInput = ref(null)
@@ -403,13 +462,52 @@ const canSubmit = computed(() =>
   selectedModel.value !== ''
 )
 
+function clearError(field) {
+  if (errors[field]) {
+    errors[field] = ''
+  }
+}
+
 function toggleAgent(name) {
+  errors.agents = ''
   const index = selectedAgents.value.indexOf(name)
   if (index === -1) {
     selectedAgents.value.push(name)
   } else {
     selectedAgents.value.splice(index, 1)
   }
+}
+
+function clearAgents() {
+  selectedAgents.value = []
+  errors.agents = ''
+}
+
+function validateStep(step) {
+  if (step === 0) {
+    let valid = true
+    if (title.value.trim() === '') {
+      errors.title = 'El título es obligatorio.'
+      valid = false
+    } else {
+      errors.title = ''
+    }
+    if (prompt.value.trim() === '') {
+      errors.prompt = 'El prompt es obligatorio.'
+      valid = false
+    } else {
+      errors.prompt = ''
+    }
+    return valid
+  }
+  if (step === 1) {
+    if (selectedAgents.value.length === 0) {
+      errors.agents = 'Selecciona al menos un agente para el consejo.'
+      return false
+    }
+    errors.agents = ''
+  }
+  return true
 }
 
 function focusStepInput() {
@@ -423,7 +521,7 @@ function focusStepInput() {
 }
 
 function goNext() {
-  if (!canAdvance.value) return
+  if (!validateStep(currentStep.value)) return
   if (currentStep.value < steps.length - 1) {
     currentStep.value++
     focusStepInput()
@@ -607,18 +705,18 @@ function handleSubmit() {
 
 .form-textarea {
   width: 100%;
-  padding: 0.7rem 1rem;
+  padding: 0.85rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   font-size: 0.95rem;
+  line-height: 1.6;
   outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
   resize: vertical;
   min-height: 140px;
   font-family: inherit;
-  line-height: 1.5;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .form-textarea::placeholder {
@@ -630,83 +728,161 @@ function handleSubmit() {
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
-.field-hint {
+.input-error {
+  border-color: #ef4444;
+}
+
+.input-error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.field-error {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #f87171;
+  font-size: 0.82rem;
+  font-weight: 500;
   margin-top: 0.5rem;
-  font-size: 0.78rem;
+}
+
+.field-hint {
+  font-size: 0.8rem;
   color: var(--text-muted);
+  margin-top: 0.5rem;
 }
 
 .field-hint kbd {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  padding: 0.1rem 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: 0.3rem;
   background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono, monospace);
+}
+
+/* Council step */
+.council-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.council-count {
+  font-size: 0.85rem;
+  font-weight: 600;
   color: var(--text-secondary);
+}
+
+.council-clear {
+  background: transparent;
+  border: none;
+  color: var(--accent-soft);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.council-clear:hover {
+  color: var(--accent-glow);
+}
+
+.council-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+.council-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.council-legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .council-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .council-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.6rem;
-  padding: 1.5rem 1.25rem;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.25rem 1rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-  font-family: inherit;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
+  user-select: none;
 }
 
 .council-card:hover {
-  border-color: var(--accent-soft);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+  border-color: var(--border-glow);
+  background: var(--bg-card-hover);
 }
 
-.council-card:focus-visible {
-  outline: none;
+.council-card:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
 .council-card.selected {
   border-color: var(--accent);
   background: var(--gradient-card);
-  box-shadow: 0 0 0 1px var(--accent), 0 4px 16px rgba(124, 58, 237, 0.2);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.council-card.selected .council-check {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.council-checkbox {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 
 .council-illustration {
-  width: 64px;
-  height: 64px;
-  border-radius: 1rem;
-  background: var(--bg-card-hover);
-  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
   color: var(--text-secondary);
   transition: color 0.2s, border-color 0.2s;
-}
-
-.council-card:hover .council-illustration {
-  color: var(--text-primary);
-  border-color: var(--accent-soft);
+  flex-shrink: 0;
 }
 
 .council-card.selected .council-illustration {
-  color: var(--accent-glow);
+  color: var(--accent-soft);
   border-color: var(--accent);
-  background: rgba(124, 58, 237, 0.08);
 }
 
 .illustration-icon {
@@ -720,25 +896,31 @@ function handleSubmit() {
   height: 32px;
 }
 
+.council-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
 .council-name {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--text-primary);
   line-height: 1.3;
 }
 
 .council-question {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   line-height: 1.4;
 }
 
 .council-check {
   position: absolute;
-  top: 0.6rem;
-  right: 0.6rem;
-  width: 20px;
-  height: 20px;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--gradient-1);
   color: white;
@@ -746,99 +928,87 @@ function handleSubmit() {
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transform: scale(0.5);
+  transform: scale(0.6);
   transition: opacity 0.2s, transform 0.2s;
   box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
 }
 
-.council-card.selected .council-check {
-  opacity: 1;
-  transform: scale(1);
-}
-
+/* Iterations step */
 .iterations-presets {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .preset-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  height: 44px;
-  padding: 0 1rem;
+  padding: 0.4rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 0.5rem;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  font-family: inherit;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
 }
 
 .preset-chip:hover {
-  border-color: var(--accent-soft);
+  border-color: var(--border-glow);
   color: var(--text-primary);
-}
-
-.preset-chip:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
 }
 
 .preset-chip.selected {
   border-color: var(--accent);
-  color: white;
   background: var(--gradient-card);
-  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--text-primary);
 }
 
+.preset-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Model step */
 .model-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .model-option {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
   text-align: left;
-  font-family: inherit;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  width: 100%;
 }
 
 .model-option:hover {
-  border-color: var(--accent-soft);
-}
-
-.model-option:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+  border-color: var(--border-glow);
+  background: var(--bg-card-hover);
 }
 
 .model-option.selected {
   border-color: var(--accent);
   background: var(--gradient-card);
-  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.model-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .model-option-radio {
   width: 20px;
   height: 20px;
-  border-radius: 50%;
   border: 2px solid var(--border-glow);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -859,7 +1029,7 @@ function handleSubmit() {
 }
 
 .radio-dot.checked {
-  background: var(--accent-glow);
+  background: var(--accent);
 }
 
 .model-option-body {
@@ -871,21 +1041,20 @@ function handleSubmit() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.2rem;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
 }
 
 .model-option-name {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .model-option-price {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--accent-soft);
-  font-family: var(--font-mono);
   white-space: nowrap;
 }
 
@@ -894,32 +1063,29 @@ function handleSubmit() {
   color: var(--text-muted);
 }
 
+/* Summary step */
 .summary-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 1rem;
+  margin: 0;
 }
 
 .summary-row {
   display: flex;
-  align-items: flex-start;
-  gap: 1.5rem;
-  padding: 1rem 0;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid var(--border);
-}
-
-.summary-row:first-child {
-  padding-top: 0;
 }
 
 .summary-row:last-child {
   border-bottom: none;
+  padding-bottom: 0;
 }
 
 .summary-label {
-  flex-shrink: 0;
-  width: 180px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -927,7 +1093,6 @@ function handleSubmit() {
 }
 
 .summary-value {
-  flex: 1;
   font-size: 0.95rem;
   color: var(--text-primary);
   margin: 0;
@@ -935,6 +1100,7 @@ function handleSubmit() {
 
 .summary-prompt {
   white-space: pre-wrap;
+  word-break: break-word;
   line-height: 1.5;
 }
 
@@ -947,15 +1113,16 @@ function handleSubmit() {
 .summary-chip {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.65rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  padding: 0.25rem 0.65rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
+/* Actions */
 .form-actions {
   display: flex;
   align-items: center;
@@ -969,66 +1136,71 @@ function handleSubmit() {
 .btn-secondary {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.5rem;
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  padding: 0.7rem 1.5rem;
-  border-radius: var(--radius-sm);
+  padding: 0.65rem 1.25rem;
+  border-radius: 0.625rem;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   text-decoration: none;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
 
 .btn-secondary:hover {
-  border-color: var(--accent);
+  border-color: var(--border-glow);
   color: var(--text-primary);
+  background: var(--bg-card-hover);
 }
 
 .btn-secondary:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .btn-primary {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.5rem;
   background: var(--gradient-1);
   border: none;
   color: white;
-  padding: 0.7rem 1.5rem;
-  border-radius: var(--radius-sm);
+  padding: 0.65rem 1.5rem;
+  border-radius: 0.625rem;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  text-decoration: none;
   cursor: pointer;
-  transition: box-shadow 0.25s, transform 0.25s;
+  transition: box-shadow 0.25s, transform 0.25s, opacity 0.2s;
   box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   box-shadow: 0 6px 20px rgba(124, 58, 237, 0.55);
   transform: translateY(-1px);
 }
 
 .btn-primary:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.4), 0 4px 14px rgba(124, 58, 237, 0.35);
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 2px;
 }
 
 .btn-primary:disabled {
-  cursor: not-allowed;
   opacity: 0.5;
-  transform: none;
+  cursor: not-allowed;
   box-shadow: none;
+  transform: none;
 }
 
 @media (max-width: 640px) {
+  .form-section {
+    padding: 1.5rem 1.25rem;
+  }
+
   .council-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .form-actions {
@@ -1037,26 +1209,6 @@ function handleSubmit() {
 
   .actions-spacer {
     display: none;
-  }
-
-  .btn-secondary,
-  .btn-primary {
-    flex: 1;
-  }
-
-  .summary-row {
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .summary-label {
-    width: auto;
-  }
-}
-
-@media (max-width: 420px) {
-  .council-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>
