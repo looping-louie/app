@@ -9,71 +9,246 @@
       <p class="page-description">Describe tu idea y configura un consejo de agentes para refinarla antes de convertirla en una especificación.</p>
     </div>
 
-    <form class="idea-form" @submit.prevent="handleSubmit">
-      <section class="form-section">
-        <div class="section-header">
-          <h2 class="section-title">Your prompt</h2>
-          <p class="section-helper">Describe la idea que quieres discutir. Cuanto más contexto aportes — objetivos, restricciones, público objetivo — mejor podrán los agentes entenderla y refinarla.</p>
+    <div class="wizard-shell">
+      <div
+        class="progress-indicator"
+        role="group"
+        aria-label="Progreso del asistente"
+      >
+        <div class="progress-track">
+          <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
         </div>
-
-        <div class="form-group">
-          <label for="idea-title" class="form-label">Título</label>
-          <input
-            id="idea-title"
-            v-model="title"
-            type="text"
-            class="form-input"
-            placeholder="Ej: Sistema de feedback para revisiones de código"
-          />
+        <div class="progress-meta">
+          <span class="progress-label">Paso {{ currentStep + 1 }} de {{ steps.length }}</span>
+          <span class="progress-status">{{ progressStatus }}</span>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label for="idea-prompt" class="form-label">Prompt</label>
-          <textarea
-            id="idea-prompt"
-            v-model="prompt"
-            class="form-textarea"
-            rows="8"
-            placeholder="Describe tu idea en detalle: qué problema resuelve, qué debe incluir, qué restricciones tienes..."
-          ></textarea>
-        </div>
-      </section>
+      <form class="wizard-form" @submit.prevent="handleSubmit">
+        <!-- Step 0: Prompt -->
+        <section
+          v-show="currentStep === 0"
+          class="form-section"
+          aria-labelledby="step-0-title"
+        >
+          <div class="section-header">
+            <h2 id="step-0-title" class="section-title">Your prompt</h2>
+            <p class="section-helper">Describe la idea que quieres discutir. Cuanto más contexto aportes — objetivos, restricciones, público objetivo — mejor podrán los agentes entenderla y refinarla.</p>
+          </div>
 
-      <section class="form-section">
-        <div class="section-header">
-          <h2 class="section-title">Set your council</h2>
-          <p class="section-helper">Selecciona los agentes que discutirán la idea. Cada uno aportará una perspectiva distinta — crítica, técnica, de producto — y juntos refinarán el resultado antes de convertirlo en una especificación.</p>
-        </div>
+          <div class="form-group">
+            <label for="idea-title" class="form-label">Título</label>
+            <input
+              id="idea-title"
+              ref="titleInput"
+              v-model="title"
+              type="text"
+              class="form-input"
+              placeholder="Ej: Sistema de feedback para revisiones de código"
+            />
+          </div>
 
-        <div class="council-grid">
-          <button
-            v-for="agent in availableAgents"
-            :key="agent.name"
-            type="button"
-            class="council-card"
-            :class="{ selected: selectedAgents.includes(agent.name) }"
-            :aria-pressed="selectedAgents.includes(agent.name)"
-            @click="toggleAgent(agent.name)"
-          >
-            <div class="council-illustration">
-              <span class="illustration-icon" v-html="agent.icon"></span>
+          <div class="form-group">
+            <label for="idea-prompt" class="form-label">Prompt</label>
+            <textarea
+              id="idea-prompt"
+              ref="promptInput"
+              v-model="prompt"
+              class="form-textarea"
+              rows="8"
+              placeholder="Describe tu idea en detalle: qué problema resuelve, qué debe incluir, qué restricciones tienes..."
+              @keydown.meta.enter.prevent="goNext"
+              @keydown.ctrl.enter.prevent="goNext"
+            ></textarea>
+            <p class="field-hint">Pulsa <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> para continuar.</p>
+          </div>
+        </section>
+
+        <!-- Step 1: Council -->
+        <section
+          v-show="currentStep === 1"
+          class="form-section"
+          aria-labelledby="step-1-title"
+        >
+          <div class="section-header">
+            <h2 id="step-1-title" class="section-title">Set your council</h2>
+            <p class="section-helper">Selecciona los agentes que discutirán la idea. Cada uno aportará una perspectiva distinta — crítica, técnica, de producto — y juntos refinarán el resultado antes de convertirlo en una especificación.</p>
+          </div>
+
+          <div class="council-grid" role="group" aria-label="Selecciona agentes">
+            <button
+              v-for="agent in availableAgents"
+              :key="agent.name"
+              type="button"
+              class="council-card"
+              :class="{ selected: selectedAgents.includes(agent.name) }"
+              :aria-pressed="selectedAgents.includes(agent.name)"
+              @click="toggleAgent(agent.name)"
+            >
+              <div class="council-illustration">
+                <span class="illustration-icon" v-html="agent.icon"></span>
+              </div>
+              <h3 class="council-name">{{ agent.name }}</h3>
+              <p class="council-question">{{ agent.question }}</p>
+              <span class="council-check" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.5 7.6a1 1 0 0 1-1.42.006l-3.5-3.5a1 1 0 1 1 1.414-1.414l2.793 2.793 6.793-6.893a1 1 0 0 1 1.414-.006Z"/></svg>
+              </span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Step 2: Max iterations -->
+        <section
+          v-show="currentStep === 2"
+          class="form-section"
+          aria-labelledby="step-2-title"
+        >
+          <div class="section-header">
+            <h2 id="step-2-title" class="section-title">Maximum iterations</h2>
+            <p class="section-helper">Define cuántas veces puede el consejo refinar la idea antes de entregar el resultado. Más iteraciones permiten mayor calidad, pero consumen más tokens.</p>
+          </div>
+
+          <div class="form-group">
+            <label for="max-iterations" class="form-label">Número máximo de iteraciones</label>
+            <input
+              id="max-iterations"
+              ref="iterationsInput"
+              v-model.number="maxIterations"
+              type="number"
+              class="form-input"
+              min="1"
+              max="10"
+              step="1"
+              inputmode="numeric"
+            />
+          </div>
+
+          <div class="iterations-presets" role="group" aria-label="Valores rápidos">
+            <button
+              v-for="value in iterationPresets"
+              :key="value"
+              type="button"
+              class="preset-chip"
+              :class="{ selected: maxIterations === value }"
+              :aria-pressed="maxIterations === value"
+              @click="maxIterations = value"
+            >
+              {{ value }}
+            </button>
+          </div>
+        </section>
+
+        <!-- Step 3: Model -->
+        <section
+          v-show="currentStep === 3"
+          class="form-section"
+          aria-labelledby="step-3-title"
+        >
+          <div class="section-header">
+            <h2 id="step-3-title" class="section-title">Choose your model</h2>
+            <p class="section-helper">Selecciona el modelo generador que producirá la primera versión de la especificación. Los revisores evaluarán su salida en cada iteración.</p>
+          </div>
+
+          <div class="model-list" role="radiogroup" aria-label="Selecciona un modelo">
+            <button
+              v-for="model in availableModels"
+              :key="model.name"
+              type="button"
+              class="model-option"
+              :class="{ selected: selectedModel === model.name }"
+              role="radio"
+              :aria-checked="selectedModel === model.name"
+              @click="selectedModel = model.name"
+              @keydown.enter.prevent="selectedModel = model.name"
+            >
+              <div class="model-option-radio" aria-hidden="true">
+                <span class="radio-dot" :class="{ checked: selectedModel === model.name }"></span>
+              </div>
+              <div class="model-option-body">
+                <div class="model-option-header">
+                  <span class="model-option-name">{{ model.name }}</span>
+                  <span class="model-option-price">${{ model.input.toFixed(2) }}/1M in</span>
+                </div>
+                <p class="model-option-detail">Salida: ${{ model.output.toFixed(2) }}/1M tokens</p>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <!-- Step 4: Summary -->
+        <section
+          v-show="currentStep === 4"
+          class="form-section"
+          aria-labelledby="step-4-title"
+        >
+          <div class="section-header">
+            <h2 id="step-4-title" class="section-title">Review and run</h2>
+            <p class="section-helper">Revisa la configuración del consejo antes de ejecutarlo. Puedes volver atrás para ajustar cualquier respuesta.</p>
+          </div>
+
+          <dl class="summary-list">
+            <div class="summary-row">
+              <dt class="summary-label">Título</dt>
+              <dd class="summary-value">{{ title || '—' }}</dd>
             </div>
-            <h3 class="council-name">{{ agent.name }}</h3>
-            <p class="council-question">{{ agent.question }}</p>
-            <span class="council-check" aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.5 7.6a1 1 0 0 1-1.42.006l-3.5-3.5a1 1 0 1 1 1.414-1.414l2.793 2.793 6.793-6.893a1 1 0 0 1 1.414-.006Z"/></svg>
-            </span>
+            <div class="summary-row">
+              <dt class="summary-label">Prompt</dt>
+              <dd class="summary-value summary-prompt">{{ prompt || '—' }}</dd>
+            </div>
+            <div class="summary-row">
+              <dt class="summary-label">Consejo</dt>
+              <dd class="summary-value">
+                <span v-if="selectedAgents.length" class="summary-chips">
+                  <span v-for="agent in selectedAgents" :key="agent" class="summary-chip">{{ agent }}</span>
+                </span>
+                <span v-else>—</span>
+              </dd>
+            </div>
+            <div class="summary-row">
+              <dt class="summary-label">Iteraciones máximas</dt>
+              <dd class="summary-value">{{ maxIterations }}</dd>
+            </div>
+            <div class="summary-row">
+              <dt class="summary-label">Modelo</dt>
+              <dd class="summary-value">{{ selectedModel || '—' }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <div class="form-actions">
+          <button
+            v-if="currentStep > 0"
+            type="button"
+            class="btn-secondary"
+            @click="goBack"
+          >
+            Atrás
+          </button>
+
+          <span class="actions-spacer"></span>
+
+          <NuxtLink to="/app/ideas" class="btn-secondary">Cancelar</NuxtLink>
+
+          <button
+            v-if="currentStep < steps.length - 1"
+            type="button"
+            class="btn-primary"
+            :disabled="!canAdvance"
+            @click="goNext"
+          >
+            Guardar y continuar
+          </button>
+          <button
+            v-else
+            type="submit"
+            class="btn-primary"
+            :disabled="!canSubmit"
+          >
+            Run Council
           </button>
         </div>
-      </section>
-
-      <div class="form-actions">
-        <NuxtLink to="/app/ideas" class="btn-secondary">Cancelar</NuxtLink>
-        <button type="submit" class="btn-primary" :disabled="!canSubmit">
-          Run Council
-        </button>
-      </div>
-    </form>
+      </form>
+    </div>
   </div>
 </template>
 
@@ -88,8 +263,27 @@ useHead({
 
 const router = useRouter()
 
+const steps = [
+  { key: 'prompt', label: 'Prompt' },
+  { key: 'council', label: 'Consejo' },
+  { key: 'iterations', label: 'Iteraciones' },
+  { key: 'model', label: 'Modelo' },
+  { key: 'summary', label: 'Resumen' }
+]
+
+const currentStep = ref(0)
+
 const title = ref('')
 const prompt = ref('')
+const selectedAgents = ref([])
+const maxIterations = ref(3)
+const selectedModel = ref('')
+
+const titleInput = ref(null)
+const promptInput = ref(null)
+const iterationsInput = ref(null)
+
+const iterationPresets = [1, 3, 5, 10]
 
 const availableAgents = [
   {
@@ -144,12 +338,69 @@ const availableAgents = [
   }
 ]
 
-const selectedAgents = ref([])
+const availableModels = [
+  { name: 'DeepSeek V4 Pro', input: 1.74, output: 3.48 },
+  { name: 'MiniMax M3', input: 0.30, output: 1.20 },
+  { name: 'Kimi K2.7 Code', input: 0.95, output: 4.00 },
+  { name: 'GLM-5.2', input: 1.40, output: 4.40 },
+  { name: 'LFM2 24B A2B', input: 0.03, output: 0.12 },
+  { name: 'Gemma 4 31B', input: 0.39, output: 0.97 },
+  { name: 'NVIDIA Nemotron 3 Ultra', input: 0.60, output: 3.60 },
+  { name: 'Qwen3.7-Plus', input: 0.32, output: 1.28 },
+  { name: 'Kimi K2.6', input: 1.20, output: 4.50 },
+  { name: 'Qwen3.7-Max', input: 1.25, output: 3.75 },
+  { name: 'gpt-oss-120B', input: 0.15, output: 0.60 },
+  { name: 'Qwen3.5-397B-A17B', input: 0.60, output: 3.60 },
+  { name: 'Qwen3.5 9B', input: 0.17, output: 0.25 },
+  { name: 'Gemma-4-31B-it-Pearl', input: 0.28, output: 0.86 },
+  { name: 'Cogito v2.1 671B', input: 1.25, output: 1.25 },
+  { name: 'RnJ-1 Instruct', input: 0.15, output: 0.15 },
+  { name: 'Llama 3.3 70B', input: 1.04, output: 1.04 },
+  { name: 'Gemma 3n E4B Instruct', input: 0.06, output: 0.12 },
+  { name: 'gpt-oss-20B', input: 0.05, output: 0.20 },
+  { name: 'Qwen3 235B A22B FP8 Throughput', input: 0.20, output: 0.60 },
+  { name: 'MiniMax M2.5', input: 0.30, output: 1.20 },
+  { name: 'GLM-5.1', input: 1.40, output: 4.40 },
+  { name: 'MiniMax M2.7', input: 0.30, output: 1.20 },
+  { name: 'Qwen3.6-Plus', input: 0.50, output: 3.00 },
+  { name: 'Qwen2.5 7B Instruct Turbo', input: 0.30, output: 0.30 },
+  { name: 'Llama 3 8B Instruct Lite', input: 0.14, output: 0.14 },
+  { name: 'Qwen3 235B A22B Instruct 2507 FP8 Throughput', input: 0.20, output: 0.60 }
+]
+
+const progressPercent = computed(() => {
+  return (currentStep.value / (steps.length - 1)) * 100
+})
+
+const progressStatus = computed(() => {
+  if (currentStep.value === steps.length - 1) {
+    return 'Completado'
+  }
+  return `${steps[currentStep.value].label}`
+})
+
+const canAdvance = computed(() => {
+  switch (currentStep.value) {
+    case 0:
+      return title.value.trim() !== '' && prompt.value.trim() !== ''
+    case 1:
+      return selectedAgents.value.length > 0
+    case 2:
+      return maxIterations.value >= 1 && maxIterations.value <= 10
+    case 3:
+      return selectedModel.value !== ''
+    default:
+      return true
+  }
+})
 
 const canSubmit = computed(() =>
   title.value.trim() !== '' &&
   prompt.value.trim() !== '' &&
-  selectedAgents.value.length > 0
+  selectedAgents.value.length > 0 &&
+  maxIterations.value >= 1 &&
+  maxIterations.value <= 10 &&
+  selectedModel.value !== ''
 )
 
 function toggleAgent(name) {
@@ -161,6 +412,31 @@ function toggleAgent(name) {
   }
 }
 
+function focusStepInput() {
+  nextTick(() => {
+    if (currentStep.value === 0 && titleInput.value) {
+      titleInput.value.focus()
+    } else if (currentStep.value === 2 && iterationsInput.value) {
+      iterationsInput.value.focus()
+    }
+  })
+}
+
+function goNext() {
+  if (!canAdvance.value) return
+  if (currentStep.value < steps.length - 1) {
+    currentStep.value++
+    focusStepInput()
+  }
+}
+
+function goBack() {
+  if (currentStep.value > 0) {
+    currentStep.value--
+    focusStepInput()
+  }
+}
+
 function handleSubmit() {
   if (!canSubmit.value) return
 
@@ -169,6 +445,8 @@ function handleSubmit() {
     title: title.value.trim(),
     prompt: prompt.value.trim(),
     agents: [...selectedAgents.value],
+    maxIterations: maxIterations.value,
+    model: selectedModel.value,
     createdAt: new Date().toISOString()
   }
 
@@ -216,7 +494,51 @@ function handleSubmit() {
   color: var(--text-secondary);
 }
 
-.idea-form {
+.wizard-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.progress-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--gradient-1);
+  border-radius: 1rem;
+  transition: width 0.35s ease;
+}
+
+.progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.progress-label {
+  color: var(--text-secondary);
+}
+
+.progress-status {
+  color: var(--accent-soft);
+}
+
+.wizard-form {
   display: flex;
   flex-direction: column;
   gap: 2.5rem;
@@ -308,6 +630,22 @@ function handleSubmit() {
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
+.field-hint {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.field-hint kbd {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
 .council-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -333,6 +671,12 @@ function handleSubmit() {
 .council-card:hover {
   border-color: var(--accent-soft);
   box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+}
+
+.council-card:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
 }
 
 .council-card.selected {
@@ -412,15 +756,220 @@ function handleSubmit() {
   transform: scale(1);
 }
 
+.iterations-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+
+.preset-chip:hover {
+  border-color: var(--accent-soft);
+  color: var(--text-primary);
+}
+
+.preset-chip:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+}
+
+.preset-chip.selected {
+  border-color: var(--accent);
+  color: white;
+  background: var(--gradient-card);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.model-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.model-option {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.model-option:hover {
+  border-color: var(--accent-soft);
+}
+
+.model-option:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+}
+
+.model-option.selected {
+  border-color: var(--accent);
+  background: var(--gradient-card);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.model-option-radio {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s;
+}
+
+.model-option.selected .model-option-radio {
+  border-color: var(--accent);
+}
+
+.radio-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: transparent;
+  transition: background 0.2s;
+}
+
+.radio-dot.checked {
+  background: var(--accent-glow);
+}
+
+.model-option-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.model-option-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.2rem;
+}
+
+.model-option-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.model-option-price {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent-soft);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.model-option-detail {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.summary-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.summary-row:first-child {
+  padding-top: 0;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-label {
+  flex-shrink: 0;
+  width: 180px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.summary-value {
+  flex: 1;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.summary-prompt {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.summary-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+}
+
 .form-actions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: 0.75rem;
+}
+
+.actions-spacer {
+  flex: 1;
 }
 
 .btn-secondary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-secondary);
@@ -438,9 +987,16 @@ function handleSubmit() {
   color: var(--text-primary);
 }
 
+.btn-secondary:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+}
+
 .btn-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   background: var(--gradient-1);
   border: none;
   color: white;
@@ -458,6 +1014,11 @@ function handleSubmit() {
   transform: translateY(-1px);
 }
 
+.btn-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.4), 0 4px 14px rgba(124, 58, 237, 0.35);
+}
+
 .btn-primary:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -471,12 +1032,25 @@ function handleSubmit() {
   }
 
   .form-actions {
-    flex-direction: column-reverse;
+    flex-wrap: wrap;
+  }
+
+  .actions-spacer {
+    display: none;
   }
 
   .btn-secondary,
   .btn-primary {
-    justify-content: center;
+    flex: 1;
+  }
+
+  .summary-row {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .summary-label {
+    width: auto;
   }
 }
 
