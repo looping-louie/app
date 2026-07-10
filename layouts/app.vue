@@ -11,19 +11,22 @@
       </div>
 
       <nav class="sidebar-nav" aria-label="Navegación principal">
-        <NuxtLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="nav-item"
-          :class="{ active: isActive(item.to) }"
-          :aria-label="item.label"
-          :title="item.label"
-          @click="closeMobile"
-        >
-          <span class="nav-icon" v-html="item.icon" />
-          <span class="nav-tooltip">{{ item.label }}</span>
-        </NuxtLink>
+        <template v-for="(group, groupIndex) in navGroups" :key="groupIndex">
+          <div v-if="groupIndex > 0" class="nav-divider" />
+          <NuxtLink
+            v-for="item in group"
+            :key="item.to"
+            :to="item.to"
+            class="nav-item"
+            :class="{ active: isActive(item.to) }"
+            :aria-label="item.label"
+            :title="item.label"
+            @click="closeMobile"
+          >
+            <span class="nav-icon" v-html="item.icon" />
+            <span class="nav-tooltip">{{ item.label }}</span>
+          </NuxtLink>
+        </template>
       </nav>
 
       <div class="sidebar-footer">
@@ -53,36 +56,46 @@ const route = useRoute()
 
 const mobileOpen = ref(false)
 
-const navItems = [
-  {
-    to: '/app',
-    label: 'Dashboard',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg>'
-  },
-  {
-    to: '/app/proyectos',
-    label: 'Proyectos',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.068.157 2.148.279 3.238.354.77.054 1.543.082 2.32.082s1.55-.028 2.32-.082a41.2 41.2 0 0 0 3.238-.354c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3.164c-.78 0-1.552.028-2.32.082a41.2 41.2 0 0 0-3.238.354C4.873 3.746 3.75 5.14 3.75 6.74v6.02Z"/><path d="M6 6.75h.008v.008H6V6.75ZM18 6.75h.008v.008H18V6.75ZM8.25 3.164V4.5c0 .414.336.75.75.75h6a.75.75 0 0 0 .75-.75V3.164a48.394 48.394 0 0 0-7.5 0Z"/></svg>'
-  },
-  {
-    to: '/app/ideas',
-    label: 'Ideas',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18v-5.25m0 5.25a3 3 0 0 1-3-3h6a3 3 0 0 1-3 3Zm0-5.25V6.75m0 6.75c-2.485 0-4.5-2.515-4.5-5.625S9.515 3.75 12 3.75s4.5 2.515 4.5 5.625S14.485 12.75 12 12.75Z"/></svg>'
-  },
-  {
-    to: '/app/tareas',
-    label: 'Tareas',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08-1.131.094-1.976 1.057-1.976 2.192v9.75A2.25 2.25 0 0 0 7.5 18.75H18A2.25 2.25 0 0 0 20.25 16.5v-9.75A2.25 2.25 0 0 0 18 4.5H15a2.25 2.25 0 0 1-2.15-1.586Z"/></svg>'
-  },
-  {
-    to: '/app/loops',
-    label: 'Loops',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c.014.221.029.443.046.662a4.006 4.006 0 0 0 3.7 3.7 48.55 48.55 0 0 0 7.308 0 4.006 4.006 0 0 0 3.7-3.7c.033-.254.046-.508.046-.762m-15 0-3 3m3-3 3 3"/></svg>'
-  }
+const iconRuns = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.25 5.25v13.5l13.5-6.75-13.5-6.75Z"/></svg>'
+const iconObservability = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13.5h2.25l1.5-6 3 12 3-15 3 9 1.5-3H21"/></svg>'
+const iconHumanReview = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25c0-3.59 3.36-6.75 7.5-6.75s7.5 3.16 7.5 6.75"/><path d="M19.5 3v3.75M19.5 10.5V6.75M19.5 6.75h3.75M19.5 6.75h-3.75"/></svg>'
+const iconIdeas = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18v-5.25m0 5.25a3 3 0 0 1-3-3h6a3 3 0 0 1-3 3Zm0-5.25V6.75m0 6.75c-2.485 0-4.5-2.515-4.5-5.625S9.515 3.75 12 3.75s4.5 2.515 4.5 5.625S14.485 12.75 12 12.75Z"/></svg>'
+const iconTasks = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08-1.131.094-1.976 1.057-1.976 2.192v9.75A2.25 2.25 0 0 0 7.5 18.75H18A2.25 2.25 0 0 0 20.25 16.5v-9.75A2.25 2.25 0 0 0 18 4.5H15a2.25 2.25 0 0 1-2.15-1.586Z"/></svg>'
+const iconLoops = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c.014.221.029.443.046.662a4.006 4.006 0 0 0 3.7 3.7 48.55 48.55 0 0 0 7.308 0 4.006 4.006 0 0 0 3.7-3.7c.033-.254.046-.508.046-.762m-15 0-3 3m3-3 3 3"/></svg>'
+const iconCouncils = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><circle cx="5" cy="14" r="2.5"/><circle cx="19" cy="14" r="2.5"/><path d="M12 11.5v3M9.5 13l-2 0M14.5 13l2 0"/></svg>'
+const iconPersonas = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="M4.5 20.25c0-3.59 3.36-6.75 7.5-6.75s7.5 3.16 7.5 6.75"/><path d="M18 4.5a3 3 0 0 1 0 5.66"/><path d="M19.5 14.5c2.5 1 3 3.5 3 5.75"/></svg>'
+const iconSkills = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.25 5.25L19.5 9l-4 4 1 5.5L12 16l-4.5 2.5 1-5.5-4-4 5.25-.75L12 3Z"/></svg>'
+const iconModels = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3m0 12v3M5.64 5.64l2.12 2.12m8.48 8.48l2.12 2.12M3 12h3m12 0h3M5.64 18.36l2.12-2.12m8.48-8.48l2.12-2.12"/><circle cx="12" cy="12" r="3.5"/></svg>'
+const iconSettings = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.25h2.25l1.5-3h9l1.5 3H21v9H3v-9Z"/><circle cx="12" cy="12.75" r="3"/></svg>'
+
+const navGroups = [
+  [
+    { to: '/app/runs', label: 'Runs', icon: iconRuns }
+  ],
+  [
+    { to: '/app/observability', label: 'Observability', icon: iconObservability },
+    { to: '/app/human-intervention', label: 'Human review', icon: iconHumanReview }
+  ],
+  [
+    { to: '/app/ideas', label: 'Ideas', icon: iconIdeas },
+    { to: '/app/tasks', label: 'Tasks', icon: iconTasks },
+    { to: '/app/loops', label: 'Loops', icon: iconLoops }
+  ],
+  [
+    { to: '/app/councils', label: 'Councils', icon: iconCouncils },
+    { to: '/app/personas', label: 'Personas', icon: iconPersonas },
+    { to: '/app/skills', label: 'Skills', icon: iconSkills },
+    { to: '/app/models', label: 'Models', icon: iconModels }
+  ],
+  [
+    { to: '/app/keys', label: 'Settings', icon: iconSettings }
+  ]
 ]
 
+const navItems = computed(() => navGroups.flat())
+
 const currentLabel = computed(() => {
-  const match = navItems.find((item) => isActive(item.to))
+  const match = navItems.value.find((item) => isActive(item.to))
   return match ? match.label : 'Dashboard'
 })
 
@@ -181,6 +194,15 @@ function closeMobile() {
   width: 100%;
   padding: 0 0.5rem;
   flex: 1;
+  overflow-y: auto;
+}
+
+.nav-divider {
+  height: 1px;
+  width: 60%;
+  margin: 0.5rem auto;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
 .nav-item {
@@ -194,11 +216,17 @@ function closeMobile() {
   text-decoration: none;
   transition: color 0.2s, background 0.2s;
   position: relative;
+  flex-shrink: 0;
 }
 
 .nav-item:hover {
   color: var(--text-primary);
   background: var(--bg-card-hover);
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--accent-glow);
+  outline-offset: 2px;
 }
 
 .nav-item.active {
