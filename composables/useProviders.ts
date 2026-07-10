@@ -6,51 +6,22 @@ export interface Provider {
   description: string
   logo: string
   enabled: boolean
-  keyTrimmed: string | null
-  baseUrl: string | null
   requiresApiKey: boolean
+  keyTrimmed?: string
+  baseUrl?: string
   modelCount: number
 }
 
-interface ApiProvider {
-  id: string
-  name: string
-  description: string
-  logo: string
+interface SaveCredentialResponse {
+  key_trimmed: string
+  model_count: number
+}
+
+interface SetEnabledResponse {
   enabled: boolean
-  key_trimmed: string | null
-  base_url: string | null
-  requires_api_key: boolean
-  model_count: number
-}
-
-interface CredentialResponse {
-  key_trimmed: string | null
-  model_count: number
-}
-
-const PROVIDER_ORDER = ['anthropic', 'nvidia', 'ollama', 'openai', 'together']
-
-function mapProvider(raw: ApiProvider): Provider {
-  return {
-    id: raw.id,
-    name: raw.name,
-    description: raw.description,
-    logo: raw.logo,
-    enabled: raw.enabled,
-    keyTrimmed: raw.key_trimmed,
-    baseUrl: raw.base_url,
-    requiresApiKey: raw.requires_api_key,
-    modelCount: raw.model_count
-  }
-}
-
-function sortByDeclaredOrder(providers: Provider[]): Provider[] {
-  return [...providers].sort((a, b) => {
-    const ai = PROVIDER_ORDER.indexOf(a.id)
-    const bi = PROVIDER_ORDER.indexOf(b.id)
-    return (ai === -1 ? Number.MAX_SAFE_INTEGER : ai) - (bi === -1 ? Number.MAX_SAFE_INTEGER : bi)
-  })
+  has_credential: boolean
+  key_trimmed?: string
+  model_count?: number
 }
 
 export function useProviders() {
@@ -62,23 +33,26 @@ export function useProviders() {
     pending.value = true
     error.value = null
     try {
-      const data = await $fetch<ApiProvider[]>('/providers')
-      providers.value = sortByDeclaredOrder(data.map(mapProvider))
+      const data = await $fetch<Provider[]>('/api/providers')
+      providers.value = data
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unable to load providers.'
-      providers.value = []
     } finally {
       pending.value = false
     }
   }
 
-  async function saveCredential(
-    providerId: string,
-    body: { api_key?: string; base_url?: string }
-  ): Promise<CredentialResponse> {
-    return await $fetch<CredentialResponse>(`/providers/${providerId}/credential`, {
-      method: 'PUT',
+  async function saveCredential(id: string, body: Record<string, string>): Promise<SaveCredentialResponse> {
+    return await $fetch<SaveCredentialResponse>(`/api/providers/${id}/credentials`, {
+      method: 'POST',
       body
+    })
+  }
+
+  async function setEnabled(id: string, enabled: boolean): Promise<SetEnabledResponse> {
+    return await $fetch<SetEnabledResponse>(`/api/providers/${id}/enabled`, {
+      method: 'PATCH',
+      body: { enabled }
     })
   }
 
@@ -87,6 +61,7 @@ export function useProviders() {
     pending,
     error,
     fetchProviders,
-    saveCredential
+    saveCredential,
+    setEnabled
   }
 }

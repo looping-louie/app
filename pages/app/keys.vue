@@ -132,7 +132,8 @@
               role="switch"
               :aria-checked="provider.enabled ? 'true' : 'false'"
               :aria-label="`Disable ${provider.name}`"
-              tabindex="0"
+              :aria-disabled="togglingId === provider.id"
+              :tabindex="togglingId === provider.id ? -1 : 0"
               @click="toggleProvider(provider.id)"
               @keydown.enter.prevent="toggleProvider(provider.id)"
               @keydown.space.prevent="toggleProvider(provider.id)"
@@ -211,7 +212,8 @@
               role="switch"
               :aria-checked="provider.enabled ? 'true' : 'false'"
               :aria-label="`Enable ${provider.name}`"
-              tabindex="0"
+              :aria-disabled="togglingId === provider.id"
+              :tabindex="togglingId === provider.id ? -1 : 0"
               @click="toggleProvider(provider.id)"
               @keydown.enter.prevent="toggleProvider(provider.id)"
               @keydown.space.prevent="toggleProvider(provider.id)"
@@ -258,7 +260,7 @@
 import { useProviders } from '~/composables/useProviders'
 import { useToasts } from '~/composables/useToasts'
 
-const { providers, pending, error, fetchProviders, saveCredential } = useProviders()
+const { providers, pending, error, fetchProviders, saveCredential, setEnabled } = useProviders()
 const { toasts, pushToast, dismissToast } = useToasts()
 
 await useAsyncData('providers', () => fetchProviders())
@@ -276,20 +278,80 @@ const availableProviders = computed(() =>
   providers.value.filter((p) => !p.enabled)
 )
 
-function toggleProvider(id: string) {
+const togglingId = ref<string | null>(null)
+async function toggleProvider(id: string) {
+  if (togglingId.value === id) return
+
   const provider = providers.value.find((p) => p.id === id)
   if (!provider) return
 
   if (provider.enabled) {
-    provider.enabled = false
-    configuringId.value = null
-    delete configForms[id]
-    delete configErrors[id]
+    await disableProvider(id)
   } else {
+    await enableProvider(id)
+  }
+}
+
+async function disableProvider(id: string) {
+  const provider = providers.value.find((p) => p.id === id)
+  if (!provider) return
+
+  togglingId.value = id
+  const previousEnabled = provider.enabled
+  provider.enabled = false
+  configuringId.value = null
+  delete configForms[id]
+  delete configErrors[id]
+
+  try {
+    await setEnabled(id, false)
+    pushToast(`${provider.name} disabled. Your stored credential has been preserved.`)
+  } catch (err) {
+    provider.enabled = previousEnabled
+    const message = err instanceof Error && err.message
+      ? err.message
+      : `Unable to disable ${provider.name}. Please try again.`
+    pushToast(message, 'error')
+  } finally {
+    togglingId.value = null
+  }
+}
+
+async function enableProvider(id: string) {
+  const provider = providers.value.find((p) => p.id === id)
+  if (!provider) return
+
+  togglingId.value = id
+
+  try {
+    const result = await setEnabled(id, true)
+
     provider.enabled = true
-    configuringId.value = id
-    configForms[id] = { apiKey: '', baseUrl: provider.baseUrl || '' }
-    configErrors[id] = ''
+
+    if (result.has_credential) {
+      if (result.key_trimmed) {
+        provider.keyTrimmed = result.key_trimmed
+      }
+      if (typeof result.model_count === 'number') {
+        provider.modelCount = result.model_count
+      }
+      configuringId.value = null
+      delete configForms[id]
+      delete configErrors[id]
+      pushToast(`${provider.name} enabled. ${result.model_count ?? provider.modelCount} models available.`)
+    } else {
+      configuringId.value = id
+      configForms[id] = { apiKey: '', baseUrl: provider.baseUrl || '' }
+      configErrors[id] = ''
+      pushToast(`${provider.name} enabled. Enter your API key to start using it.`)
+    }
+  } catch (err) {
+    const message = err instanceof Error && err.message
+      ? err.message
+      : `Unable to enable ${provider.name}. Please try again.`
+    pushToast(message, 'error')
+  } finally {
+    togglingId.value = null
   }
 }
 
