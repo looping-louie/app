@@ -24,6 +24,11 @@ interface ApiProvider {
   model_count: number
 }
 
+interface CredentialResponse {
+  key_trimmed: string | null
+  model_count: number
+}
+
 const PROVIDER_ORDER = ['anthropic', 'nvidia', 'ollama', 'openai', 'together']
 
 function mapProvider(raw: ApiProvider): Provider {
@@ -67,10 +72,21 @@ export function useProviders() {
     }
   }
 
+  async function saveCredential(
+    providerId: string,
+    body: { api_key?: string; base_url?: string }
+  ): Promise<CredentialResponse> {
+    return await $fetch<CredentialResponse>(`/providers/${providerId}/credential`, {
+      method: 'PUT',
+      body
+    })
+  }
+
   return {
     providers,
     pending,
     error,
-    fetchProviders
+    fetchProviders,
+    saveCredential
   }
 }
