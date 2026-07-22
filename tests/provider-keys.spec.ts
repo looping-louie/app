@@ -36,7 +36,7 @@ function makeProvider(overrides: Partial<Provider> = {}): Provider {
     id: 'openai',
     name: 'OpenAI',
     description: 'GPT models.',
-    logo: '/providers/openai.jpg',
+    logo: '/images/providers/openai.webp',
     enabled: false,
     requiresApiKey: true,
     modelCount: 0,
@@ -49,21 +49,21 @@ const sampleProviders: Provider[] = [
     id: 'openai',
     name: 'OpenAI',
     description: 'GPT models.',
-    logo: '/providers/openai.jpg',
+    logo: '/images/providers/openai.webp',
     modelCount: 0,
   }),
   makeProvider({
     id: 'anthropic',
     name: 'Anthropic',
     description: 'Claude models.',
-    logo: '/providers/anthropic.jpg',
+    logo: '/images/providers/anthropic.webp',
     modelCount: 0,
   }),
   makeProvider({
     id: 'ollama',
     name: 'Ollama',
     description: 'Local models.',
-    logo: '/providers/ollama.jpg',
+    logo: '/images/providers/ollama.webp',
     requiresApiKey: false,
     baseUrl: 'http://localhost:11434',
     modelCount: 0,
@@ -237,9 +237,9 @@ describe('provider keys page', () => {
 
   it('renders providers in the exact order returned by the composable', async () => {
     const ordered = [
-      makeProvider({ id: 'z-last', name: 'Z Last', logo: '/providers/z-last.jpg' }),
-      makeProvider({ id: 'a-first', name: 'A First', logo: '/providers/a-first.jpg' }),
-      makeProvider({ id: 'm-middle', name: 'M Middle', logo: '/providers/m-middle.jpg' }),
+      makeProvider({ id: 'z-last', name: 'Z Last', logo: '/images/providers/z-last.webp' }),
+      makeProvider({ id: 'a-first', name: 'A First', logo: '/images/providers/a-first.webp' }),
+      makeProvider({ id: 'm-middle', name: 'M Middle', logo: '/images/providers/m-middle.webp' }),
     ]
     mockProviders.value = ordered
     const wrapper = mountKeys()
@@ -247,12 +247,12 @@ describe('provider keys page', () => {
 
     const cards = wrapper.findAll('.provider-card')
     const srcs = cards.map((c) => c.find('img').attributes('src'))
-    expect(srcs).toEqual(['/providers/z-last.jpg', '/providers/a-first.jpg', '/providers/m-middle.jpg'])
+    expect(srcs).toEqual(['/providers/z-last.webp', '/providers/a-first.webp', '/providers/m-middle.webp'])
   })
 
-  // ── JPEG logo paths ─────────────────────────────
+  // ── Webp logo paths ─────────────────────────────
 
-  it('uses .jpg paths for provider logos', async () => {
+  it('uses .webp paths for provider logos', async () => {
     mockProviders.value = sampleProviders
     const wrapper = mountKeys()
     await flushPromises()
@@ -261,7 +261,7 @@ describe('provider keys page', () => {
     expect(logos.length).toBeGreaterThan(0)
     logos.forEach((logo) => {
       const src = logo.attributes('src') || ''
-      expect(src).toMatch(/\.jpg$/)
+      expect(src).toMatch(/\.webp$/)
     })
   })
 

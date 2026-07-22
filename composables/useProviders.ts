@@ -33,7 +33,7 @@ export function useProviders() {
     pending.value = true
     error.value = null
     try {
-      const data = await $fetch<Provider[]>('/api/providers')
+      const data = await $fetch<Provider[]>('/api/v1/providers/list')
       providers.value = data
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unable to load providers.'
@@ -43,14 +43,14 @@ export function useProviders() {
   }
 
   async function saveCredential(id: string, body: Record<string, string>): Promise<SaveCredentialResponse> {
-    return await $fetch<SaveCredentialResponse>(`/api/providers/${id}/credentials`, {
+    return await $fetch<SaveCredentialResponse>(`/api/v1/providers/describe/${id}`, {
       method: 'POST',
       body
     })
   }
 
   async function setEnabled(id: string, enabled: boolean): Promise<SetEnabledResponse> {
-    return await $fetch<SetEnabledResponse>(`/api/providers/${id}/enabled`, {
+    return await $fetch<SetEnabledResponse>(`/api/v1/providers/enable/${id}`, {
       method: 'PATCH',
       body: { enabled }
     })
