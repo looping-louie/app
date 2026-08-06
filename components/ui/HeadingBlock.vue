@@ -1,6 +1,6 @@
 <script setup lang="ts">
 type HeadingLayout = 'centered' | 'split'
-type HeadingSize = 'hero' | 'section'
+type HeadingSize = 'hero' | 'section' | 'subsection'
 type HeadingAlign = 'center' | 'start'
 
 const props = withDefaults(defineProps<{
@@ -124,6 +124,12 @@ const resolvedAlign = computed<HeadingAlign>(() => (
   font-size: clamp(2rem, 4vw, 3.25rem);
   line-height: 1.03;
   letter-spacing: -0.045em;
+}
+
+.ui-heading-block--subsection .ui-heading-block__title :deep(:is(h1, h2, h3, p)) {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
 .ui-heading-block__description {

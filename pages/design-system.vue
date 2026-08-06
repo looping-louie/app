@@ -1,6 +1,12 @@
 <script setup lang="ts">
+import UiAccordion from '~/components/ui/Accordion.vue'
 import UiButton from '~/components/ui/Button.vue'
+import UiCard from '~/components/ui/Card.vue'
+import UiContainer from '~/components/ui/Container.vue'
+import UiGrid from '~/components/ui/Grid.vue'
+import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import UiSection from '~/components/ui/Section.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
 definePageMeta({
@@ -57,6 +63,50 @@ const headingDeploymentOptions = [
   { value: 'self-hosted', label: 'Self-hosted' },
 ]
 
+const customerRows = [
+  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding agent', to: '#grid-list' },
+  { id: 'airframe', name: 'Airframe', categories: 'AI · Infrastructure', to: '#grid-list' },
+  { id: 'runway', name: 'Runway Labs', categories: 'FinTech · Enterprise', to: '#grid-list' },
+  { id: 'hangar', name: 'Hangar Cloud', categories: 'AI · Infrastructure', to: '#grid-list' },
+]
+
+const jobRows = [
+  { id: 'product-designer', name: 'Product Designer', categories: 'Growth · Remote · Full-time', to: '#grid-list' },
+  { id: 'product-engineer', name: 'Product Engineer', categories: 'Engineering · Remote · Full-time', to: '#grid-list' },
+]
+
+const teamMembers = [
+  { id: 'maya', initials: 'MR', name: 'Maya Rivera', role: 'Founder & CEO' },
+  { id: 'theo', initials: 'TC', name: 'Theo Chen', role: 'Founding Engineer' },
+  { id: 'ines', initials: 'IA', name: 'Inés Álvarez', role: 'Product Designer' },
+  { id: 'omar', initials: 'OS', name: 'Omar Silva', role: 'Customer Engineer' },
+  { id: 'nora', initials: 'NK', name: 'Nora Kim', role: 'AI Engineer' },
+  { id: 'leo', initials: 'LM', name: 'Leo Martin', role: 'Developer Relations' },
+]
+
+const faqItems = [
+  {
+    id: 'loop',
+    title: 'What is a loop?',
+    content: 'A loop coordinates generation, review, scoring, and retries until an output meets the quality threshold you define.',
+  },
+  {
+    id: 'models',
+    title: 'Can a loop use different models?',
+    content: 'Yes. Each role can use its own provider and model, so the generator, reviewers, and aggregator do not have to share a cockpit.',
+  },
+  {
+    id: 'people',
+    title: 'Can people intervene while a loop is running?',
+    content: 'Human checkpoints can pause execution, request a decision, and resume the same run with the new context attached.',
+  },
+  {
+    id: 'hosting',
+    title: 'Can Looping Louie be self-hosted?',
+    content: 'The deployment model is independent from the interface. A project can run in Louie Cloud or in infrastructure controlled by your team.',
+  },
+]
+
 async function copyToClipboard(command: string) {
   try {
     await navigator.clipboard.writeText(command)
@@ -88,20 +138,23 @@ onBeforeUnmount(() => {
 <template>
   <div class="design-system-page">
     <header class="ds-header">
-      <NuxtLink to="/" class="ds-brand" aria-label="Back to Looping Louie">
-        <img class="ds-brand__mark" src="/brand/twemoji-small-airplane.svg" alt="" width="28" height="28">
-        <span>Looping Louie</span>
-      </NuxtLink>
+      <UiContainer size="default" class="ds-header__container">
+        <NuxtLink to="/" class="ds-brand" aria-label="Back to Looping Louie">
+          <img class="ds-brand__mark" src="/brand/twemoji-small-airplane.svg" alt="" width="28" height="28">
+          <span>Looping Louie</span>
+        </NuxtLink>
 
-      <div class="ds-header__meta">
-        <span class="ds-version">Design system · 0.1</span>
-        <NuxtLink to="/" class="ds-header__link">Back to website</NuxtLink>
-        <UiButton to="/app" variant="stroke" size="sm">Open app</UiButton>
-      </div>
+        <div class="ds-header__meta">
+          <span class="ds-version">Design system · 0.1</span>
+          <NuxtLink to="/" class="ds-header__link">Back to website</NuxtLink>
+          <UiButton to="/app" variant="stroke" size="sm">Open app</UiButton>
+        </div>
+      </UiContainer>
     </header>
 
     <main>
-      <section class="ds-hero">
+      <UiSection as="div" surface="canvas" space="none" class="ds-page-canvas">
+        <section class="ds-hero">
         <div class="ds-hero__copy">
           <p class="ds-eyebrow"><span /> Foundations</p>
           <h1>Professional.<br><em>With one loose propeller.</em></h1>
@@ -146,9 +199,10 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </div>
-      </section>
+        </section>
 
-      <div class="ds-shell">
+        <UiContainer size="wide" class="ds-shell-frame">
+          <div class="ds-shell">
         <aside class="ds-sidebar" aria-label="Design system index">
           <p>Contents</p>
           <nav>
@@ -161,6 +215,14 @@ onBeforeUnmount(() => {
             <a href="#segmented-control">Segmented control</a>
             <a href="#composition">03 · Composition</a>
             <a href="#heading-block">Heading block</a>
+            <a href="#layout">04 · Layout</a>
+            <a href="#container">Container</a>
+            <a href="#section">Section</a>
+            <a href="#collections">05 · Collections</a>
+            <a href="#grid-card">Grid &amp; card</a>
+            <a href="#grid-list">Grid list</a>
+            <a href="#team-grid">Team grid</a>
+            <a href="#accordion">Accordion</a>
           </nav>
           <div class="ds-sidebar__note">
             <span class="ds-sidebar__note-dot" />
@@ -637,6 +699,29 @@ onBeforeUnmount(() => {
                     </UiHeadingBlock>
                   </div>
                 </section>
+
+                <section class="ds-heading-case">
+                  <header class="ds-heading-case__meta">
+                    <div>
+                      <span>Subsection · H3</span>
+                      <p>Use for collection headings such as open positions, values, or team directories.</p>
+                    </div>
+                    <code>size="subsection" · h3</code>
+                  </header>
+                  <div class="ds-heading-case__preview ds-heading-case__preview--subsection">
+                    <UiGrid :columns="2" gap="lg">
+                      <UiHeadingBlock align="start" size="subsection">
+                        <template #title><h3>Open positions</h3></template>
+                      </UiHeadingBlock>
+                      <UiHeadingBlock align="start" size="subsection">
+                        <template #title><h3>The crew</h3></template>
+                        <template #description>
+                          <p>People building Looping Louie from hangars around the world.</p>
+                        </template>
+                      </UiHeadingBlock>
+                    </UiGrid>
+                  </div>
+                </section>
               </div>
 
               <div class="ds-properties">
@@ -657,7 +742,8 @@ onBeforeUnmount(() => {
                   </div>
                   <p class="ds-property__copy">
                     <strong>hero</strong> is reserved for the main page proposition.
-                    <strong>section</strong> is the default for all subsequent introductions.
+                    <strong>section</strong> is the default for subsequent introductions, and
+                    <strong>subsection</strong> introduces local collections with an h3.
                   </p>
                 </div>
                 <div class="ds-property">
@@ -692,13 +778,443 @@ onBeforeUnmount(() => {
               </footer>
             </article>
           </section>
+
+          <section id="layout" class="ds-section">
+            <div class="ds-section__heading">
+              <p class="ds-index">04</p>
+              <div>
+                <h2>Layout</h2>
+                <p>
+                  Containers establish the horizontal rhythm; sections establish vertical rhythm,
+                  surface, and shape. They compose together without knowing what content they carry.
+                </p>
+              </div>
+            </div>
+
+            <article id="container" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Container</h3>
+                    <code>UiContainer</code>
+                  </div>
+                  <p>Consistent content measures and responsive page gutters.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-container-demos">
+                <UiContainer size="reading" class="ds-container-demo">
+                  <div>
+                    <span>Reading</span>
+                    <code>48rem</code>
+                  </div>
+                </UiContainer>
+                <UiContainer size="default" class="ds-container-demo">
+                  <div>
+                    <span>Default</span>
+                    <code>78rem</code>
+                  </div>
+                </UiContainer>
+                <UiContainer size="wide" class="ds-container-demo">
+                  <div>
+                    <span>Wide</span>
+                    <code>83rem</code>
+                  </div>
+                </UiContainer>
+                <UiContainer size="full" class="ds-container-demo">
+                  <div>
+                    <span>Full</span>
+                    <code>No maximum</code>
+                  </div>
+                </UiContainer>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Reading</span>
+                    <code>size="reading"</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Long-form copy, legal text, documentation, and any passage where comfortable
+                    line length matters more than filling the available space.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Default</span>
+                    <code>size="default"</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Navigation, page headings, focused product content, and the majority of ordinary
+                    page sections. This is the default when size is omitted.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Wide</span>
+                    <code>size="wide"</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Card grids, pricing tables, media, logo clouds, and compositions that benefit
+                    from using more of the viewport without touching its edges.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Full</span>
+                    <code>size="full"</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Removes the maximum width but preserves responsive gutters. Omit the container
+                    entirely when an image or background must be genuinely full-bleed.
+                  </p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Gutters</span>
+                <p>All sizes share fluid gutters from 18px on small screens to 24px on larger screens.</p>
+              </footer>
+            </article>
+
+            <article id="section" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Section</h3>
+                    <code>UiSection</code>
+                  </div>
+                  <p>Full-width tonal bands and rounded content islands with shared spacing.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-section-demos">
+                <div class="ds-section-demo">
+                  <div class="ds-section-demo__meta">
+                    <span>Canvas</span>
+                    <code>surface="canvas"</code>
+                  </div>
+                  <UiSection as="div" surface="canvas" space="sm">
+                    <UiContainer size="reading">
+                      <h4>The continuous page background</h4>
+                      <p>Use as the quiet base layer beneath bands and raised surfaces.</p>
+                    </UiContainer>
+                  </UiSection>
+                </div>
+
+                <div class="ds-section-demo">
+                  <div class="ds-section-demo__meta">
+                    <span>Subtle band</span>
+                    <code>surface="subtle"</code>
+                  </div>
+                  <UiSection as="div" surface="subtle" space="sm">
+                    <UiContainer size="reading">
+                      <h4>A gentle change of altitude</h4>
+                      <p>Separate chapters without introducing a floating card.</p>
+                    </UiContainer>
+                  </UiSection>
+                </div>
+
+                <div class="ds-section-demo ds-section-demo--padded">
+                  <div class="ds-section-demo__meta">
+                    <span>Raised island</span>
+                    <code>surface="raised" · rounded · backdrop="bottom"</code>
+                  </div>
+                  <UiSection as="div" surface="raised" space="sm" rounded backdrop="bottom">
+                    <UiContainer size="reading">
+                      <h4>A bounded, elevated composition</h4>
+                      <p>Use for showcases, media panels, feature groups, and footer islands.</p>
+                    </UiContainer>
+                  </UiSection>
+                </div>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Surface</span>
+                    <code>surface</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    <strong>transparent</strong> inherits its surroundings. <strong>canvas</strong>
+                    establishes the page base, <strong>subtle</strong> creates a tonal band, and
+                    <strong>raised</strong> creates the brightest surface.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Backdrop</span>
+                    <code>backdrop="bottom"</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Adds a full-bleed tonal layer behind the lower edge. Pair it with
+                    <strong>rounded</strong> to expose the page background at both corners.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Spacing</span>
+                    <code>space</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Choose <strong>none</strong>, <strong>sm</strong>, <strong>md</strong>, or
+                    <strong>lg</strong>. The values are fluid and control vertical padding only.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Shape</span>
+                    <code>rounded</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Rounded sections use the shared large radius, clip overflowing media, and gain
+                    a border. Reserve them for content that should read as an island, not every band.
+                  </p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Composition</span>
+                <p>
+                  Section owns the vertical and tonal layer. Place a Container inside it to align
+                  content; place Section inside a wide Container when the rounded surface itself
+                  must have a maximum width.
+                </p>
+              </footer>
+            </article>
+          </section>
+
+          <section id="collections" class="ds-section">
+            <div class="ds-section__heading">
+              <p class="ds-index">05</p>
+              <div>
+                <h2>Collections</h2>
+                <p>
+                  Repeated content uses a small set of layout and surface primitives. The grid owns
+                  distribution, the card owns presentation, and the page still owns the data.
+                </p>
+              </div>
+            </div>
+
+            <article id="grid-card" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Grid and card</h3>
+                    <code>UiGrid · UiCard</code>
+                  </div>
+                  <p>Composable grids for visual features, editorial content, books, and releases.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <div class="ds-collection-example__heading">
+                  <span>Media cards</span>
+                  <code>columns="3" · variant="media"</code>
+                </div>
+                <UiGrid :columns="3" gap="md">
+                  <UiCard to="#grid-card" variant="media">
+                    <template #eyebrow>Use case</template>
+                    <template #title><h4>Internal agents</h4></template>
+                    <template #description><p>Automate the work that keeps your team circling the same runway.</p></template>
+                    <template #media><div class="ds-media-visual ds-media-visual--messages" /></template>
+                    <template #media-hover><div class="ds-media-visual ds-media-visual--messages is-animated" /></template>
+                  </UiCard>
+                  <UiCard to="#grid-card" variant="media">
+                    <template #eyebrow>Use case</template>
+                    <template #title><h4>Customer-facing agents</h4></template>
+                    <template #description><p>Answer, complete tasks, and hand off without losing context.</p></template>
+                    <template #media><div class="ds-media-visual ds-media-visual--signal" /></template>
+                    <template #media-hover><div class="ds-media-visual ds-media-visual--signal is-animated" /></template>
+                  </UiCard>
+                  <UiCard to="#grid-card" variant="media">
+                    <template #eyebrow>Use case</template>
+                    <template #title><h4>Developer platform agents</h4></template>
+                    <template #description><p>Build reliable AI operations on shared primitives.</p></template>
+                    <template #media><div class="ds-media-visual ds-media-visual--console" /></template>
+                    <template #media-hover><div class="ds-media-visual ds-media-visual--console is-animated" /></template>
+                  </UiCard>
+                </UiGrid>
+              </div>
+
+              <div class="ds-collection-example">
+                <div class="ds-collection-example__heading">
+                  <span>Agent books and latest releases</span>
+                  <code>columns="2" · editorial + row</code>
+                </div>
+                <UiGrid :columns="2" gap="md">
+                  <div class="ds-resource-group">
+                    <span>Agent books</span>
+                    <UiCard to="#grid-card" variant="editorial">
+                      <template #eyebrow>Field manual · Volume 01</template>
+                      <template #title><h4>Principles of Building Reliable Loops</h4></template>
+                      <template #description><p>A practical guide to agents that know when to take another lap.</p></template>
+                      <template #meta>240K+ copies distributed</template>
+                    </UiCard>
+                  </div>
+                  <div class="ds-resource-group">
+                    <span>Latest releases</span>
+                    <UiCard to="#grid-card" variant="row">
+                      <template #title><h4>Human checkpoints</h4></template>
+                      <template #trailing><time datetime="2026-08-05">Aug 5</time></template>
+                    </UiCard>
+                    <UiCard to="#grid-card" variant="row">
+                      <template #title><h4>Persistent loop memory</h4></template>
+                      <template #trailing><time datetime="2026-08-03">Aug 3</time></template>
+                    </UiCard>
+                    <UiCard to="#grid-card" variant="row">
+                      <template #title><h4>Provider fallback policies</h4></template>
+                      <template #trailing><time datetime="2026-07-28">Jul 28</time></template>
+                    </UiCard>
+                  </div>
+                </UiGrid>
+              </div>
+
+              <div class="ds-collection-example">
+                <div class="ds-collection-example__heading">
+                  <span>Articles</span>
+                  <code>columns="2" · variant="editorial"</code>
+                </div>
+                <UiGrid :columns="2" gap="md">
+                  <UiCard to="#grid-card" variant="editorial">
+                    <template #eyebrow>Engineering</template>
+                    <template #title><h4>How to review long-running agents without slowing them down</h4></template>
+                    <template #description><p>Patterns for parallel review, confidence thresholds, and useful retries.</p></template>
+                    <template #meta>Aug 1, 2026</template>
+                    <template #trailing><span># foundations</span></template>
+                  </UiCard>
+                  <UiCard to="#grid-card" variant="editorial">
+                    <template #eyebrow>Architecture</template>
+                    <template #title><h4>Choosing models for generators, reviewers, and aggregators</h4></template>
+                    <template #description><p>Match model strengths to roles without turning configuration into archaeology.</p></template>
+                    <template #meta>Jul 26, 2026</template>
+                    <template #trailing><span># models</span></template>
+                  </UiCard>
+                </UiGrid>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Grid</span><code>columns · gap</code></div>
+                  <p class="ds-property__copy">Columns collapse from four or three to two, then to one. Grid never styles its children.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Card</span><code>media · editorial · row</code></div>
+                  <p class="ds-property__copy">Cards share surface, radius, and slots. Media cards crossfade to the optional hover layer on hover or keyboard focus.</p>
+                </div>
+              </div>
+            </article>
+
+            <article id="grid-list" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Grid list</h3>
+                    <code>UiGridList</code>
+                  </div>
+                  <p>Aligned directory rows with leading, metadata, and trailing slots.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-collection-example ds-collection-example--directory">
+                <div class="ds-collection-example__heading">
+                  <span>Customer directory</span>
+                  <code>variant="plain" · clickable</code>
+                </div>
+                <UiGridList :items="customerRows" aria-label="Customer directory" clickable>
+                  <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
+                  <template #metadata="{ item }">{{ item.categories }}</template>
+                  <template #trailing><span class="ds-grid-list-link">Read story →</span></template>
+                </UiGridList>
+              </div>
+
+              <div class="ds-collection-example">
+                <div class="ds-collection-example__heading">
+                  <span>Open positions</span>
+                  <code>variant="surface" · clickable</code>
+                </div>
+                <UiGridList :items="jobRows" variant="surface" aria-label="Open positions" clickable>
+                  <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
+                  <template #metadata="{ item }">{{ item.categories }}</template>
+                  <template #trailing><UiButton as="span" variant="gray" size="sm">Apply</UiButton></template>
+                </UiGridList>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Responsive</span>
+                <p>Clickable rows render as links when an item provides <code>to</code> or <code>href</code>, remain keyboard accessible, and keep the trailing affordance visible.</p>
+              </footer>
+            </article>
+
+            <article id="team-grid" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Team directory</h3>
+                    <code>UiGrid</code>
+                  </div>
+                  <p>A directory is content inside the grid, not another card variant.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiHeadingBlock align="start" size="subsection">
+                  <template #title><h3>The crew</h3></template>
+                  <template #description><p>Six people keeping Louie in the air from around the world.</p></template>
+                </UiHeadingBlock>
+                <UiGrid :columns="3" gap="lg" class="ds-team-grid">
+                  <div v-for="member in teamMembers" :key="member.id" class="ds-team-member">
+                    <span class="ds-team-member__avatar">{{ member.initials }}</span>
+                    <div><strong>{{ member.name }}</strong><span>{{ member.role }}</span></div>
+                  </div>
+                </UiGrid>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Rule</span>
+                <p>Use cards only when each person needs a bounded surface or richer interaction. A simple directory does not.</p>
+              </footer>
+            </article>
+
+            <article id="accordion" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Accordion</h3>
+                    <code>UiAccordion</code>
+                  </div>
+                  <p>Progressive disclosure for frequently asked questions and dense supporting content.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-collection-example ds-collection-example--accordion">
+                <UiAccordion :items="faqItems" :default-open="['loop']" />
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Triggers expose expanded state and control labelled regions. Reduced-motion preferences disable the transition.</p>
+              </footer>
+            </article>
+          </section>
         </div>
-      </div>
+          </div>
+        </UiContainer>
+      </UiSection>
     </main>
 
     <footer class="ds-footer">
-      <p>Looping Louie Design System</p>
-      <span>Built to go in circles without making the user dizzy.</span>
+      <UiContainer size="default" class="ds-footer__container">
+        <p>Looping Louie Design System</p>
+        <span>Built to go in circles without making the user dizzy.</span>
+      </UiContainer>
     </footer>
   </div>
 </template>
@@ -722,27 +1238,34 @@ onBeforeUnmount(() => {
   overflow-x: clip;
   color: var(--ll-color-text);
   background-color: var(--ll-color-canvas);
+  font-family: var(--ll-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.ds-page-canvas {
   background-image:
     linear-gradient(rgba(41, 47, 51, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(41, 47, 51, 0.035) 1px, transparent 1px);
   background-size: 4rem 4rem;
-  font-family: var(--ll-font-sans);
-  -webkit-font-smoothing: antialiased;
 }
 
 .ds-header {
   position: sticky;
   top: 0;
   z-index: 20;
+  min-height: 4.25rem;
+  background: rgba(245, 247, 248, 0.88);
+  border-bottom: 1px solid var(--ll-color-border);
+  backdrop-filter: blur(16px);
+}
+
+.ds-header__container {
   display: flex;
   min-height: 4.25rem;
   align-items: center;
   justify-content: space-between;
   gap: var(--ll-space-6);
-  padding: var(--ll-space-3) max(var(--ll-space-6), calc((100vw - 86rem) / 2));
-  background: rgba(245, 247, 248, 0.88);
-  border-bottom: 1px solid var(--ll-color-border);
-  backdrop-filter: blur(16px);
+  padding-block: var(--ll-space-3);
 }
 
 .ds-brand {
@@ -913,10 +1436,12 @@ onBeforeUnmount(() => {
 .ds-shell {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
-  max-width: 86rem;
-  margin: 0 auto;
   background: rgba(245, 247, 248, 0.92);
   border-inline: 1px solid var(--ll-color-border);
+}
+
+.ds-shell-frame {
+  padding-block: 0;
 }
 
 .ds-sidebar {
@@ -1425,6 +1950,103 @@ onBeforeUnmount(() => {
   padding: var(--ll-space-6) var(--ll-space-5);
 }
 
+.ds-container-demos {
+  display: grid;
+  gap: var(--ll-space-5);
+  overflow: hidden;
+  padding: clamp(2rem, 5vw, 4rem) 0;
+  background-color: var(--ll-color-surface-raised);
+  background-image:
+    linear-gradient(rgba(41, 47, 51, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 47, 51, 0.04) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-container-demo > div {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ll-space-4);
+  padding: var(--ll-space-4) var(--ll-space-5);
+  color: var(--ll-color-ink);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--ll-color-border-strong);
+  border-radius: var(--ll-radius-md);
+  box-shadow: 0 0.5rem 1.5rem rgba(41, 47, 51, 0.06);
+}
+
+.ds-container-demo span {
+  font-size: var(--ll-text-sm);
+  font-weight: 650;
+}
+
+.ds-container-demo code {
+  color: var(--ll-color-text-muted);
+  font-size: 0.6875rem;
+}
+
+.ds-section-demos {
+  display: grid;
+  gap: 1px;
+  background: var(--ll-color-border);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-section-demo {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--ll-color-canvas);
+}
+
+.ds-section-demo__meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ll-space-4);
+  padding: var(--ll-space-4) var(--ll-space-6);
+  background: var(--ll-color-surface);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-section-demo__meta span {
+  color: var(--ll-color-ink);
+  font-size: var(--ll-text-xs);
+  font-weight: 650;
+}
+
+.ds-section-demo__meta code {
+  color: var(--ll-color-text-muted);
+  font-size: 0.625rem;
+}
+
+.ds-section-demo--padded > :deep(.ui-section) {
+  width: auto;
+  margin: var(--ll-space-6);
+}
+
+.ds-section-demo :deep(h4) {
+  margin: 0;
+  color: var(--ll-color-ink);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 620;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.ds-section-demo :deep(p) {
+  max-width: 38rem;
+  margin: var(--ll-space-3) 0 0;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-sm);
+  line-height: 1.55;
+}
+
 .ds-heading-cases {
   display: grid;
   gap: 1px;
@@ -1495,6 +2117,10 @@ onBeforeUnmount(() => {
   min-height: 24rem;
 }
 
+.ds-heading-case__preview--subsection {
+  min-height: 18rem;
+}
+
 .ds-heading-case__preview--statement :deep(.ui-heading-block__title h2 > span) {
   color: var(--ll-color-text-muted);
 }
@@ -1527,6 +2153,253 @@ onBeforeUnmount(() => {
 .ds-property__copy strong {
   color: var(--ll-color-ink);
   font-weight: 650;
+}
+
+.ds-collection-example {
+  display: grid;
+  gap: var(--ll-space-6);
+  padding: clamp(2rem, 5vw, 4rem);
+  background-color: var(--ll-color-surface-raised);
+  background-image:
+    linear-gradient(rgba(41, 47, 51, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 47, 51, 0.035) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-collection-example--directory {
+  padding-inline: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.ds-collection-example__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ll-space-3);
+}
+
+.ds-collection-example__heading span,
+.ds-resource-group > span {
+  color: var(--ll-color-ink);
+  font-size: var(--ll-text-sm);
+  font-weight: 650;
+}
+
+.ds-collection-example__heading code {
+  padding: 0.35rem 0.5rem;
+  color: var(--ll-color-text-muted);
+  background: var(--ll-color-surface-muted);
+  border-radius: 0.375rem;
+  font-size: 0.625rem;
+}
+
+.ds-resource-group {
+  display: grid;
+  align-content: start;
+  gap: var(--ll-space-3);
+}
+
+.ds-resource-group > span {
+  margin-bottom: var(--ll-space-2);
+}
+
+.ds-resource-group :deep(.ui-card--row) {
+  min-height: 5rem;
+}
+
+.ds-resource-group :deep(.ui-card--row h4) {
+  font-size: var(--ll-text-md);
+}
+
+.ds-resource-group time {
+  color: var(--ll-color-text-faint);
+  font-size: var(--ll-text-xs);
+}
+
+.ds-media-visual {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: #e7edf1;
+}
+
+.ds-media-visual::before,
+.ds-media-visual::after {
+  position: absolute;
+  content: '';
+}
+
+.ds-media-visual--messages {
+  background-image:
+    linear-gradient(135deg, rgba(34, 102, 153, 0.2), transparent 58%),
+    linear-gradient(#eef3f6, #dce5ea);
+}
+
+.ds-media-visual--messages::before {
+  width: 68%;
+  height: 34%;
+  top: 18%;
+  left: 12%;
+  background:
+    linear-gradient(var(--ll-color-gray-300) 0 0) 1rem 1rem / 58% 0.35rem no-repeat,
+    linear-gradient(var(--ll-color-gray-200) 0 0) 1rem 1.75rem / 78% 0.35rem no-repeat,
+    #ffffff;
+  border: 1px solid var(--ll-color-border);
+  border-radius: var(--ll-radius-md);
+  box-shadow: var(--ll-shadow-raised);
+}
+
+.ds-media-visual--messages::after {
+  width: 54%;
+  height: 26%;
+  right: 10%;
+  bottom: 12%;
+  background: var(--ll-color-gray-950);
+  border-radius: var(--ll-radius-md);
+  box-shadow: var(--ll-shadow-raised);
+}
+
+.ds-media-visual--signal {
+  background:
+    linear-gradient(180deg, transparent 10%, rgba(255, 255, 255, 0.6)),
+    repeating-linear-gradient(90deg, var(--ll-color-blue-300) 0 0.55rem, transparent 0.55rem 1.1rem),
+    var(--ll-color-blue-100);
+  background-size: 100% 100%, 200% 70%, 100% 100%;
+  background-position: center, left bottom, center;
+  background-repeat: no-repeat;
+}
+
+.ds-media-visual--signal::after {
+  width: 2.75rem;
+  height: 2.75rem;
+  inset: 0;
+  margin: auto;
+  background: url('/brand/twemoji-small-airplane.svg') center / contain no-repeat;
+  filter: drop-shadow(0 0.5rem 0.8rem rgba(41, 47, 51, 0.2));
+}
+
+.ds-media-visual--console {
+  background:
+    linear-gradient(90deg, transparent 30%, rgba(255, 255, 255, 0.06) 30%),
+    var(--ll-color-gray-950);
+}
+
+.ds-media-visual--console::before {
+  inset: 16% 10%;
+  background:
+    linear-gradient(var(--ll-color-red-500) 0 0) 10% 12% / 45% 0.35rem no-repeat,
+    linear-gradient(var(--ll-color-blue-300) 0 0) 10% 32% / 72% 0.35rem no-repeat,
+    linear-gradient(var(--ll-color-gray-600) 0 0) 10% 52% / 58% 0.35rem no-repeat,
+    linear-gradient(var(--ll-color-blue-300) 0 0) 10% 72% / 80% 0.35rem no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--ll-radius-sm);
+}
+
+.ds-media-visual.is-animated::before {
+  animation: ds-media-float 1.2s ease-in-out infinite alternate;
+}
+
+.ds-media-visual--signal.is-animated {
+  animation: ds-media-signal 1.8s linear infinite;
+}
+
+.ds-media-visual--signal.is-animated::after {
+  animation: ds-media-plane 1.1s ease-in-out infinite alternate;
+}
+
+.ds-grid-list-link {
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-sm);
+  text-decoration: none;
+}
+
+.ds-grid-list-link:hover {
+  color: var(--ll-color-primary);
+}
+
+.ds-collection-example :deep(.ui-grid-list__leading strong) {
+  color: var(--ll-color-ink);
+  font-size: var(--ll-text-md);
+  font-weight: 650;
+}
+
+.ds-team-grid {
+  margin-top: var(--ll-space-4);
+}
+
+.ds-team-member {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--ll-space-3);
+  padding: var(--ll-space-3);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--ll-radius-lg);
+  transition:
+    border-color var(--ll-duration-normal) var(--ll-ease-out),
+    background var(--ll-duration-normal) var(--ll-ease-out),
+    box-shadow var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ds-team-member:hover {
+  background: #ffffff;
+  border-color: var(--ll-color-border-strong);
+  box-shadow: var(--ll-shadow-raised);
+}
+
+.ds-team-member__avatar {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  place-items: center;
+  color: #ffffff;
+  background: linear-gradient(145deg, var(--ll-color-blue-600), var(--ll-color-gray-950));
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--ll-color-border);
+  font: 600 0.6875rem / 1 var(--ll-font-mono);
+}
+
+.ds-team-member > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.ds-team-member strong {
+  overflow: hidden;
+  color: var(--ll-color-ink);
+  font-size: var(--ll-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-team-member div > span {
+  overflow: hidden;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-collection-example--accordion :deep(.ui-accordion) {
+  width: min(100%, 58rem);
+  margin-inline: auto;
+}
+
+@keyframes ds-media-float {
+  to { transform: translateY(-0.5rem); }
+}
+
+@keyframes ds-media-signal {
+  to { background-position: center, 2.2rem bottom, center; }
+}
+
+@keyframes ds-media-plane {
+  to { transform: translate(0.75rem, -0.5rem) rotate(4deg); }
 }
 
 :deep(.ds-command-button) {
@@ -1594,13 +2467,16 @@ onBeforeUnmount(() => {
 }
 
 .ds-footer {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--ll-space-6);
-  padding: var(--ll-space-8) max(var(--ll-space-6), calc((100vw - 86rem) / 2));
   color: var(--ll-color-text-muted);
   background: var(--ll-color-ink);
   font-size: var(--ll-text-xs);
+}
+
+.ds-footer__container {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ll-space-6);
+  padding-block: var(--ll-space-8);
 }
 
 .ds-footer p {
@@ -1610,10 +2486,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 64rem) {
-  .ds-header {
-    padding-inline: var(--ll-space-5);
-  }
-
   .ds-version,
   .ds-header__link {
     display: none;
@@ -1697,6 +2569,16 @@ onBeforeUnmount(() => {
     padding: var(--ll-space-12) var(--ll-space-5);
   }
 
+  .ds-collection-example {
+    padding: var(--ll-space-6) var(--ll-space-4);
+  }
+
+  .ds-collection-example__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--ll-space-2);
+  }
+
   .ds-heading-aside {
     align-items: flex-start;
   }
@@ -1718,9 +2600,8 @@ onBeforeUnmount(() => {
     min-width: 0;
   }
 
-  .ds-footer {
+  .ds-footer__container {
     flex-direction: column;
-    padding: var(--ll-space-8) var(--ll-space-6);
   }
 }
 
@@ -1734,6 +2615,16 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
   :global(html) {
     scroll-behavior: auto;
+  }
+
+  .ds-media-visual.is-animated,
+  .ds-media-visual.is-animated::before,
+  .ds-media-visual.is-animated::after {
+    animation: none;
+  }
+
+  .ds-team-member {
+    transition: none;
   }
 }
 </style>

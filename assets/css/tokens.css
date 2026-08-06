@@ -23,6 +23,8 @@
   --ll-color-surface: #fafbfc;
   --ll-color-surface-raised: #ffffff;
   --ll-color-surface-muted: var(--ll-color-gray-100);
+  --ll-color-section-subtle: #eef2f4;
+  --ll-color-section-backdrop: var(--ll-color-gray-100);
   --ll-color-ink: var(--ll-color-gray-950);
   --ll-color-text: var(--ll-color-gray-950);
   --ll-color-text-muted: var(--ll-color-gray-600);

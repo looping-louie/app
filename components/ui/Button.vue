@@ -4,6 +4,7 @@ type ButtonSize = 'sm' | 'md' | 'lg'
 type ButtonType = 'button' | 'submit' | 'reset'
 
 const props = withDefaults(defineProps<{
+  as?: string
   variant?: ButtonVariant
   size?: ButtonSize
   type?: ButtonType
@@ -15,6 +16,7 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   block?: boolean
 }>(), {
+  as: 'button',
   variant: 'primary',
   size: 'md',
   type: 'button',
@@ -35,7 +37,7 @@ const isUnavailable = computed(() => props.disabled || props.loading)
 const componentTag = computed(() => {
   if (props.to) return resolveComponent('NuxtLink')
   if (props.href) return 'a'
-  return 'button'
+  return props.as
 })
 
 const componentAttributes = computed(() => {
@@ -51,10 +53,12 @@ const componentAttributes = computed(() => {
     }
   }
 
-  return {
+  if (props.as === 'button') return {
     type: props.type,
     disabled: isUnavailable.value,
   }
+
+  return {}
 })
 
 function handleClick(event: MouseEvent) {
