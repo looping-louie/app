@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-stage ds-stage--buttons">
-                <UiButton variant="primary" size="lg">Crear loop</UiButton>
+                <UiButton variant="primary" size="md">Crear loop</UiButton>
                 <UiButton variant="secondary">Ver documentación</UiButton>
                 <UiButton variant="stroke">Cancelar</UiButton>
               </div>
@@ -277,6 +277,7 @@ onBeforeUnmount(() => {
                     <UiButton variant="primary" size="sm">Primary</UiButton>
                     <UiButton variant="secondary" size="sm">Secondary</UiButton>
                     <UiButton variant="stroke" size="sm">Stroke</UiButton>
+                    <UiButton variant="gray" size="sm">Gray 950</UiButton>
                   </div>
                 </div>
 
@@ -419,6 +420,7 @@ onBeforeUnmount(() => {
                   <UiSegmentedControl
                     v-model="deployment"
                     :options="deploymentOptions"
+                    accent="gray"
                     aria-label="Tipo de despliegue"
                   />
                   <small>Seleccionado: {{ deployment }}</small>
@@ -428,6 +430,7 @@ onBeforeUnmount(() => {
                   <UiSegmentedControl
                     v-model="environment"
                     :options="environmentOptions"
+                    accent="primary"
                     aria-label="Entorno de ejecución"
                   />
                   <small>Seleccionado: {{ environment }}</small>

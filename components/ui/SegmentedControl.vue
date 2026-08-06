@@ -7,14 +7,18 @@ interface SegmentOption {
   disabled?: boolean
 }
 
+type SegmentAccent = 'secondary' | 'primary' | 'gray'
+
 const props = withDefaults(defineProps<{
   modelValue: string
   options: SegmentOption[]
   ariaLabel?: string
   fullWidth?: boolean
+  accent?: SegmentAccent
 }>(), {
   ariaLabel: 'Seleccionar una opción',
   fullWidth: false,
+  accent: 'secondary',
 })
 
 const emit = defineEmits<{
@@ -82,7 +86,10 @@ function handleKeydown(event: KeyboardEvent, index: number) {
 <template>
   <div
     class="ui-segmented-control"
-    :class="{ 'ui-segmented-control--full': fullWidth }"
+    :class="[
+      `ui-segmented-control--${accent}`,
+      { 'ui-segmented-control--full': fullWidth },
+    ]"
     :style="segmentStyle"
     role="radiogroup"
     :aria-label="ariaLabel"
@@ -114,41 +121,77 @@ function handleKeydown(event: KeyboardEvent, index: number) {
 
 <style scoped>
 .ui-segmented-control {
+  --ui-segment-track-fill: #f7f6f3;
+  --ui-segment-track-border-start: #ffffff;
+  --ui-segment-track-border-end: #d2d1cb;
+
   position: relative;
   isolation: isolate;
   display: inline-grid;
   grid-template-columns: repeat(var(--ui-segment-count), minmax(6.75rem, 1fr));
-  height: 2.5rem;
+  box-sizing: border-box;
+  height: 2.125rem;
   max-width: 100%;
-  padding: 0.125rem;
-  background: var(--ll-control-surface);
-  border: 0;
+  padding: 0;
+  background-image:
+    linear-gradient(var(--ui-segment-track-fill), var(--ui-segment-track-fill)),
+    linear-gradient(180deg, var(--ui-segment-track-border-start) 0%, var(--ui-segment-track-border-end) 100%);
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  border: 1.5px solid transparent;
   border-radius: var(--ll-radius-pill);
-  box-shadow:
-    0 7px 18px rgba(25, 26, 23, 0.1),
-    0 1px 3px rgba(25, 26, 23, 0.07);
+  box-shadow: 0 4px 9px rgba(25, 26, 23, 0.1);
 }
 
 .ui-segmented-control--full {
   width: 100%;
 }
 
+.ui-segmented-control:has(.ui-segmented-control__option:hover:not(:disabled):not([data-selected="true"])) {
+  --ui-segment-track-fill: #fcfbf8;
+  --ui-segment-track-border-start: #ffffff;
+  --ui-segment-track-border-end: #dad9d4;
+}
+
 .ui-segmented-control__indicator {
+  --ui-segment-indicator-fill: #e7e6e2;
+  --ui-segment-indicator-border-start: #ffffff;
+  --ui-segment-indicator-border-end: #bebdb7;
+
   position: absolute;
   z-index: -1;
-  inset-block: 0.125rem;
-  left: 0.125rem;
-  width: calc((100% - 0.25rem) / var(--ui-segment-count));
-  border: 0;
+  inset-block: -0.09375rem;
+  left: -0.09375rem;
+  width: calc((100% + 0.1875rem) / var(--ui-segment-count));
+  box-sizing: border-box;
+  border: 1.5px solid transparent;
   border-radius: var(--ll-radius-pill);
-  background: var(--ll-control-surface-selected);
-  box-shadow:
-    0 2px 5px rgba(25, 26, 23, 0.09),
-    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  background-image:
+    linear-gradient(var(--ui-segment-indicator-fill), var(--ui-segment-indicator-fill)),
+    linear-gradient(180deg, var(--ui-segment-indicator-border-start) 0%, var(--ui-segment-indicator-border-end) 100%);
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  box-shadow: 0 4px 9px rgba(25, 26, 23, 0.12);
   transform: translateX(calc(var(--ui-segment-index) * 100%));
   transition: transform 480ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
   pointer-events: none;
+}
+
+.ui-segmented-control--primary .ui-segmented-control__indicator {
+  --ui-segment-indicator-fill: var(--ll-color-primary);
+  --ui-segment-indicator-border-start: var(--ll-color-primary-highlight);
+  --ui-segment-indicator-border-end: var(--ll-color-primary-depth);
+
+  box-shadow: 0 4px 9px rgba(11, 45, 70, 0.28);
+}
+
+.ui-segmented-control--gray .ui-segmented-control__indicator {
+  --ui-segment-indicator-fill: var(--ll-color-gray-950);
+  --ui-segment-indicator-border-start: #ffffff;
+  --ui-segment-indicator-border-end: #050607;
+
+  box-shadow: 0 4px 9px rgba(17, 21, 24, 0.34);
 }
 
 .ui-segmented-control__option {
@@ -158,7 +201,7 @@ function handleKeydown(event: KeyboardEvent, index: number) {
   height: 100%;
   padding: 0 0.875rem;
   overflow: hidden;
-  color: var(--ll-color-text-muted);
+  color: #333333;
   background: transparent;
   border: 0;
   border-radius: var(--ll-radius-pill);
@@ -176,6 +219,14 @@ function handleKeydown(event: KeyboardEvent, index: number) {
 
 .ui-segmented-control__option[data-selected="true"] {
   color: var(--ll-color-ink);
+}
+
+.ui-segmented-control--primary .ui-segmented-control__option[data-selected="true"] {
+  color: #f4f8fb;
+}
+
+.ui-segmented-control--gray .ui-segmented-control__option[data-selected="true"] {
+  color: var(--ll-color-gray-050);
 }
 
 .ui-segmented-control__option:focus-visible {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type ButtonVariant = 'primary' | 'secondary' | 'stroke'
+type ButtonVariant = 'primary' | 'secondary' | 'stroke' | 'gray'
 type ButtonSize = 'sm' | 'md' | 'lg'
 type ButtonType = 'button' | 'submit' | 'reset'
 
@@ -98,7 +98,7 @@ function handleClick(event: MouseEvent) {
 
 <style scoped>
 .ui-button {
-  --ui-button-height: 2.5rem;
+  --ui-button-height: 2.125rem;
   --ui-button-padding: 0.875rem;
   --ui-button-font-size: 0.90625rem;
 
@@ -184,6 +184,10 @@ function handleClick(event: MouseEvent) {
   --ui-button-secondary-border-end: #c9c8c2;
 }
 
+.ui-button--secondary:active:not([aria-disabled="true"]) {
+  transform: scale(0.98);
+}
+
 .ui-button--stroke {
   --ui-button-stroke-fill: #f7f6f3;
   --ui-button-stroke-border-start: #ffffff;
@@ -210,21 +214,50 @@ function handleClick(event: MouseEvent) {
   transform: scale(0.98);
 }
 
+.ui-button--gray {
+  --ui-button-gray-fill: var(--ll-color-gray-950);
+  --ui-button-gray-border-start: #ffffff;
+  --ui-button-gray-border-end: #050607;
+
+  color: var(--ll-color-gray-050);
+  background-image:
+    linear-gradient(var(--ui-button-gray-fill), var(--ui-button-gray-fill)),
+    linear-gradient(180deg, var(--ui-button-gray-border-start) 0%, var(--ui-button-gray-border-end) 100%);
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  border-width: 1.5px;
+  border-color: transparent;
+  box-shadow: 0 4px 9px rgba(17, 21, 24, 0.34);
+}
+
+.ui-button--gray:hover:not([aria-disabled="true"]) {
+  --ui-button-gray-fill: #343c41;
+  --ui-button-gray-border-start: #ffffff;
+  --ui-button-gray-border-end: #090b0c;
+}
+
+.ui-button--gray:active:not([aria-disabled="true"]) {
+  transform: scale(0.98);
+}
+
 .ui-button--sm {
-  --ui-button-height: 2.125rem;
-  --ui-button-padding: 0.875rem;
+  --ui-button-height: 1.75rem;
+  --ui-button-padding: 0.75rem;
+  --ui-button-font-size: 0.8125rem;
+
+  gap: 0.375rem;
 }
 
 .ui-button--lg {
-  --ui-button-height: 2.875rem;
-  --ui-button-padding: 1.125rem;
-  --ui-button-font-size: 0.9375rem;
+  --ui-button-height: 2.5rem;
+  --ui-button-padding: 0.875rem;
+  --ui-button-font-size: 0.90625rem;
 }
 
-.ui-button--lg .ui-button__icon,
-.ui-button--lg .ui-button__icon :deep(svg) {
-  width: 1.125rem;
-  height: 1.125rem;
+.ui-button--sm .ui-button__icon,
+.ui-button--sm .ui-button__icon :deep(svg) {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .ui-button--block {
@@ -252,6 +285,11 @@ function handleClick(event: MouseEvent) {
   border-right-color: transparent;
   border-radius: 50%;
   animation: ui-button-spin 650ms linear infinite;
+}
+
+.ui-button--sm .ui-button__spinner {
+  width: 0.8125rem;
+  height: 0.8125rem;
 }
 
 @keyframes ui-button-spin {
