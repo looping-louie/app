@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import UiButton from '~/components/ui/Button.vue'
+import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
 definePageMeta({
@@ -22,6 +23,7 @@ const deployment = ref('cloud')
 const environment = ref('production')
 const catalog = ref('models')
 const settings = ref('api-keys')
+const headingDeployment = ref('platform')
 const copiedCommand = ref<string | null>(null)
 const copyError = ref<string | null>(null)
 let copyResetTimer: ReturnType<typeof setTimeout> | undefined
@@ -48,6 +50,11 @@ const settingsOptions = [
   { value: 'api-keys', label: 'API keys' },
   { value: 'mcps', label: 'MCPs' },
   { value: 'providers', label: 'Providers' },
+]
+
+const headingDeploymentOptions = [
+  { value: 'platform', label: 'Louie Cloud' },
+  { value: 'self-hosted', label: 'Self-hosted' },
 ]
 
 async function copyToClipboard(command: string) {
@@ -152,6 +159,8 @@ onBeforeUnmount(() => {
             <a href="#buttons">Buttons</a>
             <a href="#copy-command">Copyable command</a>
             <a href="#segmented-control">Segmented control</a>
+            <a href="#composition">03 · Composition</a>
+            <a href="#heading-block">Heading block</a>
           </nav>
           <div class="ds-sidebar__note">
             <span class="ds-sidebar__note-dot" />
@@ -505,6 +514,181 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>Keyboard</span>
                 <p>Supports arrow keys, Home, and End following the accessible pattern for a group of options.</p>
+              </footer>
+            </article>
+          </section>
+
+          <section id="composition" class="ds-section">
+            <div class="ds-section__heading">
+              <p class="ds-index">03</p>
+              <div>
+                <h2>Composition</h2>
+                <p>
+                  Reusable arrangements for introducing pages and sections. The structure stays
+                  consistent while each page owns its copy, controls, and behaviour.
+                </p>
+              </div>
+            </div>
+
+            <article id="heading-block" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Heading block</h3>
+                    <code>UiHeadingBlock</code>
+                  </div>
+                  <p>Page and section introductions with centered or split composition.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-heading-cases">
+                <section class="ds-heading-case">
+                  <header class="ds-heading-case__meta">
+                    <div>
+                      <span>Centered · Hero</span>
+                      <p>Use for a page hero that needs context, explanation, and primary actions.</p>
+                    </div>
+                    <code>layout="centered" · size="hero"</code>
+                  </header>
+                  <div class="ds-heading-case__preview ds-heading-case__preview--hero">
+                    <UiHeadingBlock layout="centered" size="hero">
+                      <template #eyebrow>Agent observability</template>
+                      <template #title>
+                        <h2>Every loop, fully visible in production</h2>
+                      </template>
+                      <template #description>
+                        <p>
+                          Follow every model call, retry, and human handoff without adding another
+                          dashboard to the cockpit.
+                        </p>
+                      </template>
+                      <template #actions>
+                        <UiButton>Get started</UiButton>
+                        <UiButton variant="stroke">Documentation</UiButton>
+                      </template>
+                    </UiHeadingBlock>
+                  </div>
+                </section>
+
+                <section class="ds-heading-case">
+                  <header class="ds-heading-case__meta">
+                    <div>
+                      <span>Centered · Statement</span>
+                      <p>Use between sections when the heading itself is the entire message.</p>
+                    </div>
+                    <code>layout="centered" · size="section"</code>
+                  </header>
+                  <div class="ds-heading-case__preview ds-heading-case__preview--statement">
+                    <UiHeadingBlock layout="centered" size="section">
+                      <template #title>
+                        <h2>
+                          Loops. Skills. Personas.
+                          <span>Louie brings the whole flight crew.</span>
+                        </h2>
+                      </template>
+                    </UiHeadingBlock>
+                  </div>
+                </section>
+
+                <section class="ds-heading-case">
+                  <header class="ds-heading-case__meta">
+                    <div>
+                      <span>Split · With selector</span>
+                      <p>Use when a page-level choice changes the content immediately below.</p>
+                    </div>
+                    <code>layout="split" · #aside</code>
+                  </header>
+                  <div class="ds-heading-case__preview">
+                    <UiHeadingBlock layout="split" size="section">
+                      <template #title>
+                        <h2>Plans that scale with your loops</h2>
+                      </template>
+                      <template #aside>
+                        <div class="ds-heading-aside">
+                          <UiSegmentedControl
+                            v-model="headingDeployment"
+                            :options="headingDeploymentOptions"
+                            accent="gray"
+                            aria-label="Deployment model"
+                          />
+                        </div>
+                      </template>
+                    </UiHeadingBlock>
+                  </div>
+                </section>
+
+                <section class="ds-heading-case">
+                  <header class="ds-heading-case__meta">
+                    <div>
+                      <span>Split · With action</span>
+                      <p>Use when the heading introduces a collection with one clear next step.</p>
+                    </div>
+                    <code>layout="split" · #aside</code>
+                  </header>
+                  <div class="ds-heading-case__preview">
+                    <UiHeadingBlock layout="split" size="section">
+                      <template #title>
+                        <h2>Meet the teams flying with Louie</h2>
+                      </template>
+                      <template #aside>
+                        <UiButton variant="stroke">Talk to the crew</UiButton>
+                      </template>
+                    </UiHeadingBlock>
+                  </div>
+                </section>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Layout</span>
+                    <code>layout</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    <strong>centered</strong> stacks content on one axis. <strong>split</strong>
+                    reserves an independent aside column and stacks it below the title on mobile.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Scale</span>
+                    <code>size</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    <strong>hero</strong> is reserved for the main page proposition.
+                    <strong>section</strong> is the default for all subsequent introductions.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Alignment</span>
+                    <code>align</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Defaults to <strong>center</strong> for centered layouts and <strong>start</strong>
+                    for split layouts. Override only when the surrounding composition requires it.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Content</span>
+                    <code>slots</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Use <strong>eyebrow</strong>, <strong>title</strong>, <strong>description</strong>,
+                    <strong>actions</strong>, and <strong>aside</strong> independently. Only title is
+                    normally required; the page supplies the correct semantic heading level.
+                  </p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Responsibility</span>
+                <p>
+                  The component controls rhythm, measure, and responsive layout. The consuming page
+                  owns heading semantics, copy, controls, navigation, and click behaviour.
+                </p>
               </footer>
             </article>
           </section>
@@ -1241,6 +1425,110 @@ onBeforeUnmount(() => {
   padding: var(--ll-space-6) var(--ll-space-5);
 }
 
+.ds-heading-cases {
+  display: grid;
+  gap: 1px;
+  background: var(--ll-color-border);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-heading-case {
+  min-width: 0;
+  background: var(--ll-color-surface-raised);
+}
+
+.ds-heading-case__meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ll-space-6);
+  padding: var(--ll-space-5) var(--ll-space-6);
+  background: var(--ll-color-surface);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-heading-case__meta > div {
+  display: grid;
+  gap: var(--ll-space-2);
+}
+
+.ds-heading-case__meta span {
+  color: var(--ll-color-ink);
+  font-size: var(--ll-text-sm);
+  font-weight: 650;
+}
+
+.ds-heading-case__meta p {
+  margin: 0;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-xs);
+  line-height: 1.45;
+}
+
+.ds-heading-case__meta code {
+  flex: none;
+  padding: 0.35rem 0.5rem;
+  color: var(--ll-color-text-muted);
+  background: var(--ll-color-surface-muted);
+  border-radius: 0.375rem;
+  font: 500 0.625rem / 1 var(--ll-font-mono);
+  white-space: nowrap;
+}
+
+.ds-heading-case__preview {
+  min-height: 18rem;
+  display: flex;
+  align-items: center;
+  padding: clamp(2.5rem, 7vw, 6rem);
+  background-color: var(--ll-color-surface-raised);
+  background-image:
+    linear-gradient(rgba(41, 47, 51, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 47, 51, 0.035) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+}
+
+.ds-heading-case__preview--hero {
+  min-height: 34rem;
+}
+
+.ds-heading-case__preview--statement {
+  min-height: 24rem;
+}
+
+.ds-heading-case__preview--statement :deep(.ui-heading-block__title h2 > span) {
+  color: var(--ll-color-text-muted);
+}
+
+.ds-heading-aside {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--ll-space-4);
+}
+
+.ds-heading-aside > p {
+  max-width: 22rem;
+  margin: 0;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-sm);
+  line-height: 1.45;
+  text-align: right;
+}
+
+.ds-property__copy {
+  max-width: 50rem;
+  margin: 0;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-sm);
+  line-height: 1.6;
+}
+
+.ds-property__copy strong {
+  color: var(--ll-color-ink);
+  font-weight: 650;
+}
+
 :deep(.ds-command-button) {
   width: fit-content;
   min-width: 15.375rem;
@@ -1397,6 +1685,24 @@ onBeforeUnmount(() => {
 
   .ds-component__header {
     flex-direction: column;
+  }
+
+  .ds-heading-case__meta {
+    flex-direction: column;
+    gap: var(--ll-space-3);
+  }
+
+  .ds-heading-case__preview {
+    min-height: 0;
+    padding: var(--ll-space-12) var(--ll-space-5);
+  }
+
+  .ds-heading-aside {
+    align-items: flex-start;
+  }
+
+  .ds-heading-aside > p {
+    text-align: left;
   }
 
   .ds-stage {
