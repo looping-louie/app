@@ -2,6 +2,7 @@ export default defineNuxtConfig({
   ssr: true,
   devtools: { enabled: true },
   modules: [],
+  css: ['~/assets/css/tokens.css'],
 
   routeRules: {
     '/api/**': {
