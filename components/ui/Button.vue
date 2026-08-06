@@ -135,9 +135,9 @@ function handleClick(event: MouseEvent) {
 }
 
 .ui-button--primary {
-  --ui-button-primary-fill: #226699;
-  --ui-button-primary-border-start: #9bc7e3;
-  --ui-button-primary-border-end: #0b2d46;
+  --ui-button-primary-fill: var(--ll-color-primary);
+  --ui-button-primary-border-start: var(--ll-color-primary-highlight);
+  --ui-button-primary-border-end: var(--ll-color-primary-depth);
 
   color: #f4f8fb;
   background-image:
@@ -153,9 +153,9 @@ function handleClick(event: MouseEvent) {
 }
 
 .ui-button--primary:hover:not([aria-disabled="true"]) {
-  --ui-button-primary-fill: #2b75aa;
-  --ui-button-primary-border-start: #c0dff0;
-  --ui-button-primary-border-end: #103a57;
+  --ui-button-primary-fill: var(--ll-color-primary-hover);
+  --ui-button-primary-border-start: var(--ll-color-primary-highlight-hover);
+  --ui-button-primary-border-end: var(--ll-color-primary-depth-hover);
 }
 
 .ui-button--primary:active:not([aria-disabled="true"]) {

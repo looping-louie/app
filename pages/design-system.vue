@@ -13,7 +13,7 @@ useHead({
       name: 'description',
       content: 'Componentes, fundamentos y patrones visuales de Looping Louie.',
     },
-    { name: 'theme-color', content: '#f2f1ec' },
+    { name: 'theme-color', content: '#f5f7f8' },
   ],
 })
 
@@ -131,7 +131,10 @@ onBeforeUnmount(() => {
         <aside class="ds-sidebar" aria-label="Índice del sistema de diseño">
           <p>Contenido</p>
           <nav>
-            <a href="#actions" class="is-active">01 · Acciones</a>
+            <a href="#foundations" class="is-active">01 · Fundamentos</a>
+            <a href="#colors">Color</a>
+            <a href="#typography">Tipografía</a>
+            <a href="#actions">02 · Acciones</a>
             <a href="#buttons">Botones</a>
             <a href="#copy-command">Comando copiable</a>
             <a href="#segmented-control">Selector segmentado</a>
@@ -143,9 +146,100 @@ onBeforeUnmount(() => {
         </aside>
 
         <div class="ds-content">
-          <section id="actions" class="ds-section">
+          <section id="foundations" class="ds-section ds-section--foundations">
             <div class="ds-section__heading">
               <p class="ds-index">01</p>
+              <div>
+                <h2>Fundamentos</h2>
+                <p>
+                  El fuselaje de Louie convertido en sistema: grises metálicos, rojo de marca,
+                  azul de acción y una tipografía técnica que no necesita ponerse casco.
+                </p>
+              </div>
+            </div>
+
+            <article id="colors" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Color</h3>
+                    <code>Twemoji 2.0</code>
+                  </div>
+                  <p>Colores originales del Small Airplane y tonos derivados para interfaz.</p>
+                </div>
+                <span class="ds-status"><i /> Defined</span>
+              </header>
+
+              <div class="ds-palette">
+                <div class="ds-palette__group">
+                  <p>Metal</p>
+                  <div class="ds-swatches">
+                    <div class="ds-swatch ds-swatch--gray-950"><span>Gray 950</span><code>#292F33</code></div>
+                    <div class="ds-swatch ds-swatch--gray-600"><span>Gray 600</span><code>#66757F</code></div>
+                    <div class="ds-swatch ds-swatch--gray-300"><span>Gray 300</span><code>#CCD6DD</code></div>
+                    <div class="ds-swatch ds-swatch--gray-050"><span>Gray 050</span><code>#F5F7F8</code></div>
+                  </div>
+                </div>
+
+                <div class="ds-palette__group">
+                  <p>Identidad y acción</p>
+                  <div class="ds-swatches ds-swatches--brand">
+                    <div class="ds-swatch ds-swatch--red-700"><span>Louie Red</span><code>#BE1931</code></div>
+                    <div class="ds-swatch ds-swatch--red-500"><span>Louie Coral</span><code>#EA596E</code></div>
+                    <div class="ds-swatch ds-swatch--blue-700"><span>Cockpit Blue</span><code>#226699</code></div>
+                    <div class="ds-swatch ds-swatch--blue-300"><span>Sky Highlight</span><code>#9BC7E3</code></div>
+                  </div>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Regla</span>
+                <p>Azul para acciones principales, rojo para identidad y énfasis; los grises construyen toda la interfaz.</p>
+              </footer>
+            </article>
+
+            <article id="typography" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Tipografía</h3>
+                    <code>Instrument Sans + Commit Mono</code>
+                  </div>
+                  <p>Una pareja libre inspirada en la combinación editorial y técnica de Mastra.</p>
+                </div>
+                <span class="ds-status"><i /> Self-hosted</span>
+              </header>
+
+              <div class="ds-type-specimens">
+                <div class="ds-type-specimen ds-type-specimen--sans">
+                  <div class="ds-type-specimen__meta">
+                    <span>Instrument Sans</span>
+                    <code>Display · Body · UI</code>
+                  </div>
+                  <p>Agentes que mantienen el rumbo.</p>
+                  <small>Precisa y compacta, con el punto justo de personalidad para que la interfaz no parezca una declaración de Hacienda.</small>
+                </div>
+
+                <div class="ds-type-specimen ds-type-specimen--mono">
+                  <div class="ds-type-specimen__meta">
+                    <span>Commit Mono</span>
+                    <code>Code · Metadata</code>
+                  </div>
+                  <p>npm create looping-louie</p>
+                  <small>0123456789 · status: ready · altitude: 10,000 ft</small>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Licencia</span>
+                <p>Ambas familias usan SIL Open Font License 1.1 y se sirven desde el propio proyecto.</p>
+              </footer>
+            </article>
+          </section>
+
+          <section id="actions" class="ds-section">
+            <div class="ds-section__heading">
+              <p class="ds-index">02</p>
               <div>
                 <h2>Acciones</h2>
                 <p>
@@ -377,8 +471,8 @@ onBeforeUnmount(() => {
   color: var(--ll-color-text);
   background-color: var(--ll-color-canvas);
   background-image:
-    linear-gradient(rgba(25, 26, 23, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(25, 26, 23, 0.035) 1px, transparent 1px);
+    linear-gradient(rgba(41, 47, 51, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 47, 51, 0.035) 1px, transparent 1px);
   background-size: 4rem 4rem;
   font-family: var(--ll-font-sans);
   -webkit-font-smoothing: antialiased;
@@ -394,7 +488,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: var(--ll-space-6);
   padding: var(--ll-space-3) max(var(--ll-space-6), calc((100vw - 86rem) / 2));
-  background: rgba(242, 241, 236, 0.88);
+  background: rgba(245, 247, 248, 0.88);
   border-bottom: 1px solid var(--ll-color-border);
   backdrop-filter: blur(16px);
 }
@@ -433,7 +527,7 @@ onBeforeUnmount(() => {
   right: 0;
   width: 0.5rem;
   height: 0.5rem;
-  background: var(--ll-color-signal);
+  background: var(--ll-color-brand);
   border: 1.5px solid var(--ll-color-ink);
   border-radius: 50%;
 }
@@ -493,8 +587,8 @@ onBeforeUnmount(() => {
 .ds-eyebrow span {
   width: 0.5rem;
   height: 0.5rem;
-  background: var(--ll-color-signal);
-  border: 1px solid var(--ll-color-signal-ink);
+  background: var(--ll-color-brand);
+  border: 1px solid var(--ll-color-brand-ink);
   border-radius: 50%;
 }
 
@@ -556,7 +650,7 @@ onBeforeUnmount(() => {
 }
 
 .ds-preview-window__topbar > span:first-child {
-  background: var(--ll-color-signal);
+  background: var(--ll-color-brand-bright);
 }
 
 .ds-preview-window__topbar small {
@@ -591,7 +685,7 @@ onBeforeUnmount(() => {
   grid-template-columns: 15rem minmax(0, 1fr);
   max-width: 86rem;
   margin: 0 auto;
-  background: rgba(242, 241, 236, 0.92);
+  background: rgba(245, 247, 248, 0.92);
   border-inline: 1px solid var(--ll-color-border);
 }
 
@@ -630,7 +724,7 @@ onBeforeUnmount(() => {
 .ds-sidebar nav a:hover,
 .ds-sidebar nav a.is-active {
   color: var(--ll-color-ink);
-  background: rgba(25, 26, 23, 0.055);
+  background: rgba(41, 47, 51, 0.055);
 }
 
 .ds-sidebar__note {
@@ -653,13 +747,17 @@ onBeforeUnmount(() => {
   height: 0.45rem;
   flex: 0 0 auto;
   margin-top: 0.25rem;
-  background: var(--ll-color-signal);
+  background: var(--ll-color-brand);
   border-radius: 50%;
 }
 
 .ds-content {
   min-width: 0;
   padding: var(--ll-space-16) clamp(1.5rem, 5vw, 5rem) var(--ll-space-20);
+}
+
+.ds-section + .ds-section {
+  margin-top: var(--ll-space-20);
 }
 
 .ds-section__heading {
@@ -698,6 +796,124 @@ onBeforeUnmount(() => {
   background: var(--ll-color-surface);
   border: 1px solid var(--ll-color-border);
   border-radius: var(--ll-radius-lg);
+}
+
+.ds-palette {
+  display: grid;
+  gap: var(--ll-space-8);
+  padding: var(--ll-space-6);
+  background: var(--ll-color-surface-raised);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-palette__group > p {
+  margin: 0 0 var(--ll-space-3);
+  color: var(--ll-color-text-muted);
+  font: 500 var(--ll-text-xs) / 1 var(--ll-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ds-swatches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--ll-space-2);
+}
+
+.ds-swatch {
+  display: flex;
+  min-height: 7.5rem;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  padding: var(--ll-space-4);
+  border: 1px solid rgba(41, 47, 51, 0.08);
+  border-radius: var(--ll-radius-md);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.ds-swatch span {
+  font-size: var(--ll-text-sm);
+  font-weight: 650;
+}
+
+.ds-swatch code {
+  font-size: 0.6875rem;
+  opacity: 0.72;
+}
+
+.ds-swatch--gray-950 { color: #ffffff; background: var(--ll-color-gray-950); }
+.ds-swatch--gray-600 { color: #ffffff; background: var(--ll-color-gray-600); }
+.ds-swatch--gray-300 { color: var(--ll-color-gray-950); background: var(--ll-color-gray-300); }
+.ds-swatch--gray-050 { color: var(--ll-color-gray-950); background: var(--ll-color-gray-050); }
+.ds-swatch--red-700 { color: #ffffff; background: var(--ll-color-red-700); }
+.ds-swatch--red-500 { color: var(--ll-color-gray-950); background: var(--ll-color-red-500); }
+.ds-swatch--blue-700 { color: #ffffff; background: var(--ll-color-blue-700); }
+.ds-swatch--blue-300 { color: var(--ll-color-gray-950); background: var(--ll-color-blue-300); }
+
+.ds-type-specimens {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ll-space-4);
+  padding: var(--ll-space-6);
+  background: var(--ll-color-surface-raised);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-type-specimen {
+  min-width: 0;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  background: var(--ll-color-gray-050);
+  border: 1px solid var(--ll-color-border);
+  border-radius: var(--ll-radius-md);
+}
+
+.ds-type-specimen__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ll-space-2);
+  margin-bottom: var(--ll-space-8);
+}
+
+.ds-type-specimen__meta span {
+  color: var(--ll-color-ink);
+  font-size: var(--ll-text-sm);
+  font-weight: 650;
+}
+
+.ds-type-specimen__meta code {
+  color: var(--ll-color-text-muted);
+  font-size: 0.6875rem;
+}
+
+.ds-type-specimen > p {
+  margin: 0;
+  color: var(--ll-color-ink);
+}
+
+.ds-type-specimen > small {
+  display: block;
+  margin-top: var(--ll-space-5);
+  color: var(--ll-color-text-muted);
+  line-height: 1.6;
+}
+
+.ds-type-specimen--sans > p {
+  font: 620 clamp(2rem, 4vw, 3.5rem) / 0.98 var(--ll-font-display);
+  letter-spacing: -0.045em;
+}
+
+.ds-type-specimen--mono > p,
+.ds-type-specimen--mono > small {
+  font-family: var(--ll-font-mono);
+}
+
+.ds-type-specimen--mono > p {
+  overflow-wrap: anywhere;
+  font-size: clamp(1.1rem, 2.4vw, 1.6rem);
+  line-height: 1.25;
 }
 
 .ds-component__header {
@@ -760,8 +976,8 @@ onBeforeUnmount(() => {
   padding: clamp(2rem, 6vw, 5rem);
   background-color: var(--ll-color-surface-raised);
   background-image:
-    linear-gradient(rgba(25, 26, 23, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(25, 26, 23, 0.045) 1px, transparent 1px);
+    linear-gradient(rgba(41, 47, 51, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(41, 47, 51, 0.045) 1px, transparent 1px);
   background-size: 2rem 2rem;
   border-bottom: 1px solid var(--ll-color-border);
 }
@@ -851,8 +1067,8 @@ onBeforeUnmount(() => {
 }
 
 .ds-plan-card--featured {
-  background: linear-gradient(180deg, var(--ll-color-surface-raised), var(--ll-color-signal-soft));
-  border-color: #b4d97b;
+  background: linear-gradient(180deg, var(--ll-color-surface-raised), var(--ll-color-brand-soft));
+  border-color: var(--ll-color-brand-bright);
 }
 
 .ds-plan-card__badge {
@@ -860,8 +1076,8 @@ onBeforeUnmount(() => {
   top: var(--ll-space-4);
   right: var(--ll-space-4);
   padding: 0.3rem 0.5rem;
-  color: var(--ll-color-signal-ink);
-  background: var(--ll-color-signal);
+  color: #ffffff;
+  background: var(--ll-color-brand);
   border-radius: var(--ll-radius-pill);
   font: 600 0.625rem / 1 var(--ll-font-mono);
   text-transform: uppercase;
@@ -1066,6 +1282,11 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .ds-swatches,
+  .ds-type-specimens {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .ds-component__header {
     flex-direction: column;
   }
@@ -1086,6 +1307,13 @@ onBeforeUnmount(() => {
   .ds-footer {
     flex-direction: column;
     padding: var(--ll-space-8) var(--ll-space-6);
+  }
+}
+
+@media (max-width: 30rem) {
+  .ds-swatches,
+  .ds-type-specimens {
+    grid-template-columns: 1fr;
   }
 }
 

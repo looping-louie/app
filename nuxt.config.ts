@@ -2,7 +2,14 @@ export default defineNuxtConfig({
   ssr: true,
   devtools: { enabled: true },
   modules: [],
-  css: ['~/assets/css/tokens.css'],
+  css: [
+    '@fontsource-variable/instrument-sans/standard.css',
+    '@fontsource-variable/instrument-sans/standard-italic.css',
+    '@fontsource/commit-mono/400.css',
+    '@fontsource/commit-mono/500.css',
+    '@fontsource/commit-mono/600.css',
+    '~/assets/css/tokens.css'
+  ],
 
   routeRules: {
     '/api/**': {
