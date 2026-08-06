@@ -1,7 +1,10 @@
 <template>
   <div class="app-layout">
     <header class="app-header">
-      <NuxtLink to="/" class="app-logo">Looping Louie</NuxtLink>
+      <NuxtLink to="/" class="app-logo">
+        <img src="/brand/twemoji-small-airplane.svg" alt="" width="28" height="28">
+        <span>Looping Louie</span>
+      </NuxtLink>
     </header>
 
     <main class="app-main">
@@ -31,9 +34,17 @@
 }
 
 .app-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   font-weight: bold;
   text-decoration: none;
   color: inherit;
+}
+
+.app-logo img {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .app-main {

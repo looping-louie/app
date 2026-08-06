@@ -4,6 +4,7 @@ import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
 definePageMeta({
   layout: false,
+  alias: '/design-variants',
 })
 
 useHead({
@@ -11,7 +12,7 @@ useHead({
   meta: [
     {
       name: 'description',
-      content: 'Componentes, fundamentos y patrones visuales de Looping Louie.',
+      content: 'Looping Louie components, foundations, and visual patterns.',
     },
     { name: 'theme-color', content: '#f5f7f8' },
   ],
@@ -19,6 +20,8 @@ useHead({
 
 const deployment = ref('cloud')
 const environment = ref('production')
+const catalog = ref('models')
+const settings = ref('api-keys')
 const copiedCommand = ref<string | null>(null)
 const copyError = ref<string | null>(null)
 let copyResetTimer: ReturnType<typeof setTimeout> | undefined
@@ -30,7 +33,21 @@ const deploymentOptions = [
 
 const environmentOptions = [
   { value: 'preview', label: 'Preview' },
-  { value: 'production', label: 'Producción' },
+  { value: 'production', label: 'Production' },
+]
+
+const catalogOptions = [
+  { value: 'providers', label: 'Providers' },
+  { value: 'models', label: 'Models' },
+  { value: 'skills', label: 'Skills' },
+  { value: 'personas', label: 'Personas' },
+  { value: 'loops', label: 'Loops' },
+]
+
+const settingsOptions = [
+  { value: 'api-keys', label: 'API keys' },
+  { value: 'mcps', label: 'MCPs' },
+  { value: 'providers', label: 'Providers' },
 ]
 
 async function copyToClipboard(command: string) {
@@ -51,9 +68,9 @@ async function copyToClipboard(command: string) {
 }
 
 function copyButtonLabel(command: string) {
-  if (copiedCommand.value === command) return `Copiado: ${command}`
-  if (copyError.value === command) return `No se pudo copiar: ${command}`
-  return `Copiar comando: ${command}`
+  if (copiedCommand.value === command) return `Copied: ${command}`
+  if (copyError.value === command) return `Could not copy: ${command}`
+  return `Copy command: ${command}`
 }
 
 onBeforeUnmount(() => {
@@ -64,33 +81,30 @@ onBeforeUnmount(() => {
 <template>
   <div class="design-system-page">
     <header class="ds-header">
-      <NuxtLink to="/" class="ds-brand" aria-label="Volver a Looping Louie">
-        <span class="ds-brand__mark" aria-hidden="true">
-          <span class="ds-brand__orbit" />
-          <span class="ds-brand__dot" />
-        </span>
+      <NuxtLink to="/" class="ds-brand" aria-label="Back to Looping Louie">
+        <img class="ds-brand__mark" src="/brand/twemoji-small-airplane.svg" alt="" width="28" height="28">
         <span>Looping Louie</span>
       </NuxtLink>
 
       <div class="ds-header__meta">
         <span class="ds-version">Design system · 0.1</span>
-        <NuxtLink to="/" class="ds-header__link">Volver a la web</NuxtLink>
-        <UiButton to="/app" variant="stroke" size="sm">Abrir aplicación</UiButton>
+        <NuxtLink to="/" class="ds-header__link">Back to website</NuxtLink>
+        <UiButton to="/app" variant="stroke" size="sm">Open app</UiButton>
       </div>
     </header>
 
     <main>
       <section class="ds-hero">
         <div class="ds-hero__copy">
-          <p class="ds-eyebrow"><span /> Fundamentos</p>
-          <h1>Profesional.<br><em>Con una hélice suelta.</em></h1>
+          <p class="ds-eyebrow"><span /> Foundations</p>
+          <h1>Professional.<br><em>With one loose propeller.</em></h1>
           <p class="ds-hero__description">
-            La primera versión del lenguaje visual de Looping Louie. Clara, técnica y sobria;
-            con el espacio justo para que Louie sobrevuele la interfaz sin pilotarla.
+            The first version of Looping Louie’s visual language. Clear, technical, and restrained;
+            with just enough room for Louie to fly across the interface without taking the controls.
           </p>
         </div>
 
-        <div class="ds-hero__preview" aria-label="Vista previa de acciones">
+        <div class="ds-hero__preview" aria-label="Action preview">
           <div class="ds-preview-window">
             <div class="ds-preview-window__topbar">
               <span />
@@ -99,7 +113,7 @@ onBeforeUnmount(() => {
               <small>quickstart.ll</small>
             </div>
             <div class="ds-preview-window__body">
-              <p class="ds-preview-window__label">Tu primer loop despega aquí</p>
+              <p class="ds-preview-window__label">Your first loop takes off here</p>
               <UiButton
                 class="ds-command-button"
                 variant="stroke"
@@ -119,8 +133,8 @@ onBeforeUnmount(() => {
                 </template>
               </UiButton>
               <div class="ds-preview-window__actions">
-                <UiButton size="sm">Crear proyecto</UiButton>
-                <UiButton variant="stroke" size="sm">Documentación</UiButton>
+                <UiButton size="sm">Create project</UiButton>
+                <UiButton variant="stroke" size="sm">Documentation</UiButton>
               </div>
             </div>
           </div>
@@ -128,20 +142,20 @@ onBeforeUnmount(() => {
       </section>
 
       <div class="ds-shell">
-        <aside class="ds-sidebar" aria-label="Índice del sistema de diseño">
-          <p>Contenido</p>
+        <aside class="ds-sidebar" aria-label="Design system index">
+          <p>Contents</p>
           <nav>
-            <a href="#foundations" class="is-active">01 · Fundamentos</a>
+            <a href="#foundations" class="is-active">01 · Foundations</a>
             <a href="#colors">Color</a>
-            <a href="#typography">Tipografía</a>
-            <a href="#actions">02 · Acciones</a>
-            <a href="#buttons">Botones</a>
-            <a href="#copy-command">Comando copiable</a>
-            <a href="#segmented-control">Selector segmentado</a>
+            <a href="#typography">Typography</a>
+            <a href="#actions">02 · Actions</a>
+            <a href="#buttons">Buttons</a>
+            <a href="#copy-command">Copyable command</a>
+            <a href="#segmented-control">Segmented control</a>
           </nav>
           <div class="ds-sidebar__note">
             <span class="ds-sidebar__note-dot" />
-            <p>Componentes listos para adoptar progresivamente en la aplicación.</p>
+            <p>Components ready for progressive adoption across the application.</p>
           </div>
         </aside>
 
@@ -150,10 +164,10 @@ onBeforeUnmount(() => {
             <div class="ds-section__heading">
               <p class="ds-index">01</p>
               <div>
-                <h2>Fundamentos</h2>
+                <h2>Foundations</h2>
                 <p>
-                  El fuselaje de Louie convertido en sistema: grises metálicos, rojo de marca,
-                  azul de acción y una tipografía técnica que no necesita ponerse casco.
+                  Louie’s fuselage turned into a system: metallic grays, brand red,
+                  action blue, and technical typography that does not need a helmet.
                 </p>
               </div>
             </div>
@@ -165,7 +179,7 @@ onBeforeUnmount(() => {
                     <h3>Color</h3>
                     <code>Twemoji 2.0</code>
                   </div>
-                  <p>Colores originales del Small Airplane y tonos derivados para interfaz.</p>
+                  <p>Original Small Airplane colors and derived tones for the interface.</p>
                 </div>
                 <span class="ds-status"><i /> Defined</span>
               </header>
@@ -182,7 +196,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="ds-palette__group">
-                  <p>Identidad y acción</p>
+                  <p>Identity and action</p>
                   <div class="ds-swatches ds-swatches--brand">
                     <div class="ds-swatch ds-swatch--red-700"><span>Louie Red</span><code>#BE1931</code></div>
                     <div class="ds-swatch ds-swatch--red-500"><span>Louie Coral</span><code>#EA596E</code></div>
@@ -193,8 +207,8 @@ onBeforeUnmount(() => {
               </div>
 
               <footer class="ds-component__footnote">
-                <span>Regla</span>
-                <p>Azul para acciones principales, rojo para identidad y énfasis; los grises construyen toda la interfaz.</p>
+                <span>Rule</span>
+                <p>Blue for primary actions, red for identity and emphasis; grays build the entire interface.</p>
               </footer>
             </article>
 
@@ -202,10 +216,10 @@ onBeforeUnmount(() => {
               <header class="ds-component__header">
                 <div>
                   <div class="ds-component__title-row">
-                    <h3>Tipografía</h3>
+                    <h3>Typography</h3>
                     <code>Instrument Sans + Commit Mono</code>
                   </div>
-                  <p>Una pareja libre inspirada en la combinación editorial y técnica de Mastra.</p>
+                  <p>A free pairing inspired by Mastra’s editorial and technical combination.</p>
                 </div>
                 <span class="ds-status"><i /> Self-hosted</span>
               </header>
@@ -216,8 +230,8 @@ onBeforeUnmount(() => {
                     <span>Instrument Sans</span>
                     <code>Display · Body · UI</code>
                   </div>
-                  <p>Agentes que mantienen el rumbo.</p>
-                  <small>Precisa y compacta, con el punto justo de personalidad para que la interfaz no parezca una declaración de Hacienda.</small>
+                  <p>Agents that stay on course.</p>
+                  <small>Precise and compact, with just enough personality to keep the interface from looking like a tax return.</small>
                 </div>
 
                 <div class="ds-type-specimen ds-type-specimen--mono">
@@ -231,8 +245,8 @@ onBeforeUnmount(() => {
               </div>
 
               <footer class="ds-component__footnote">
-                <span>Licencia</span>
-                <p>Ambas familias usan SIL Open Font License 1.1 y se sirven desde el propio proyecto.</p>
+                <span>License</span>
+                <p>Both families use the SIL Open Font License 1.1 and are served from the project itself.</p>
               </footer>
             </article>
           </section>
@@ -241,10 +255,10 @@ onBeforeUnmount(() => {
             <div class="ds-section__heading">
               <p class="ds-index">02</p>
               <div>
-                <h2>Acciones</h2>
+                <h2>Actions</h2>
                 <p>
-                  Controles para iniciar, elegir o copiar. Comparten geometría y movimiento,
-                  pero cada uno conserva una responsabilidad clara.
+                  Controls for starting, choosing, or copying. They share geometry and motion,
+                  while each retains a clear responsibility.
                 </p>
               </div>
             </div>
@@ -256,21 +270,21 @@ onBeforeUnmount(() => {
                     <h3>Button</h3>
                     <code>UiButton</code>
                   </div>
-                  <p>Acciones y enlaces con tres niveles de jerarquía.</p>
+                  <p>Actions and links with three levels of hierarchy.</p>
                 </div>
                 <span class="ds-status"><i /> Stable</span>
               </header>
 
               <div class="ds-stage ds-stage--buttons">
-                <UiButton variant="primary" size="md">Crear loop</UiButton>
-                <UiButton variant="secondary">Ver documentación</UiButton>
-                <UiButton variant="stroke">Cancelar</UiButton>
+                <UiButton variant="primary" size="md">Create loop</UiButton>
+                <UiButton variant="secondary">View documentation</UiButton>
+                <UiButton variant="stroke">Cancel</UiButton>
               </div>
 
               <div class="ds-properties">
                 <div class="ds-property">
                   <div class="ds-property__label">
-                    <span>Variantes</span>
+                    <span>Variants</span>
                     <code>variant</code>
                   </div>
                   <div class="ds-property__demo">
@@ -283,7 +297,7 @@ onBeforeUnmount(() => {
 
                 <div class="ds-property">
                   <div class="ds-property__label">
-                    <span>Tamaños</span>
+                    <span>Sizes</span>
                     <code>size</code>
                   </div>
                   <div class="ds-property__demo ds-property__demo--baseline">
@@ -295,14 +309,14 @@ onBeforeUnmount(() => {
 
                 <div class="ds-property">
                   <div class="ds-property__label">
-                    <span>Estados</span>
+                    <span>States</span>
                     <code>loading · disabled</code>
                   </div>
                   <div class="ds-property__demo">
-                    <UiButton loading>Guardando</UiButton>
-                    <UiButton variant="secondary" disabled>No disponible</UiButton>
+                    <UiButton loading>Saving</UiButton>
+                    <UiButton variant="secondary" disabled>Unavailable</UiButton>
                     <UiButton variant="secondary">
-                      Continuar
+                      Continue
                       <template #trailing>
                         <svg viewBox="0 0 16 16" fill="none">
                           <path d="M3 8h10m-4-4 4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -315,22 +329,22 @@ onBeforeUnmount(() => {
 
               <div class="ds-context">
                 <div class="ds-context__intro">
-                  <span>En contexto</span>
-                  <p>La jerarquía debe seguir funcionando dentro de una composición real.</p>
+                  <span>In context</span>
+                  <p>The hierarchy must continue to work within a real composition.</p>
                 </div>
                 <div class="ds-pricing-grid">
                   <div class="ds-plan-card">
                     <p class="ds-plan-card__name">Starter</p>
-                    <p class="ds-plan-card__description">Para loops que todavía llevan ruedines.</p>
-                    <p class="ds-plan-card__price">0 € <span>/ mes</span></p>
-                    <UiButton variant="secondary" block>Empezar gratis</UiButton>
+                    <p class="ds-plan-card__description">For loops that still need training wheels.</p>
+                    <p class="ds-plan-card__price">0 € <span>/ month</span></p>
+                    <UiButton variant="secondary" block>Get started free</UiButton>
                   </div>
                   <div class="ds-plan-card ds-plan-card--featured">
-                    <span class="ds-plan-card__badge">Recomendado</span>
+                    <span class="ds-plan-card__badge">Recommended</span>
                     <p class="ds-plan-card__name">Flight crew</p>
-                    <p class="ds-plan-card__description">Para equipos con Louie en producción.</p>
-                    <p class="ds-plan-card__price">49 € <span>/ mes</span></p>
-                    <UiButton block>Elegir Flight crew</UiButton>
+                    <p class="ds-plan-card__description">For teams running Louie in production.</p>
+                    <p class="ds-plan-card__price">49 € <span>/ month</span></p>
+                    <UiButton block>Choose Flight crew</UiButton>
                   </div>
                 </div>
               </div>
@@ -340,17 +354,17 @@ onBeforeUnmount(() => {
               <header class="ds-component__header">
                 <div>
                   <div class="ds-component__title-row">
-                    <h3>Botón con icono</h3>
+                    <h3>Button with icon</h3>
                     <code>UiButton</code>
                   </div>
-                  <p>El botón presenta la acción; la página decide qué ocurre al pulsarlo.</p>
+                  <p>The button presents the action; the page decides what happens when it is pressed.</p>
                 </div>
                 <span class="ds-status"><i /> Stable</span>
               </header>
 
               <div class="ds-stage ds-stage--command">
                 <div>
-                  <span class="ds-stage__caption">Instalación rápida</span>
+                  <span class="ds-stage__caption">Quick install</span>
                   <UiButton
                     class="ds-command-button"
                     variant="stroke"
@@ -371,7 +385,7 @@ onBeforeUnmount(() => {
                   </UiButton>
                 </div>
                 <div>
-                  <span class="ds-stage__caption">Inicializar un proyecto</span>
+                  <span class="ds-stage__caption">Initialize a project</span>
                   <UiButton
                     class="ds-command-button"
                     variant="stroke"
@@ -394,11 +408,11 @@ onBeforeUnmount(() => {
               </div>
 
               <footer class="ds-component__footnote">
-                <span>Responsabilidad</span>
-                <p>La página controla el portapapeles y pasa al botón su etiqueta, contenido, icono y estado visual.</p>
+                <span>Responsibility</span>
+                <p>The page controls the clipboard and passes the button its label, content, icon, and visual state.</p>
               </footer>
               <p class="ds-sr-status" aria-live="polite">
-                {{ copiedCommand ? `Comando copiado: ${copiedCommand}` : copyError ? `No se pudo copiar: ${copyError}` : '' }}
+                {{ copiedCommand ? `Command copied: ${copiedCommand}` : copyError ? `Could not copy: ${copyError}` : '' }}
               </p>
             </article>
 
@@ -409,37 +423,88 @@ onBeforeUnmount(() => {
                     <h3>Segmented control</h3>
                     <code>UiSegmentedControl</code>
                   </div>
-                  <p>Una elección única entre opciones relacionadas, no dos botones compitiendo.</p>
+                  <p>A single choice among related options, not two buttons competing.</p>
                 </div>
                 <span class="ds-status"><i /> Stable</span>
               </header>
 
               <div class="ds-stage ds-stage--segments">
-                <div class="ds-segment-example">
-                  <span class="ds-stage__caption">Despliegue</span>
-                  <UiSegmentedControl
-                    v-model="deployment"
-                    :options="deploymentOptions"
-                    accent="gray"
-                    aria-label="Tipo de despliegue"
-                  />
-                  <small>Seleccionado: {{ deployment }}</small>
-                </div>
-                <div class="ds-segment-example">
-                  <span class="ds-stage__caption">Entorno</span>
-                  <UiSegmentedControl
-                    v-model="environment"
-                    :options="environmentOptions"
-                    accent="primary"
-                    aria-label="Entorno de ejecución"
-                  />
-                  <small>Seleccionado: {{ environment }}</small>
-                </div>
+                <section class="ds-segment-variant" aria-labelledby="contained-variant-title">
+                  <header class="ds-segment-variant__header">
+                    <div>
+                      <span>Variant 01</span>
+                      <h4 id="contained-variant-title">Contained</h4>
+                    </div>
+                    <code>variant="contained"</code>
+                  </header>
+                  <p class="ds-segment-variant__description">
+                    A compact track that groups a small set of closely related choices.
+                  </p>
+                  <div class="ds-segment-variant__examples">
+                    <div class="ds-segment-example">
+                      <span class="ds-stage__caption">Deployment</span>
+                      <UiSegmentedControl
+                        v-model="deployment"
+                        :options="deploymentOptions"
+                        accent="gray"
+                        aria-label="Deployment type"
+                      />
+                      <small>Selected: {{ deployment }}</small>
+                    </div>
+                    <div class="ds-segment-example">
+                      <span class="ds-stage__caption">Environment</span>
+                      <UiSegmentedControl
+                        v-model="environment"
+                        :options="environmentOptions"
+                        accent="primary"
+                        aria-label="Execution environment"
+                      />
+                      <small>Selected: {{ environment }}</small>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="ds-segment-variant" aria-labelledby="inline-variant-title">
+                  <header class="ds-segment-variant__header">
+                    <div>
+                      <span>Variant 02</span>
+                      <h4 id="inline-variant-title">Inline</h4>
+                    </div>
+                    <code>variant="inline"</code>
+                  </header>
+                  <p class="ds-segment-variant__description">
+                    A lightweight navigation row for broader sets of peer destinations.
+                  </p>
+                  <div class="ds-segment-variant__examples">
+                    <div class="ds-segment-example">
+                      <span class="ds-stage__caption">Catalog</span>
+                      <UiSegmentedControl
+                        v-model="catalog"
+                        :options="catalogOptions"
+                        variant="inline"
+                        accent="gray"
+                        aria-label="Catalog section"
+                      />
+                      <small>Selected: {{ catalog }}</small>
+                    </div>
+                    <div class="ds-segment-example">
+                      <span class="ds-stage__caption">Settings</span>
+                      <UiSegmentedControl
+                        v-model="settings"
+                        :options="settingsOptions"
+                        variant="inline"
+                        accent="primary"
+                        aria-label="Settings section"
+                      />
+                      <small>Selected: {{ settings }}</small>
+                    </div>
+                  </div>
+                </section>
               </div>
 
               <footer class="ds-component__footnote">
-                <span>Teclado</span>
-                <p>Admite flechas, inicio y fin siguiendo el patrón accesible de un grupo de opciones.</p>
+                <span>Keyboard</span>
+                <p>Supports arrow keys, Home, and End following the accessible pattern for a group of options.</p>
               </footer>
             </article>
           </section>
@@ -449,7 +514,7 @@ onBeforeUnmount(() => {
 
     <footer class="ds-footer">
       <p>Looping Louie Design System</p>
-      <span>Construido para dar vueltas sin marear al usuario.</span>
+      <span>Built to go in circles without making the user dizzy.</span>
     </footer>
   </div>
 </template>
@@ -508,31 +573,9 @@ onBeforeUnmount(() => {
 }
 
 .ds-brand__mark {
-  position: relative;
-  display: grid;
   width: 1.75rem;
   height: 1.75rem;
-  place-items: center;
-}
-
-.ds-brand__orbit {
-  width: 1.4rem;
-  height: 1.4rem;
-  border: 2px solid var(--ll-color-ink);
-  border-right-color: transparent;
-  border-radius: 50%;
-  transform: rotate(-30deg);
-}
-
-.ds-brand__dot {
-  position: absolute;
-  top: 0.1rem;
-  right: 0;
-  width: 0.5rem;
-  height: 0.5rem;
-  background: var(--ll-color-brand);
-  border: 1.5px solid var(--ll-color-ink);
-  border-radius: 50%;
+  object-fit: contain;
 }
 
 .ds-header__meta {
@@ -1123,7 +1166,7 @@ onBeforeUnmount(() => {
 .ds-stage--segments {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: center;
+  align-items: stretch;
   gap: var(--ll-space-8);
 }
 
@@ -1134,6 +1177,68 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--ll-space-3);
+}
+
+.ds-segment-variant {
+  min-width: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ll-color-surface) 94%, transparent);
+  border: 1px solid var(--ll-color-border);
+  border-radius: var(--ll-radius-md);
+  box-shadow: 0 0.75rem 2rem rgba(41, 47, 51, 0.06);
+}
+
+.ds-segment-variant__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ll-space-4);
+  padding: var(--ll-space-5) var(--ll-space-5) var(--ll-space-4);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-segment-variant__header > div {
+  display: grid;
+  gap: var(--ll-space-2);
+}
+
+.ds-segment-variant__header span {
+  color: var(--ll-color-text-faint);
+  font: 550 0.625rem / 1 var(--ll-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ds-segment-variant__header h4 {
+  margin: 0;
+  color: var(--ll-color-ink);
+  font-size: 1.125rem;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+
+.ds-segment-variant__header code {
+  padding: 0.35rem 0.5rem;
+  color: var(--ll-color-text-muted);
+  background: var(--ll-color-surface-muted);
+  border-radius: 0.375rem;
+  font: 500 0.625rem / 1 var(--ll-font-mono);
+  white-space: nowrap;
+}
+
+.ds-segment-variant__description {
+  min-height: 2.75rem;
+  margin: 0;
+  padding: var(--ll-space-4) var(--ll-space-5) 0;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-xs);
+  line-height: 1.5;
+}
+
+.ds-segment-variant__examples {
+  display: grid;
+  gap: var(--ll-space-6);
+  padding: var(--ll-space-6) var(--ll-space-5);
 }
 
 :deep(.ds-command-button) {

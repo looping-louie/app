@@ -5,7 +5,8 @@
 
     <nav class="navbar" id="navbar">
       <div class="logo">
-        <span class="logo-icon">⟳</span> Looping Louie
+        <img class="logo-icon" src="/brand/twemoji-small-airplane.svg" alt="" width="29" height="29">
+        <span>Looping Louie</span>
       </div>
       <div class="nav-links">
         <a href="#how">How it works</a>
@@ -299,8 +300,9 @@ body {
 }
 
 .logo-icon {
-  font-size: 1.8rem;
-  filter: drop-shadow(0 0 8px var(--accent));
+  width: 1.8rem;
+  height: 1.8rem;
+  object-fit: contain;
 }
 
 .nav-links {

@@ -8,6 +8,7 @@ interface SegmentOption {
 }
 
 type SegmentAccent = 'secondary' | 'primary' | 'gray'
+type SegmentVariant = 'contained' | 'inline'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -15,26 +16,48 @@ const props = withDefaults(defineProps<{
   ariaLabel?: string
   fullWidth?: boolean
   accent?: SegmentAccent
+  variant?: SegmentVariant
 }>(), {
   ariaLabel: 'Seleccionar una opción',
   fullWidth: false,
   accent: 'secondary',
+  variant: 'contained',
 })
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
 }>()
 
-const optionRefs = ref<HTMLButtonElement[]>([])
+const rootRef = ref<HTMLElement | null>(null)
+const optionRefs = ref<Array<HTMLButtonElement | undefined>>([])
+const inlineIndicator = ref({ x: 0, width: 0 })
+const inlineIndicatorReady = ref(false)
+let resizeObserver: ResizeObserver | undefined
 const selectedIndex = computed(() => props.options.findIndex(option => option.value === props.modelValue))
 const segmentStyle = computed(() => ({
   '--ui-segment-count': String(Math.max(props.options.length, 1)),
   '--ui-segment-index': String(Math.max(selectedIndex.value, 0)),
+  '--ui-segment-indicator-x': `${inlineIndicator.value.x}px`,
+  '--ui-segment-indicator-width': `${inlineIndicator.value.width}px`,
 }))
 
 function setOptionRef(element: Element | ComponentPublicInstance | null, index: number) {
   if (element instanceof HTMLButtonElement) {
     optionRefs.value[index] = element
+  } else {
+    optionRefs.value[index] = undefined
+  }
+}
+
+function measureInlineIndicator() {
+  if (props.variant !== 'inline') return
+
+  const selectedOption = optionRefs.value[selectedIndex.value]
+  if (!selectedOption) return
+
+  inlineIndicator.value = {
+    x: selectedOption.offsetLeft,
+    width: selectedOption.offsetWidth,
   }
 }
 
@@ -81,14 +104,47 @@ function handleKeydown(event: KeyboardEvent, index: number) {
   event.preventDefault()
   focusAndSelect(nextIndex)
 }
+
+watch(
+  () => [
+    props.modelValue,
+    props.variant,
+    props.options.map(option => `${option.value}:${option.label}:${option.disabled}`).join('|'),
+  ],
+  async () => {
+    await nextTick()
+    measureInlineIndicator()
+  },
+)
+
+onMounted(async () => {
+  await nextTick()
+  measureInlineIndicator()
+
+  resizeObserver = new ResizeObserver(measureInlineIndicator)
+  if (rootRef.value) resizeObserver.observe(rootRef.value)
+
+  requestAnimationFrame(() => {
+    inlineIndicatorReady.value = true
+  })
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
+})
 </script>
 
 <template>
   <div
+    ref="rootRef"
     class="ui-segmented-control"
     :class="[
       `ui-segmented-control--${accent}`,
-      { 'ui-segmented-control--full': fullWidth },
+      `ui-segmented-control--${variant}`,
+      {
+        'ui-segmented-control--full': fullWidth,
+        'ui-segmented-control--indicator-ready': inlineIndicatorReady,
+      },
     ]"
     :style="segmentStyle"
     role="radiogroup"
@@ -147,7 +203,7 @@ function handleKeydown(event: KeyboardEvent, index: number) {
   width: 100%;
 }
 
-.ui-segmented-control:has(.ui-segmented-control__option:hover:not(:disabled):not([data-selected="true"])) {
+.ui-segmented-control--contained:has(.ui-segmented-control__option:hover:not(:disabled):not([data-selected="true"])) {
   --ui-segment-track-fill: #fcfbf8;
   --ui-segment-track-border-start: #ffffff;
   --ui-segment-track-border-end: #dad9d4;
@@ -176,6 +232,36 @@ function handleKeydown(event: KeyboardEvent, index: number) {
   transition: transform 480ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform;
   pointer-events: none;
+}
+
+.ui-segmented-control--inline {
+  display: inline-flex;
+  width: fit-content;
+  height: 2.25rem;
+  max-width: 100%;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.ui-segmented-control--inline.ui-segmented-control--full {
+  width: 100%;
+}
+
+.ui-segmented-control--inline .ui-segmented-control__indicator {
+  z-index: 0;
+  inset-block: 0;
+  left: 0;
+  width: var(--ui-segment-indicator-width);
+  transform: translateX(var(--ui-segment-indicator-x));
+  transition: none;
+  will-change: width, transform;
+}
+
+.ui-segmented-control--inline.ui-segmented-control--indicator-ready .ui-segmented-control__indicator {
+  transition:
+    width 240ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 240ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 .ui-segmented-control--primary .ui-segmented-control__indicator {
@@ -213,6 +299,18 @@ function handleKeydown(event: KeyboardEvent, index: number) {
   transition: color 220ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+.ui-segmented-control--inline .ui-segmented-control__option {
+  flex: 0 0 auto;
+  min-height: 2.25rem;
+  padding-inline: 0.875rem;
+  overflow: visible;
+  color: var(--ll-color-gray-600);
+  font-size: 0.8125rem;
+  font-weight: 470;
+  letter-spacing: 0.0121875rem;
+  text-overflow: clip;
+}
+
 .ui-segmented-control__option:hover:not(:disabled):not([data-selected="true"]) {
   color: var(--ll-color-ink);
 }
@@ -240,7 +338,7 @@ function handleKeydown(event: KeyboardEvent, index: number) {
 }
 
 @media (max-width: 30rem) {
-  .ui-segmented-control {
+  .ui-segmented-control--contained {
     width: 100%;
     grid-auto-columns: minmax(0, 1fr);
   }

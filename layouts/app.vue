@@ -2,8 +2,8 @@
   <div class="app-shell">
     <aside class="sidebar" :class="{ open: mobileOpen }">
       <div class="sidebar-header">
-        <NuxtLink to="/app" class="sidebar-logo" @click="closeMobile">
-          <span class="logo-icon">⟳</span>
+        <NuxtLink to="/app" class="sidebar-logo" aria-label="Looping Louie home" @click="closeMobile">
+          <img class="logo-icon" src="/brand/twemoji-small-airplane.svg" alt="" width="30" height="30">
         </NuxtLink>
         <button class="sidebar-close" aria-label="Cerrar menú" @click="closeMobile">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
@@ -155,16 +155,16 @@ function closeMobile() {
   width: 40px;
   height: 40px;
   border-radius: 0.75rem;
-  background: var(--gradient-1);
-  color: white;
+  background: transparent;
   text-decoration: none;
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(124, 58, 237, 0.3);
+  box-shadow: none;
 }
 
 .logo-icon {
-  font-size: 1.5rem;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+  width: 1.875rem;
+  height: 1.875rem;
+  object-fit: contain;
 }
 
 .sidebar-close {
