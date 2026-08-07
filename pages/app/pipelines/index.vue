@@ -1,100 +1,100 @@
 <template>
-  <div class="ideas-page">
+  <div class="pipelines-page">
     <div class="page-header">
       <div>
-        <h1>Ideas</h1>
-        <p class="page-description">Refina tus ideas de desarrollo con un modelo y convierte el resultado en especificaciones Markdown.</p>
+        <h1>Pipelines</h1>
+        <p class="page-description">Refina tus pipelines de desarrollo con un modelo y convierte el resultado en especificaciones Markdown.</p>
       </div>
     </div>
 
-    <div v-if="ideas.length === 0" class="empty-state">
+    <div v-if="pipelines.length === 0" class="empty-state">
       <div class="empty-icon-wrapper">
         <span class="empty-icon">💡</span>
       </div>
-      <h2 class="empty-title">Aún no hay ideas</h2>
-      <p class="empty-text">Captura tu primera idea y deja que Looping Louie la refine con un modelo para convertirla en una especificación lista para ejecutar.</p>
-      <NuxtLink to="/app/ideas/new" class="btn-primary">
+      <h2 class="empty-title">Aún no hay pipelines</h2>
+      <p class="empty-text">Define tu primer pipeline y deja que Looping Louie lo refine con un modelo hasta convertirlo en una especificación lista para ejecutar.</p>
+      <NuxtLink to="/app/pipelines/new" class="btn-primary">
         <span class="btn-icon">+</span>
-        Crear primera idea
+        Crear primer pipeline
       </NuxtLink>
     </div>
 
-    <div v-else class="ideas-list">
+    <div v-else class="pipelines-list">
       <div class="list-header">
-        <NuxtLink to="/app/ideas/new" class="btn-primary">
+        <NuxtLink to="/app/pipelines/new" class="btn-primary">
           <span class="btn-icon">+</span>
-          Nueva idea
+          Nuevo pipeline
         </NuxtLink>
       </div>
 
       <div class="stacked-list">
         <div
-          v-for="(idea, index) in ideas"
-          :key="idea.id"
+          v-for="(pipeline, index) in pipelines"
+          :key="pipeline.id"
           class="list-row"
-          :class="{ last: index === ideas.length - 1 }"
+          :class="{ last: index === pipelines.length - 1 }"
         >
           <div class="row-main">
             <div class="row-top">
-              <NuxtLink :to="`/app/ideas/${idea.id}`" class="row-title-link">
-                <h3 class="row-title">{{ idea.title }}</h3>
+              <NuxtLink :to="`/app/pipelines/${pipeline.id}`" class="row-title-link">
+                <h3 class="row-title">{{ pipeline.title }}</h3>
               </NuxtLink>
-              <span class="row-status" :class="`status-${idea.status}`">
+              <span class="row-status" :class="`status-${pipeline.status}`">
                 <span class="status-dot"></span>
-                {{ statusLabel(idea.status) }}
+                {{ statusLabel(pipeline.status) }}
               </span>
             </div>
 
             <div class="row-meta">
               <span class="meta-author">
-                <span class="meta-avatar" :style="{ background: avatarColor(idea.user) }">{{ idea.user.charAt(0) }}</span>
-                <span class="meta-name">{{ idea.user }}</span>
+                <span class="meta-avatar" :style="{ background: avatarColor(pipeline.user) }">{{ pipeline.user.charAt(0) }}</span>
+                <span class="meta-name">{{ pipeline.user }}</span>
               </span>
               <span class="meta-sep">·</span>
-              <span class="meta-time">{{ timeAgo(idea.createdAt) }}</span>
+              <span class="meta-time">{{ timeAgo(pipeline.createdAt) }}</span>
             </div>
 
-            <p class="row-prompt">{{ idea.prompt }}</p>
+            <p class="row-prompt">{{ pipeline.prompt }}</p>
           </div>
 
           <div class="row-side">
             <div class="avatar-group">
               <span
-                v-for="(agent, ai) in idea.agents"
+                v-for="(agent, ai) in pipeline.agents"
                 :key="agent"
                 class="avatar-group-item"
-                :style="{ background: agentColor(agent), zIndex: idea.agents.length - ai }"
+                :style="{ background: agentColor(agent), zIndex: pipeline.agents.length - ai }"
                 :title="agent"
               >{{ agent.charAt(0) }}</span>
-              <span v-if="idea.agents.length > 4" class="avatar-overflow">+{{ idea.agents.length - 4 }}</span>
+              <span v-if="pipeline.agents.length > 4" class="avatar-overflow">+{{ pipeline.agents.length - 4 }}</span>
             </div>
 
             <div class="row-stats">
-              <span class="stat-chip" :title="`${idea.messageCount} mensajes del consejo`">
+              <span class="stat-chip" :title="`${pipeline.messageCount} mensajes del equipo`">
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M2 4.5A1.5 1.5 0 0 1 3.5 3h13A1.5 1.5 0 0 1 18 4.5v8a1.5 1.5 0 0 1-1.5 1.5H7l-4 3.5V4.5Z"/></svg>
-                <span class="stat-count">{{ idea.messageCount }}</span>
+                <span class="stat-count">{{ pipeline.messageCount }}</span>
               </span>
 
               <span
-                v-if="idea.status === 'resolved'"
+                v-if="pipeline.status === 'resolved'"
                 class="stat-chip stat-doc"
-                title="ideas.md generado"
+                title="pipeline.md generado"
               >
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M4 2.5A1.5 1.5 0 0 1 5.5 1H12l4 4v12.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 17.5v-15Z"/><path d="M12 1v4h4" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-                <span class="stat-label">ideas.md</span>
+                <span class="stat-label">pipeline.md</span>
               </span>
 
               <span
                 v-else
                 class="stat-chip stat-pending"
-                :title="idea.status === 'running' ? 'Consejo en ejecución' : 'Pendiente de ejecutar'"
+                :title="pipeline.status === 'running' ? 'Equipo en ejecución' : 'Pendiente de ejecutar'"
               >
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path d="M4 2.5A1.5 1.5 0 0 1 5.5 1H12l4 4v12.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 4 17.5v-15Z"/><path d="M8 9h6M8 12h4" stroke="rgba(0,0,0,0.3)" stroke-width="1.2" stroke-linecap="round"/></svg>
-                <span class="stat-label">{{ idea.status === 'running' ? 'En curso' : 'Pendiente' }}</span>
+                <span class="stat-label">{{ pipeline.status === 'running' ? 'En curso' : 'Pendiente' }}</span>
               </span>
             </div>
 
-            <NuxtLink :to="`/app/ideas/${idea.id}`" class="row-open-link">
+            <NuxtLink :to="`/app/pipelines/${pipeline.id}`" class="row-open-link">
               Ver detalle
               <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M7.22 14.78a.75.75 0 0 1 0-1.06L10.94 10 7.22 6.28a.75.75 0 1 1 1.06-1.06l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0Z"/></svg>
             </NuxtLink>
@@ -111,12 +111,12 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Ideas · Looping Louie'
+  title: 'Pipelines · Looping Louie'
 })
 
-const sampleIdeas = [
+const samplePipelines = [
   {
-    id: 'idea-1',
+    id: 'pipeline-1',
     title: 'Sistema de feedback para revisiones de código',
     prompt: 'Un sistema que permita dejar feedback contextualizado en revisiones de código, integrándose con GitHub y Bitbucket. Debe soportar hilos de discusión, resolución de comentarios y métricas de calidad por PR.',
     user: 'María González',
@@ -126,7 +126,7 @@ const sampleIdeas = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString()
   },
   {
-    id: 'idea-2',
+    id: 'pipeline-2',
     title: 'Dashboard de métricas en tiempo real para loops',
     prompt: 'Crear un dashboard que muestre el estado de todos los loops en ejecución, con métricas de coste, latencia y tasa de aprobación. Debe actualizarse en tiempo real vía WebSocket.',
     user: 'Carlos Ruiz',
@@ -136,7 +136,7 @@ const sampleIdeas = [
     createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString()
   },
   {
-    id: 'idea-3',
+    id: 'pipeline-3',
     title: 'Moderación automática de contenido con escalado humano',
     prompt: 'Sistema de moderación que combine modelos LLM baratos para una primera clasificación y modelos frontier para casos dudosos, escalando a humanos solo cuando la confianza sea baja.',
     user: 'Ana Torres',
@@ -146,7 +146,7 @@ const sampleIdeas = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString()
   },
   {
-    id: 'idea-4',
+    id: 'pipeline-4',
     title: 'Generador de tests unitarios a partir de especificaciones',
     prompt: 'A partir de una especificación en Markdown, generar tests unitarios automáticamente usando un modelo generador barato y validarlos con revisores frontier. El loop continúa hasta que los tests pasan.',
     user: 'Diego Vega',
@@ -157,11 +157,15 @@ const sampleIdeas = [
   }
 ]
 
-const ideas = ref([])
+const pipelines = ref([])
 
 onMounted(() => {
-  const stored = JSON.parse(localStorage.getItem('looping-louie:ideas') || '[]')
-  ideas.value = [...stored, ...sampleIdeas]
+  const stored = JSON.parse(
+    localStorage.getItem('looping-louie:pipelines')
+      || localStorage.getItem('looping-louie:ideas')
+      || '[]'
+  )
+  pipelines.value = [...stored, ...samplePipelines]
 })
 
 function statusLabel(status) {
@@ -200,7 +204,7 @@ function agentColor(name) {
 </script>
 
 <style scoped>
-.ideas-page {
+.pipelines-page {
   max-width: 900px;
 }
 
@@ -208,7 +212,7 @@ function agentColor(name) {
   margin-bottom: 2.5rem;
 }
 
-.ideas-page h1 {
+.pipelines-page h1 {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -289,7 +293,7 @@ function agentColor(name) {
   line-height: 1;
 }
 
-.ideas-list {
+.pipelines-list {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

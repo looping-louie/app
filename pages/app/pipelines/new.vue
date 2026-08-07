@@ -1,12 +1,12 @@
 <template>
-  <div class="idea-new-page">
+  <div class="pipeline-new-page">
     <div class="page-header">
-      <NuxtLink to="/app/ideas" class="back-link">
+      <NuxtLink to="/app/pipelines" class="back-link">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M12.78 5.22a.75.75 0 0 0-1.06 0L6.47 10.47a.75.75 0 0 0 0 1.06l5.25 5.25a.75.75 0 1 0 1.06-1.06L8.06 11l4.72-4.72a.75.75 0 0 0 0-1.06Z"/></svg>
-        Volver a Ideas
+        Volver a Pipelines
       </NuxtLink>
-      <h1>Nueva idea</h1>
-      <p class="page-description">Describe tu idea y configura un consejo de agentes para refinarla antes de convertirla en una especificación.</p>
+      <h1>Nuevo pipeline</h1>
+      <p class="page-description">Describe tu pipeline y configura un equipo de agentes para refinarlo antes de convertirlo en una especificación.</p>
     </div>
 
     <div class="wizard-shell">
@@ -33,26 +33,26 @@
         >
           <div class="section-header">
             <h2 id="step-0-title" class="section-title">Your prompt</h2>
-            <p class="section-helper">Describe la idea que quieres discutir. Cuanto más contexto aportes — objetivos, restricciones, público objetivo — mejor podrán los agentes entenderla y refinarla.</p>
+            <p class="section-helper">Describe el pipeline que quieres discutir. Cuanto más contexto aportes —objetivos, restricciones y público objetivo— mejor podrán los agentes entenderlo y refinarlo.</p>
           </div>
 
           <div class="form-group">
-            <label for="idea-title" class="form-label">Título</label>
+            <label for="pipeline-title" class="form-label">Título</label>
             <input
-              id="idea-title"
+              id="pipeline-title"
               ref="titleInput"
               v-model="title"
               type="text"
               class="form-input"
               :class="{ 'input-error': errors.title }"
               :aria-invalid="errors.title ? 'true' : null"
-              :aria-describedby="errors.title ? 'idea-title-error' : null"
+              :aria-describedby="errors.title ? 'pipeline-title-error' : null"
               placeholder="Ej: Sistema de feedback para revisiones de código"
               @input="clearError('title')"
             />
             <p
               v-if="errors.title"
-              id="idea-title-error"
+              id="pipeline-title-error"
               class="field-error"
               role="alert"
             >
@@ -61,24 +61,24 @@
           </div>
 
           <div class="form-group">
-            <label for="idea-prompt" class="form-label">Prompt</label>
+            <label for="pipeline-prompt" class="form-label">Prompt</label>
             <textarea
-              id="idea-prompt"
+              id="pipeline-prompt"
               ref="promptInput"
               v-model="prompt"
               class="form-textarea"
               :class="{ 'input-error': errors.prompt }"
               :aria-invalid="errors.prompt ? 'true' : null"
-              :aria-describedby="errors.prompt ? 'idea-prompt-error' : null"
+              :aria-describedby="errors.prompt ? 'pipeline-prompt-error' : null"
               rows="8"
-              placeholder="Describe tu idea en detalle: qué problema resuelve, qué debe incluir, qué restricciones tienes..."
+              placeholder="Describe tu pipeline en detalle: qué problema resuelve, qué debe incluir, qué restricciones tienes..."
               @keydown.meta.enter.prevent="goNext"
               @keydown.ctrl.enter.prevent="goNext"
               @input="clearError('prompt')"
             ></textarea>
             <p
               v-if="errors.prompt"
-              id="idea-prompt-error"
+              id="pipeline-prompt-error"
               class="field-error"
               role="alert"
             >
@@ -88,53 +88,53 @@
           </div>
         </section>
 
-        <!-- Step 1: Council -->
+        <!-- Step 1: Agent team -->
         <section
           v-show="currentStep === 1"
           class="form-section"
           aria-labelledby="step-1-title"
         >
           <div class="section-header">
-            <h2 id="step-1-title" class="section-title">Set your council</h2>
-            <p class="section-helper">Selecciona los agentes que discutirán la idea. Cada uno aportará una perspectiva distinta — crítica, técnica, de producto — y juntos refinarán el resultado antes de convertirlo en una especificación.</p>
+            <h2 id="step-1-title" class="section-title">Build your agent team</h2>
+            <p class="section-helper">Selecciona los agentes que discutirán el pipeline. Cada uno aportará una perspectiva distinta — crítica, técnica, de producto — y juntos refinarán el resultado antes de convertirlo en una especificación.</p>
           </div>
 
-          <div class="council-summary" aria-live="polite">
-            <span class="council-count">{{ selectedAgents.length }} seleccionado{{ selectedAgents.length === 1 ? '' : 's' }}</span>
+          <div class="agent-team-summary" aria-live="polite">
+            <span class="agent-team-count">{{ selectedAgents.length }} seleccionado{{ selectedAgents.length === 1 ? '' : 's' }}</span>
             <button
               v-if="selectedAgents.length > 0"
               type="button"
-              class="council-clear"
+              class="agent-team-clear"
               @click="clearAgents"
             >
               Limpiar selección
             </button>
           </div>
 
-          <fieldset class="council-fieldset">
-            <legend class="council-legend">Agentes disponibles</legend>
-            <div class="council-grid">
+          <fieldset class="agent-team-fieldset">
+            <legend class="agent-team-legend">Agentes disponibles</legend>
+            <div class="agent-team-grid">
               <label
                 v-for="agent in availableAgents"
                 :key="agent.name"
-                class="council-card"
+                class="agent-team-card"
                 :class="{ selected: selectedAgents.includes(agent.name) }"
               >
                 <input
                   type="checkbox"
-                  class="council-checkbox"
+                  class="agent-team-checkbox"
                   :checked="selectedAgents.includes(agent.name)"
                   :aria-label="agent.name"
                   @change="toggleAgent(agent.name)"
                 />
-                <span class="council-illustration" aria-hidden="true">
+                <span class="agent-team-illustration" aria-hidden="true">
                   <span class="illustration-icon" v-html="agent.icon"></span>
                 </span>
-                <span class="council-body">
-                  <span class="council-name">{{ agent.name }}</span>
-                  <span class="council-question">{{ agent.question }}</span>
+                <span class="agent-team-body">
+                  <span class="agent-team-name">{{ agent.name }}</span>
+                  <span class="agent-team-question">{{ agent.question }}</span>
                 </span>
-                <span class="council-check" aria-hidden="true">
+                <span class="agent-team-check" aria-hidden="true">
                   <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.5 7.6a1 1 0 0 1-1.42.006l-3.5-3.5a1 1 0 1 1 1.414-1.414l2.793 2.793 6.793-6.893a1 1 0 0 1 1.414-.006Z"/></svg>
                 </span>
               </label>
@@ -158,7 +158,7 @@
         >
           <div class="section-header">
             <h2 id="step-2-title" class="section-title">Maximum iterations</h2>
-            <p class="section-helper">Define cuántas veces puede el consejo refinar la idea antes de entregar el resultado. Más iteraciones permiten mayor calidad, pero consumen más tokens.</p>
+            <p class="section-helper">Define cuántas veces puede el equipo refinar el pipeline antes de entregar el resultado. Más iteraciones permiten mayor calidad, pero consumen más tokens.</p>
           </div>
 
           <div
@@ -232,7 +232,7 @@
         >
           <div class="section-header">
             <h2 id="step-4-title" class="section-title">Review and run</h2>
-            <p class="section-helper">Revisa la configuración del consejo antes de ejecutarlo. Puedes volver atrás para ajustar cualquier respuesta.</p>
+            <p class="section-helper">Revisa la configuración del equipo antes de ejecutarlo. Puedes volver atrás para ajustar cualquier respuesta.</p>
           </div>
 
           <dl class="summary-list">
@@ -245,7 +245,7 @@
               <dd class="summary-value summary-prompt">{{ prompt || '—' }}</dd>
             </div>
             <div class="summary-row">
-              <dt class="summary-label">Consejo</dt>
+              <dt class="summary-label">Equipo</dt>
               <dd class="summary-value">
                 <span v-if="selectedAgents.length" class="summary-chips">
                   <span v-for="agent in selectedAgents" :key="agent" class="summary-chip">{{ agent }}</span>
@@ -276,7 +276,7 @@
 
           <span class="actions-spacer"></span>
 
-          <NuxtLink to="/app/ideas" class="btn-secondary">Cancelar</NuxtLink>
+          <NuxtLink to="/app/pipelines" class="btn-secondary">Cancelar</NuxtLink>
 
           <button
             v-if="currentStep < steps.length - 1"
@@ -293,7 +293,7 @@
             class="btn-primary"
             :disabled="!canSubmit"
           >
-            Run Council
+            Run pipeline
           </button>
         </div>
       </form>
@@ -307,14 +307,14 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Nueva idea · Looping Louie'
+  title: 'Nuevo pipeline · Looping Louie'
 })
 
 const router = useRouter()
 
 const steps = [
   { key: 'prompt', label: 'Prompt' },
-  { key: 'council', label: 'Consejo' },
+  { key: 'agent-team', label: 'Equipo' },
   { key: 'iterations', label: 'Iteraciones' },
   { key: 'model', label: 'Modelo' },
   { key: 'summary', label: 'Resumen' }
@@ -374,7 +374,7 @@ const availableAgents = [
   },
   {
     name: "Devil's Advocate",
-    question: '¿Por qué es una mala idea?',
+    question: '¿Por qué es un mal pipeline?',
     icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="16"/><path d="M16 20h.01M32 20h.01M16 32s3-4 8-4 8 4 8 4"/></svg>'
   },
   {
@@ -503,7 +503,7 @@ function validateStep(step) {
   }
   if (step === 1) {
     if (selectedAgents.value.length === 0) {
-      errors.agents = 'Selecciona al menos un agente para el consejo.'
+      errors.agents = 'Selecciona al menos un agente para el equipo.'
       return false
     }
     errors.agents = ''
@@ -604,7 +604,7 @@ function goBack() {
 function handleSubmit() {
   if (!canSubmit.value) return
 
-  const idea = {
+  const pipeline = {
     id: crypto.randomUUID(),
     title: title.value.trim(),
     prompt: prompt.value.trim(),
@@ -617,16 +617,20 @@ function handleSubmit() {
     createdAt: new Date().toISOString()
   }
 
-  const stored = JSON.parse(localStorage.getItem('looping-louie:ideas') || '[]')
-  stored.unshift(idea)
-  localStorage.setItem('looping-louie:ideas', JSON.stringify(stored))
+  const stored = JSON.parse(
+    localStorage.getItem('looping-louie:pipelines')
+      || localStorage.getItem('looping-louie:ideas')
+      || '[]'
+  )
+  stored.unshift(pipeline)
+  localStorage.setItem('looping-louie:pipelines', JSON.stringify(stored))
 
-  router.push('/app/ideas')
+  router.push('/app/pipelines')
 }
 </script>
 
 <style scoped>
-.idea-new-page {
+.pipeline-new-page {
   max-width: 720px;
 }
 
@@ -650,7 +654,7 @@ function handleSubmit() {
   color: var(--text-primary);
 }
 
-.idea-new-page h1 {
+.pipeline-new-page h1 {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -865,8 +869,8 @@ function handleSubmit() {
   }
 }
 
-/* Council */
-.council-summary {
+/* Agent team */
+.agent-team-summary {
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -874,11 +878,11 @@ function handleSubmit() {
   color: var(--text-secondary);
 }
 
-.council-count {
+.agent-team-count {
   font-weight: 600;
 }
 
-.council-clear {
+.agent-team-clear {
   background: transparent;
   border: none;
   color: var(--accent-soft);
@@ -890,17 +894,17 @@ function handleSubmit() {
   text-underline-offset: 2px;
 }
 
-.council-clear:hover {
+.agent-team-clear:hover {
   color: var(--accent-glow);
 }
 
-.council-fieldset {
+.agent-team-fieldset {
   border: none;
   padding: 0;
   margin: 0;
 }
 
-.council-legend {
+.agent-team-legend {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -908,13 +912,13 @@ function handleSubmit() {
   padding: 0;
 }
 
-.council-grid {
+.agent-team-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 0.75rem;
 }
 
-.council-card {
+.agent-team-card {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -927,17 +931,17 @@ function handleSubmit() {
   position: relative;
 }
 
-.council-card:hover {
+.agent-team-card:hover {
   border-color: var(--border-glow);
   background: var(--bg-card-hover);
 }
 
-.council-card.selected {
+.agent-team-card.selected {
   border-color: var(--accent);
   background: var(--gradient-card);
 }
 
-.council-checkbox {
+.agent-team-checkbox {
   position: absolute;
   opacity: 0;
   width: 1px;
@@ -945,12 +949,12 @@ function handleSubmit() {
   pointer-events: none;
 }
 
-.council-card:focus-within {
+.agent-team-card:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
 }
 
-.council-illustration {
+.agent-team-illustration {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -963,20 +967,20 @@ function handleSubmit() {
   color: var(--accent-soft);
 }
 
-.council-body {
+.agent-team-body {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
   min-width: 0;
 }
 
-.council-name {
+.agent-team-name {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
-.council-question {
+.agent-team-question {
   font-size: 0.75rem;
   color: var(--text-muted);
   overflow: hidden;
@@ -984,7 +988,7 @@ function handleSubmit() {
   white-space: nowrap;
 }
 
-.council-check {
+.agent-team-check {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
@@ -1000,7 +1004,7 @@ function handleSubmit() {
   transition: opacity 0.2s;
 }
 
-.council-card.selected .council-check {
+.agent-team-card.selected .agent-team-check {
   opacity: 1;
 }
 

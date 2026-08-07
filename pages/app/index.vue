@@ -1,347 +1,398 @@
-<template>
-  <div class="dashboard-page">
-    <div class="dashboard-header">
-      <div>
-        <h1>Dashboard</h1>
-        <p class="page-description">Vista general de las ejecuciones de Looping Louie: loops programados, en preparación, en ejecución y completados.</p>
-      </div>
-      <button class="btn-new-loop" type="button" disabled>
-        <span class="btn-icon">+</span>
-        Nuevo loop
-      </button>
-    </div>
+<script setup lang="ts">
+import UiButton from '~/components/ui/Button.vue'
+import UiCard from '~/components/ui/Card.vue'
+import UiContainer from '~/components/ui/Container.vue'
+import UiGrid from '~/components/ui/Grid.vue'
+import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 
-    <div class="kanban-board">
-      <div class="kanban-column">
-        <div class="column-header">
-          <span class="column-dot dot-scheduled"></span>
-          <h2 class="column-title">Programados</h2>
-          <span class="column-count">2</span>
-        </div>
-        <div class="column-body">
-          <div class="loop-card">
-            <div class="loop-card-header">
-              <span class="loop-name">Revisión de código — Sprint 24</span>
-              <span class="loop-badge badge-scheduled">Programado</span>
-            </div>
-            <p class="loop-detail">Generador: mistral-7b · Revisores: 2</p>
-            <p class="loop-meta">Inicia: 15:30 · Umbral: 0.92</p>
-          </div>
-          <div class="loop-card">
-            <div class="loop-card-header">
-              <span class="loop-name">Moderación de contenido</span>
-              <span class="loop-badge badge-scheduled">Programado</span>
-            </div>
-            <p class="loop-detail">Generador: qwen3-235b · Revisores: 3</p>
-            <p class="loop-meta">Inicia: 16:00 · Umbral: 0.95</p>
-          </div>
-        </div>
-      </div>
+type LoopStatus = 'scheduled' | 'preparing' | 'running' | 'completed'
 
-      <div class="kanban-column">
-        <div class="column-header">
-          <span class="column-dot dot-prep"></span>
-          <h2 class="column-title">En preparación</h2>
-          <span class="column-count">1</span>
-        </div>
-        <div class="column-body">
-          <div class="loop-card">
-            <div class="loop-card-header">
-              <span class="loop-name">Resumen de documentos</span>
-              <span class="loop-badge badge-prep">Preparando</span>
-            </div>
-            <p class="loop-detail">Generador: llama-3.3-70b · Revisores: 2</p>
-            <p class="loop-meta">Configurando revisores · Umbral: 0.88</p>
-          </div>
-        </div>
-      </div>
+interface LoopItem {
+  name: string
+  status: LoopStatus
+  statusLabel: string
+  detail: string
+  meta: string
+  progress?: number
+}
 
-      <div class="kanban-column">
-        <div class="column-header">
-          <span class="column-dot dot-running"></span>
-          <h2 class="column-title">En ejecución</h2>
-          <span class="column-count">1</span>
-        </div>
-        <div class="column-body">
-          <div class="loop-card">
-            <div class="loop-card-header">
-              <span class="loop-name">Razonamiento multi-agente</span>
-              <span class="loop-badge badge-running">Ejecutando</span>
-            </div>
-            <p class="loop-detail">Generador: deepseek-v4 · Revisores: 3</p>
-            <p class="loop-meta">Intento 2 de 3 · Puntuación: 0.87</p>
-            <div class="loop-progress">
-              <div class="loop-progress-bar" style="width: 72%"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+interface LoopColumn {
+  id: LoopStatus
+  title: string
+  loops: LoopItem[]
+}
 
-      <div class="kanban-column">
-        <div class="column-header">
-          <span class="column-dot dot-done"></span>
-          <h2 class="column-title">Completados</h2>
-          <span class="column-count">2</span>
-        </div>
-        <div class="column-body">
-          <div class="loop-card">
-            <div class="loop-card-header">
-              <span class="loop-name">Clasificación de tickets</span>
-              <span class="loop-badge badge-done">Completado</span>
-            </div>
-            <p class="loop-detail">Generador: gpt-oss-20b · Revisores: 2</p>
-            <p class="loop-meta">Finalizado: 14:12 · Puntuación: 0.94</p>
-          </div>
-          <div class="loop-card">
-            <div class="loop-card-header">
-              <span class="loop-name">Traducción técnica</span>
-              <span class="loop-badge badge-done">Completado</span>
-            </div>
-            <p class="loop-detail">Generador: gemma-4-31b · Revisores: 2</p>
-            <p class="loop-meta">Finalizado: 13:05 · Puntuación: 0.96</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
+const columns: LoopColumn[] = [
+  {
+    id: 'scheduled',
+    title: 'Programados',
+    loops: [
+      {
+        name: 'Revisión de código — Sprint 24',
+        status: 'scheduled',
+        statusLabel: 'Programado',
+        detail: 'Generador: mistral-7b · Revisores: 2',
+        meta: 'Inicia: 15:30 · Umbral: 0.92',
+      },
+      {
+        name: 'Moderación de contenido',
+        status: 'scheduled',
+        statusLabel: 'Programado',
+        detail: 'Generador: qwen3-235b · Revisores: 3',
+        meta: 'Inicia: 16:00 · Umbral: 0.95',
+      },
+    ],
+  },
+  {
+    id: 'preparing',
+    title: 'En preparación',
+    loops: [
+      {
+        name: 'Resumen de documentos',
+        status: 'preparing',
+        statusLabel: 'Preparando',
+        detail: 'Generador: llama-3.3-70b · Revisores: 2',
+        meta: 'Configurando revisores · Umbral: 0.88',
+      },
+    ],
+  },
+  {
+    id: 'running',
+    title: 'En ejecución',
+    loops: [
+      {
+        name: 'Razonamiento multi-agente',
+        status: 'running',
+        statusLabel: 'Ejecutando',
+        detail: 'Generador: deepseek-v4 · Revisores: 3',
+        meta: 'Intento 2 de 3 · Puntuación: 0.87',
+        progress: 72,
+      },
+    ],
+  },
+  {
+    id: 'completed',
+    title: 'Completados',
+    loops: [
+      {
+        name: 'Clasificación de tickets',
+        status: 'completed',
+        statusLabel: 'Completado',
+        detail: 'Generador: gpt-oss-20b · Revisores: 2',
+        meta: 'Finalizado: 14:12 · Puntuación: 0.94',
+      },
+      {
+        name: 'Traducción técnica',
+        status: 'completed',
+        statusLabel: 'Completado',
+        detail: 'Generador: gemma-4-31b · Revisores: 2',
+        meta: 'Finalizado: 13:05 · Puntuación: 0.96',
+      },
+    ],
+  },
+]
 
-<script setup>
 definePageMeta({
-  layout: 'app'
+  layout: 'app',
 })
 
 useHead({
-  title: 'Dashboard · Looping Louie'
+  title: 'Dashboard · Looping Louie',
 })
 </script>
 
+<template>
+  <UiContainer size="wide" class="dashboard-page">
+    <UiHeadingBlock layout="split" size="subsection" align="start" class="dashboard-header">
+      <template #eyebrow>
+        <span class="dashboard-eyebrow"><span aria-hidden="true" /> Flight operations</span>
+      </template>
+
+      <template #title>
+        <h1>Dashboard</h1>
+      </template>
+
+      <template #description>
+        <p>Vista general de las ejecuciones de Looping Louie: loops programados, en preparación, en ejecución y completados.</p>
+      </template>
+
+      <template #aside>
+        <UiButton disabled>
+          <template #leading>
+            <svg viewBox="0 0 16 16" fill="none">
+              <path d="M8 3.25v9.5M3.25 8h9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </template>
+          Nuevo loop
+        </UiButton>
+      </template>
+    </UiHeadingBlock>
+
+    <UiGrid :columns="4" gap="md" class="kanban-board">
+      <UiCard
+        v-for="column in columns"
+        :key="column.id"
+        as="section"
+        variant="editorial"
+        class="kanban-column"
+      >
+        <template #title>
+          <header class="column-header">
+            <span class="column-dot" :class="`column-dot--${column.id}`" aria-hidden="true" />
+            <h2 class="column-title">{{ column.title }}</h2>
+            <span class="column-count" :aria-label="`${column.loops.length} loops`">{{ column.loops.length }}</span>
+          </header>
+        </template>
+
+        <template #description>
+          <div class="column-body">
+            <UiCard
+              v-for="loop in column.loops"
+              :key="loop.name"
+              as="article"
+              variant="editorial"
+              class="loop-card"
+            >
+              <template #title>
+                <div class="loop-card-header">
+                  <h3 class="loop-name">{{ loop.name }}</h3>
+                  <span class="loop-badge" :class="`loop-badge--${loop.status}`">{{ loop.statusLabel }}</span>
+                </div>
+              </template>
+
+              <template #description>
+                <p>{{ loop.detail }}</p>
+              </template>
+
+              <template #meta>
+                <p>{{ loop.meta }}</p>
+                <progress
+                  v-if="loop.progress !== undefined"
+                  class="loop-progress"
+                  :value="loop.progress"
+                  max="100"
+                  :aria-label="`Progreso de ${loop.name}: ${loop.progress}%`"
+                >
+                  {{ loop.progress }}%
+                </progress>
+              </template>
+            </UiCard>
+          </div>
+        </template>
+      </UiCard>
+    </UiGrid>
+  </UiContainer>
+</template>
+
 <style scoped>
 .dashboard-page {
-  max-width: 1200px;
+  padding-block: var(--ll-space-8) var(--ll-space-12);
 }
 
 .dashboard-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-  margin-bottom: 2.5rem;
-  flex-wrap: wrap;
+  margin-bottom: var(--ll-space-10);
 }
 
-.dashboard-page h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
+.dashboard-header :deep(.ui-heading-block__description) {
+  margin-top: var(--ll-space-3);
 }
 
-.page-description {
-  color: var(--text-secondary);
-  max-width: 600px;
-}
-
-.btn-new-loop {
+.dashboard-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  background: var(--gradient-1);
-  border: none;
-  color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.625rem;
-  font-weight: 600;
-  font-size: 0.95rem;
-  cursor: pointer;
-  transition: box-shadow 0.25s, transform 0.25s;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
-  flex-shrink: 0;
+  gap: var(--ll-space-2);
+  font: 600 var(--ll-text-xs) / 1 var(--ll-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.btn-new-loop:hover {
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.55);
-  transform: translateY(-1px);
-}
-
-.btn-new-loop:disabled {
-  cursor: not-allowed;
-  opacity: 0.85;
-}
-
-.btn-icon {
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.kanban-board {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.25rem;
+.dashboard-eyebrow > span {
+  width: 0.4375rem;
+  height: 0.4375rem;
+  background: var(--ll-color-brand);
+  border-radius: 50%;
 }
 
 .kanban-column {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  min-height: 200px;
+  min-height: 22rem;
+  overflow: visible;
+  background: var(--ll-color-card);
+  border-radius: var(--ll-radius-lg);
+}
+
+.kanban-column > :deep(.ui-card__content) {
+  padding: var(--ll-space-4);
+}
+
+.kanban-column > :deep(.ui-card__content > .ui-card__title) {
+  flex: none;
+}
+
+.kanban-column > :deep(.ui-card__content > .ui-card__description) {
+  margin-top: 0;
 }
 
 .column-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  gap: var(--ll-space-2);
+  padding: var(--ll-space-1) 0 var(--ll-space-3);
+  margin-bottom: var(--ll-space-3);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .column-dot {
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
   border-radius: 50%;
-  flex-shrink: 0;
 }
 
-.dot-scheduled {
-  background: #a78bfa;
-}
-
-.dot-prep {
-  background: #fbbf24;
-}
-
-.dot-running {
-  background: #34d399;
-}
-
-.dot-done {
-  background: #60a5fa;
-}
+.column-dot--scheduled { background: var(--ll-color-blue-300); }
+.column-dot--preparing { background: var(--ll-color-brand-bright); }
+.column-dot--running { background: var(--ll-color-primary); }
+.column-dot--completed { background: var(--ll-color-metal-700); }
 
 .column-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   flex: 1;
+  margin: 0;
+  color: var(--ll-color-ink);
+  font: 600 var(--ll-text-xs) / 1.2 var(--ll-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .column-count {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  padding: 0.1rem 0.5rem;
+  display: inline-flex;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--ll-space-2);
+  color: var(--ll-color-text-muted);
+  background: var(--ll-color-surface-raised);
+  border: 1px solid var(--ll-color-divider);
+  border-radius: var(--ll-radius-pill);
+  font: 600 var(--ll-text-xs) / 1 var(--ll-font-mono);
 }
 
 .column-body {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--ll-space-3);
 }
 
-.loop-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.85rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.kanban-column .loop-card.ui-card--editorial {
+  min-height: 0;
+  overflow: hidden;
+  background: var(--ll-color-surface-raised);
+  border-radius: var(--ll-radius-md);
 }
 
-.loop-card:hover {
-  border-color: var(--accent-soft);
-  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.12);
+.loop-card :deep(.ui-card__content) {
+  padding: var(--ll-space-4);
+}
+
+.loop-card :deep(.ui-card__description) {
+  margin-top: var(--ll-space-3);
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-xs);
+  line-height: 1.45;
+}
+
+.loop-card :deep(.ui-card__footer) {
+  margin-top: var(--ll-space-2);
+  padding-top: 0;
+}
+
+.loop-card :deep(.ui-card__meta) {
+  width: 100%;
+  color: var(--ll-color-text-faint);
+  font-size: var(--ll-text-xs);
+  line-height: 1.45;
+}
+
+.loop-card :deep(.ui-card__meta p) {
+  margin: 0;
 }
 
 .loop-card-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: var(--ll-space-2);
 }
 
 .loop-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.3;
+  margin: 0;
+  color: var(--ll-color-ink);
+  font-size: var(--ll-text-sm);
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
 }
 
 .loop-badge {
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
-  border-radius: 1rem;
+  flex: none;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--ll-radius-pill);
+  font: 600 0.6875rem / 1 var(--ll-font-control);
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
-.badge-scheduled {
-  background: rgba(167, 139, 250, 0.15);
-  color: #a78bfa;
+.loop-badge--scheduled {
+  color: var(--ll-color-blue-700);
+  background: var(--ll-color-blue-100);
 }
 
-.badge-prep {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+.loop-badge--preparing {
+  color: var(--ll-color-brand-ink);
+  background: var(--ll-color-red-100);
 }
 
-.badge-running {
-  background: rgba(52, 211, 153, 0.15);
-  color: #34d399;
+.loop-badge--running {
+  color: var(--ll-color-metal-025);
+  background: var(--ll-color-primary);
 }
 
-.badge-done {
-  background: rgba(96, 165, 250, 0.15);
-  color: #60a5fa;
-}
-
-.loop-detail {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.25rem;
-}
-
-.loop-meta {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.loop-badge--completed {
+  color: var(--ll-color-text-muted);
+  background: var(--ll-color-surface-muted);
 }
 
 .loop-progress {
-  margin-top: 0.6rem;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
+  display: block;
+  width: 100%;
+  height: 0.25rem;
+  margin-top: var(--ll-space-3);
   overflow: hidden;
+  appearance: none;
+  background: var(--ll-color-divider);
+  border: 0;
+  border-radius: var(--ll-radius-pill);
 }
 
-.loop-progress-bar {
-  height: 100%;
-  background: var(--gradient-1);
-  border-radius: 2px;
+.loop-progress::-webkit-progress-bar {
+  background: var(--ll-color-divider);
 }
 
-@media (max-width: 1024px) {
-  .kanban-board {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.loop-progress::-webkit-progress-value {
+  background: var(--ll-color-primary);
+  border-radius: var(--ll-radius-pill);
 }
 
-@media (max-width: 640px) {
-  .kanban-board {
-    grid-template-columns: 1fr;
+.loop-progress::-moz-progress-bar {
+  background: var(--ll-color-primary);
+  border-radius: var(--ll-radius-pill);
+}
+
+@media (max-width: 48rem) {
+  .dashboard-page {
+    padding-block: var(--ll-space-6) var(--ll-space-10);
   }
 
   .dashboard-header {
-    flex-direction: column;
+    margin-bottom: var(--ll-space-8);
   }
 }
 </style>
