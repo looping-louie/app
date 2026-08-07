@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type ButtonVariant = 'primary' | 'secondary' | 'stroke' | 'metal'
+type ButtonVariant = 'primary' | 'secondary' | 'stroke' | 'metal' | 'coral'
 type ButtonSize = 'sm' | 'md' | 'lg'
 type ButtonType = 'button' | 'submit' | 'reset'
 
@@ -244,6 +244,33 @@ function handleClick(event: MouseEvent) {
   transform: scale(0.98);
 }
 
+.ui-button--coral {
+  --ui-button-coral-fill: var(--ll-color-brand-bright);
+  --ui-button-coral-border-start: var(--ll-color-red-100);
+  --ui-button-coral-border-end: var(--ll-color-brand);
+
+  color: var(--ll-color-brand-ink);
+  background-image:
+    linear-gradient(var(--ui-button-coral-fill), var(--ui-button-coral-fill)),
+    linear-gradient(180deg, var(--ui-button-coral-border-start) 0%, var(--ui-button-coral-border-end) 100%);
+  background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  border-width: 1.5px;
+  border-color: transparent;
+  box-shadow: 0 4px 9px rgba(134, 17, 34, 0.22);
+  font-weight: 500;
+}
+
+.ui-button--coral:hover:not([aria-disabled="true"]) {
+  --ui-button-coral-fill: #ef6e80;
+  --ui-button-coral-border-start: #fff5f7;
+  --ui-button-coral-border-end: var(--ll-color-red-700);
+}
+
+.ui-button--coral:active:not([aria-disabled="true"]) {
+  transform: scale(0.98);
+}
+
 .ui-button--sm {
   --ui-button-height: 1.75rem;
   --ui-button-padding: 0.75rem;
@@ -306,7 +333,8 @@ function handleClick(event: MouseEvent) {
     transition-duration: 0.01ms;
   }
 
-  .ui-button--stroke:active:not([aria-disabled="true"]) {
+  .ui-button--stroke:active:not([aria-disabled="true"]),
+  .ui-button--coral:active:not([aria-disabled="true"]) {
     transform: none;
   }
 

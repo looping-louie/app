@@ -2,6 +2,7 @@
 import UiMainNavigation from '~/components/navigation/MainNavigation.vue'
 import UiSiteFooter from '~/components/site/SiteFooter.vue'
 import UiAccordion from '~/components/ui/Accordion.vue'
+import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
@@ -350,6 +351,7 @@ onBeforeUnmount(() => {
             <a href="#copy-command">Copyable command</a>
             <a href="#segmented-control">Segmented control</a>
             <a href="#composition">03 · Composition</a>
+            <a href="#breadcrumb">Breadcrumb</a>
             <a href="#heading-block">Heading block</a>
             <a href="#layout">04 · Layout</a>
             <a href="#container">Container</a>
@@ -507,6 +509,7 @@ onBeforeUnmount(() => {
                     <UiButton variant="secondary" size="sm">Secondary</UiButton>
                     <UiButton variant="stroke" size="sm">Stroke</UiButton>
                     <UiButton variant="metal" size="sm">Metal 950</UiButton>
+                    <UiButton variant="coral" size="sm">Louie Coral</UiButton>
                   </div>
                 </div>
 
@@ -830,6 +833,45 @@ onBeforeUnmount(() => {
                 </p>
               </div>
             </div>
+
+            <article id="breadcrumb" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Breadcrumb</h3>
+                    <code>UiBreadcrumb</code>
+                  </div>
+                  <p>A compact route trail for locating the current page within the application.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-stage">
+                <UiBreadcrumb
+                  :items="[
+                    { label: 'Agents', to: '/app/personas' },
+                    { label: 'Engineering', to: '/app/skills' },
+                    { label: 'Code review' },
+                  ]"
+                />
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Items</span><code>label · to · href</code></div>
+                  <p class="ds-property__copy">Internal and external destinations can be mixed. The final item is rendered as the current page rather than as a link.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Typography</span><code>Centered · Hero eyebrow</code></div>
+                  <p class="ds-property__copy">Uses the same size, weight, line height, and primary color as the eyebrow in UiHeadingBlock.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Uses a labelled navigation landmark, an ordered list, decorative separators, and aria-current on the active page.</p>
+              </footer>
+            </article>
 
             <article id="heading-block" class="ds-component">
               <header class="ds-component__header">
