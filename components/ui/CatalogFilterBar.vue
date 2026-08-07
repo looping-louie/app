@@ -1,5 +1,34 @@
 <script setup lang="ts">
 import UiIconPill from '~/components/ui/IconPill.vue'
+
+withDefaults(defineProps<{
+  interactive?: boolean
+  thirdLabel?: string
+  thirdIcon?: 'department' | 'labs' | 'task'
+  thirdOptions?: Array<{ value: string; label: string }>
+}>(), {
+  interactive: false,
+  thirdLabel: 'Department',
+  thirdIcon: 'department',
+  thirdOptions: () => [],
+})
+
+const status = defineModel<string>('status', { default: 'all' })
+const category = defineModel<string[]>('category', { default: () => [] })
+const sort = defineModel<string>('sort', { default: 'alphabetical-asc' })
+
+const statusOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'enabled', label: 'Enabled' },
+  { value: 'disabled', label: 'Disabled' },
+]
+
+const sortOptions = [
+  { value: 'alphabetical-asc', label: 'Alphabetical (A–Z)' },
+  { value: 'alphabetical-desc', label: 'Alphabetical (Z–A)' },
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+]
 </script>
 
 <template>
@@ -14,7 +43,14 @@ import UiIconPill from '~/components/ui/IconPill.vue'
         Search
       </UiIconPill>
 
-      <UiIconPill aria-label="Filter catalog by status">
+      <UiIconPill
+        v-model="status"
+        :clickable="interactive"
+        selection-type="radio"
+        :options="interactive ? statusOptions : undefined"
+        aria-label="Filter catalog by status"
+        dropdown-label="Status"
+      >
         <template #icon>
           <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
             <path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
@@ -23,17 +59,38 @@ import UiIconPill from '~/components/ui/IconPill.vue'
         Status
       </UiIconPill>
 
-      <UiIconPill aria-label="Filter catalog by department">
+      <UiIconPill
+        v-model="category"
+        :clickable="interactive"
+        selection-type="checkbox"
+        :options="interactive ? thirdOptions : undefined"
+        :aria-label="`Filter catalog by ${thirdLabel.toLowerCase()}`"
+        :dropdown-label="thirdLabel"
+      >
         <template #icon>
-          <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
+          <svg v-if="thirdIcon === 'department'" viewBox="0 0 256 256" fill="currentColor" focusable="false">
             <path d="M240,208H224V96a16,16,0,0,0-16-16H144V32a16,16,0,0,0-24.88-13.32L39.12,72A16,16,0,0,0,32,85.34V208H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM208,96V208H144V96ZM48,85.34,128,32V208H48ZM112,112v16a8,8,0,0,1-16,0V112a8,8,0,1,1,16,0Zm-32,0v16a8,8,0,0,1-16,0V112a8,8,0,1,1,16,0Zm0,56v16a8,8,0,0,1-16,0V168a8,8,0,0,1,16,0Zm32,0v16a8,8,0,0,1-16,0V168a8,8,0,0,1,16,0Z" />
           </svg>
+          <svg v-else-if="thirdIcon === 'labs'" viewBox="0 0 256 256" fill="currentColor" focusable="false">
+            <path d="M248,124a56.11,56.11,0,0,0-32-50.61V72a48,48,0,0,0-88-26.49A48,48,0,0,0,40,72v1.39a56,56,0,0,0,0,101.2V176a48,48,0,0,0,88,26.49A48,48,0,0,0,216,176v-1.41A56.09,56.09,0,0,0,248,124ZM88,208a32,32,0,0,1-31.81-28.56A55.87,55.87,0,0,0,64,180h8a8,8,0,0,0,0-16H64A40,40,0,0,1,50.67,86.27,8,8,0,0,0,56,78.73V72a32,32,0,0,1,64,0v68.26A47.8,47.8,0,0,0,88,128a8,8,0,0,0,0,16,32,32,0,0,1,0,64Zm104-44h-8a8,8,0,0,0,0,16h8a55.87,55.87,0,0,0,7.81-.56A32,32,0,1,1,168,144a8,8,0,0,0,0-16,47.8,47.8,0,0,0-32,12.26V72a32,32,0,0,1,64,0v6.73a8,8,0,0,0,5.33,7.54A40,40,0,0,1,192,164Zm16-52a8,8,0,0,1-8,8h-4a36,36,0,0,1-36-36V80a8,8,0,0,1,16,0v4a20,20,0,0,0,20,20h4A8,8,0,0,1,208,112ZM60,120H56a8,8,0,0,1,0-16h4A20,20,0,0,0,80,84V80a8,8,0,0,1,16,0v4A36,36,0,0,1,60,120Z" />
+          </svg>
+          <svg v-else viewBox="0 0 256 256" fill="currentColor" focusable="false">
+            <path d="M76,152a36,36,0,1,0,36,36A36,36,0,0,0,76,152Zm0,56a20,20,0,1,1,20-20A20,20,0,0,1,76,208ZM42.34,106.34,56.69,92,42.34,77.66A8,8,0,0,1,53.66,66.34L68,80.69,82.34,66.34A8,8,0,0,1,93.66,77.66L79.31,92l14.35,14.34a8,8,0,0,1-11.32,11.32L68,103.31,53.66,117.66a8,8,0,0,1-11.32-11.32Zm187.32,96a8,8,0,0,1-11.32,11.32L204,199.31l-14.34,14.35a8,8,0,0,1-11.32-11.32L192.69,188l-14.35-14.34a8,8,0,0,1,11.32-11.32L204,176.69l14.34-14.35a8,8,0,0,1,11.32,11.32L215.31,188Zm-45.19-89.51c-6.18,22.33-25.32,41.63-46.53,46.93A8.13,8.13,0,0,1,136,160a8,8,0,0,1-1.93-15.76c15.63-3.91,30.35-18.91,35-35.68,3.19-11.5,3.22-29-14.71-46.9L152,59.31V80a8,8,0,0,1-16,0V40a8,8,0,0,1,8-8h40a8,8,0,0,1,0,16H163.31l2.35,2.34C183.9,68.59,190.58,90.78,184.47,112.83Z" />
+          </svg>
         </template>
-        Department
+        {{ thirdLabel }}
       </UiIconPill>
     </div>
 
-    <UiIconPill aria-label="Sort catalog">
+    <UiIconPill
+      v-model="sort"
+      :clickable="interactive"
+      dropdown-align="right"
+      selection-type="radio"
+      :options="interactive ? sortOptions : undefined"
+      aria-label="Sort catalog"
+      dropdown-label="Sort"
+    >
       <template #icon>
         <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
           <path d="M117.66,170.34a8,8,0,0,1,0,11.32l-32,32a8,8,0,0,1-11.32,0l-32-32a8,8,0,0,1,11.32-11.32L72,188.69V48a8,8,0,0,1,16,0V188.69l18.34-18.35A8,8,0,0,1,117.66,170.34Zm96-96-32-32a8,8,0,0,0-11.32,0l-32,32a8,8,0,0,0,11.32,11.32L168,67.31V208a8,8,0,0,0,16,0V67.31l18.34,18.35a8,8,0,0,0,11.32-11.32Z" />

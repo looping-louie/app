@@ -25,6 +25,16 @@ const { data, status, error, refresh } = await useAsyncData(
 )
 
 const skills = computed(() => data.value?.items ?? [])
+const skillStatus = ref('all')
+const skillTasks = ref<string[]>([])
+const skillSort = ref('alphabetical-asc')
+
+const skillTaskOptions = [
+  { value: 'coding', label: 'Coding' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'selling', label: 'Selling' },
+  { value: 'writing', label: 'Writing' },
+]
 
 const skillDateFormatter = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
@@ -58,7 +68,16 @@ useHead({
       </template>
     </UiHeadingBlock>
 
-    <UiCatalogFilterBar class="catalog-filters" />
+    <UiCatalogFilterBar
+      v-model:status="skillStatus"
+      v-model:category="skillTasks"
+      v-model:sort="skillSort"
+      interactive
+      third-label="Task"
+      third-icon="task"
+      :third-options="skillTaskOptions"
+      class="catalog-filters"
+    />
 
     <div v-if="status === 'pending'" class="catalog-state" role="status">Loading skills…</div>
     <div v-else-if="error" class="catalog-state catalog-state--error" role="alert">

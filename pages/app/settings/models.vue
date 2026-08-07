@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import UiButton from '~/components/ui/Button.vue'
+import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 
@@ -21,6 +22,25 @@ const { data, status, error, refresh } = await useAsyncData(
 )
 
 const models = computed(() => data.value?.items ?? [])
+const modelStatus = ref('all')
+const modelLabs = ref<string[]>([])
+const modelSort = ref('alphabetical-asc')
+
+const modelLabOptions = [
+  { value: 'anthropic', label: 'Anthropic' },
+  { value: 'deep-cogito', label: 'Deep Cogito' },
+  { value: 'deepseek', label: 'DeepSeek' },
+  { value: 'google', label: 'Google' },
+  { value: 'meta', label: 'Meta' },
+  { value: 'minimax', label: 'Minimax' },
+  { value: 'mistral', label: 'Mistral' },
+  { value: 'moonshot', label: 'Moonshot' },
+  { value: 'nvidia', label: 'Nvidia' },
+  { value: 'openai', label: 'OpenAI' },
+  { value: 'thinking-machines', label: 'Thinking Machines' },
+  { value: 'qwen', label: 'Qwen' },
+  { value: 'z', label: 'Z' },
+]
 
 const modelLogoByVendor: Record<string, string> = {
   anthropic: '/images/models/anthropic.webp',
@@ -66,12 +86,23 @@ useHead({
   <section aria-labelledby="models-heading">
     <h2 id="models-heading" class="visually-hidden">Models</h2>
 
+    <UiCatalogFilterBar
+      v-model:status="modelStatus"
+      v-model:category="modelLabs"
+      v-model:sort="modelSort"
+      interactive
+      third-label="Labs"
+      third-icon="labs"
+      :third-options="modelLabOptions"
+      class="models-filters"
+    />
+
     <div v-if="status === 'pending'" class="settings-state" role="status">Loading models…</div>
     <div v-else-if="error" class="settings-state settings-state--error" role="alert">
       <span>Models could not be loaded.</span>
       <UiButton variant="stroke" size="sm" @click="refresh">Retry</UiButton>
     </div>
-    <UiSectionStage v-else inverse="both">
+    <UiSectionStage v-else inverse="bottom">
       <UiGrid :columns="3" gap="lg">
         <div v-for="model in models" :key="model.id" class="model-item">
           <img
@@ -97,6 +128,10 @@ useHead({
 </template>
 
 <style scoped>
+.models-filters {
+  margin-bottom: var(--ll-space-10);
+}
+
 .settings-state {
   display: flex;
   min-height: 10rem;

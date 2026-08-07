@@ -40,6 +40,8 @@ const headingDeployment = ref('platform')
 const interfaceView = ref('agents')
 const automaticRetries = ref(true)
 const humanReview = ref(false)
+const pillStatus = ref('enabled')
+const pillLabs = ref<string[]>(['openai'])
 const copiedCommand = ref<string | null>(null)
 const copyError = ref<string | null>(null)
 let copyResetTimer: ReturnType<typeof setTimeout> | undefined
@@ -72,6 +74,103 @@ const headingDeploymentOptions = [
   { value: 'platform', label: 'Louie Cloud' },
   { value: 'self-hosted', label: 'Self-hosted' },
 ]
+
+const pillStatusOptions = [
+  { value: 'all', label: 'All statuses' },
+  { value: 'enabled', label: 'Enabled' },
+  { value: 'disabled', label: 'Disabled' },
+]
+
+const pillLabOptions = [
+  { value: 'openai', label: 'OpenAI' },
+  { value: 'anthropic', label: 'Anthropic' },
+  { value: 'google', label: 'Google DeepMind' },
+]
+
+const designSystemNavItems = [
+  { id: 'foundations', label: '01 · Foundations', level: 1 },
+  { id: 'colors', label: 'Color', level: 2 },
+  { id: 'typography', label: 'Typography', level: 2 },
+  { id: 'actions', label: '02 · Actions', level: 1 },
+  { id: 'buttons', label: 'Buttons', level: 2 },
+  { id: 'toggle', label: 'Toggle', level: 2 },
+  { id: 'icon-pill', label: 'Icon pill', level: 2 },
+  { id: 'copy-command', label: 'Copyable command', level: 2 },
+  { id: 'segmented-control', label: 'Segmented control', level: 2 },
+  { id: 'composition', label: '03 · Composition', level: 1 },
+  { id: 'breadcrumb', label: 'Breadcrumb', level: 2 },
+  { id: 'heading-block', label: 'Heading block', level: 2 },
+  { id: 'layout', label: '04 · Layout', level: 1 },
+  { id: 'container', label: 'Container', level: 2 },
+  { id: 'section', label: 'Section', level: 2 },
+  { id: 'collections', label: '05 · Collections', level: 1 },
+  { id: 'grid-card', label: 'Grid & card', level: 2 },
+  { id: 'grid-list', label: 'Grid list', level: 2 },
+  { id: 'team-grid', label: 'Team grid', level: 2 },
+  { id: 'accordion', label: 'Accordion', level: 2 },
+  { id: 'site-chrome', label: '06 · Site chrome', level: 1 },
+  { id: 'site-navigation', label: 'Main navigation', level: 2 },
+  { id: 'interface-showcase', label: 'Interface showcase', level: 2 },
+  { id: 'site-footer', label: 'Site footer', level: 2 },
+] as const
+
+const activeNavId = ref<(typeof designSystemNavItems)[number]['id']>('foundations')
+const designSystemSidebar = ref<HTMLElement | null>(null)
+let scrollSpyFrame: number | undefined
+
+function keepActiveNavItemVisible() {
+  const sidebar = designSystemSidebar.value
+  const activeLink = sidebar?.querySelector<HTMLElement>(`[data-nav-id="${activeNavId.value}"]`)
+  if (!sidebar || !activeLink) return
+
+  const sidebarBounds = sidebar.getBoundingClientRect()
+  const linkBounds = activeLink.getBoundingClientRect()
+  const breathingRoom = 12
+
+  if (linkBounds.top < sidebarBounds.top + breathingRoom) {
+    sidebar.scrollTop -= sidebarBounds.top + breathingRoom - linkBounds.top
+  } else if (linkBounds.bottom > sidebarBounds.bottom - breathingRoom) {
+    sidebar.scrollTop += linkBounds.bottom - sidebarBounds.bottom + breathingRoom
+  }
+}
+
+function updateActiveNavItem() {
+  scrollSpyFrame = undefined
+  const marker = 100
+  let nextActive = designSystemNavItems[0].id
+
+  for (const item of designSystemNavItems) {
+    const section = document.getElementById(item.id)
+    if (!section || section.getBoundingClientRect().top > marker) break
+    nextActive = item.id
+  }
+
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+    nextActive = designSystemNavItems.at(-1)?.id ?? nextActive
+  }
+
+  if (activeNavId.value !== nextActive) {
+    activeNavId.value = nextActive
+    nextTick(keepActiveNavItemVisible)
+  }
+}
+
+function scheduleScrollSpyUpdate() {
+  if (scrollSpyFrame !== undefined) return
+  scrollSpyFrame = window.requestAnimationFrame(updateActiveNavItem)
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', scheduleScrollSpyUpdate, { passive: true })
+  window.addEventListener('resize', scheduleScrollSpyUpdate)
+  nextTick(updateActiveNavItem)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', scheduleScrollSpyUpdate)
+  window.removeEventListener('resize', scheduleScrollSpyUpdate)
+  if (scrollSpyFrame !== undefined) window.cancelAnimationFrame(scrollSpyFrame)
+})
 
 const mainNavigationMenus = [
   {
@@ -338,33 +437,22 @@ onBeforeUnmount(() => {
 
         <UiContainer size="wide" class="ds-shell-frame">
           <div class="ds-shell">
-        <aside class="ds-sidebar" aria-label="Design system index">
+        <aside ref="designSystemSidebar" class="ds-sidebar" aria-label="Design system index">
           <p>Contents</p>
           <nav>
-            <a href="#foundations" class="is-active">01 · Foundations</a>
-            <a href="#colors">Color</a>
-            <a href="#typography">Typography</a>
-            <a href="#actions">02 · Actions</a>
-            <a href="#buttons">Buttons</a>
-            <a href="#toggle">Toggle</a>
-            <a href="#icon-pill">Icon pill</a>
-            <a href="#copy-command">Copyable command</a>
-            <a href="#segmented-control">Segmented control</a>
-            <a href="#composition">03 · Composition</a>
-            <a href="#breadcrumb">Breadcrumb</a>
-            <a href="#heading-block">Heading block</a>
-            <a href="#layout">04 · Layout</a>
-            <a href="#container">Container</a>
-            <a href="#section">Section</a>
-            <a href="#collections">05 · Collections</a>
-            <a href="#grid-card">Grid &amp; card</a>
-            <a href="#grid-list">Grid list</a>
-            <a href="#team-grid">Team grid</a>
-            <a href="#accordion">Accordion</a>
-            <a href="#site-chrome">06 · Site chrome</a>
-            <a href="#site-navigation">Main navigation</a>
-            <a href="#interface-showcase">Interface showcase</a>
-            <a href="#site-footer">Site footer</a>
+            <a
+              v-for="item in designSystemNavItems"
+              :key="item.id"
+              :href="`#${item.id}`"
+              :data-nav-id="item.id"
+              :class="[
+                `ds-sidebar__link--level-${item.level}`,
+                { 'is-active': activeNavId === item.id },
+              ]"
+              :aria-current="activeNavId === item.id ? 'location' : undefined"
+            >
+              {{ item.label }}
+            </a>
           </nav>
           <div class="ds-sidebar__note">
             <span class="ds-sidebar__note-dot" />
@@ -630,30 +718,53 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="ds-icon-pill-example">
-                  <span class="ds-stage__caption">Clickable · connected dropdown</span>
-                  <UiIconPill clickable aria-label="Add filter" dropdown-label="Available filters">
+                  <span class="ds-stage__caption">Radio · opens left</span>
+                  <UiIconPill
+                    v-model="pillStatus"
+                    clickable
+                    selection-type="radio"
+                    :options="pillStatusOptions"
+                    aria-label="Filter by status"
+                    dropdown-label="Status"
+                  >
                     <template #icon>
                       <svg viewBox="0 0 256 256" fill="currentColor">
-                        <path d="M40,72a8,8,0,0,1,8-8H208a8,8,0,0,1,0,16H48A8,8,0,0,1,40,72Zm32,56a8,8,0,0,1,8-8h96a8,8,0,0,1,0,16H80A8,8,0,0,1,72,128Zm40,56a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H120A8,8,0,0,1,112,184Z" />
+                        <path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
                       </svg>
                     </template>
-                    Add filter
-                    <template #dropdown="{ close }">
-                      <div class="ds-pill-dropdown">
-                        <p>Filter by</p>
-                        <button type="button" @click="close()"><span>Status</span><small>Running, paused, failed</small></button>
-                        <button type="button" @click="close()"><span>Provider</span><small>OpenAI, Anthropic, local</small></button>
-                        <button type="button" @click="close()"><span>Model</span><small>Choose a deployed model</small></button>
-                      </div>
+                    Status
+                  </UiIconPill>
+                </div>
+
+                <div class="ds-icon-pill-example ds-icon-pill-example--right">
+                  <span class="ds-stage__caption">Checkbox · opens right</span>
+                  <UiIconPill
+                    v-model="pillLabs"
+                    clickable
+                    dropdown-align="right"
+                    selection-type="checkbox"
+                    :options="pillLabOptions"
+                    aria-label="Filter by labs"
+                    dropdown-label="Labs"
+                  >
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M248,124a56.06,56.06,0,0,0-56-56h-1.85A40,40,0,0,0,152,40a39.73,39.73,0,0,0-24,8.05A39.73,39.73,0,0,0,104,40,40,40,0,0,0,65.85,68H64a56,56,0,0,0-32,101.92V176a40,40,0,0,0,40,40,39.73,39.73,0,0,0,24-8.05A39.73,39.73,0,0,0,120,216V88a8,8,0,0,0-16,0V200a24,24,0,0,1-24-24v-8a8,8,0,0,0-8-8,40,40,0,0,1,0-80h1.37a40.09,40.09,0,0,0,30.3,14.66,8,8,0,0,0,12.11-10.44A56.21,56.21,0,0,0,82.86,65.87,24,24,0,0,1,45.14,2.25V216a39.73,39.73,0,0,0,24-8.05A39.73,39.73,0,0,0,176,216a40,40,0,0,0,40-40v-6.08A56,56,0,0,0,248,124Zm-40,36a8,8,0,0,0-8,8v8a24,24,0,0,1-48,0V88a8,8,0,0,0-16,0V200a24,24,0,0,1-8,17.85V66.13a24,24,0,0,1,45.14-2.26,56.21,56.21,0,0,0-32.92,18.35,8,8,0,0,0,12.11,10.44A40.09,40.09,0,0,1,182.63,78H184a40,40,0,0,1,0,80A8,8,0,0,0,176,166a8,8,0,0,0,8,8A56.28,56.28,0,0,0,208,168Z" />
+                      </svg>
                     </template>
+                    Labs
                   </UiIconPill>
                 </div>
               </div>
 
               <div class="ds-properties">
                 <div class="ds-property">
-                  <div class="ds-property__label"><span>Variants</span><code>clickable</code></div>
-                  <p class="ds-property__copy">The default pill is presentational. Add <strong>clickable</strong> and the dropdown slot to create an accessible disclosure with connected border geometry.</p>
+                  <div class="ds-property__label"><span>Variants</span><code>clickable · selectionType</code></div>
+                  <p class="ds-property__copy">The default pill is presentational. Dropdown pills support built-in <strong>radio</strong> and <strong>checkbox</strong> options through options and v-model, or arbitrary content through the dropdown slot.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Alignment</span><code>dropdownAlign</code></div>
+                  <p class="ds-property__copy"><strong>left</strong> is the default connected geometry. <strong>right</strong> mirrors the shoulder and anchors the wider dropdown to the pill’s right edge.</p>
                 </div>
               </div>
 
@@ -2024,6 +2135,14 @@ onBeforeUnmount(() => {
   font-size: 0.8125rem;
   text-decoration: none;
   transition: color var(--ll-duration-normal), background var(--ll-duration-normal);
+}
+
+.ds-sidebar nav a.ds-sidebar__link--level-1 {
+  font-weight: 620;
+}
+
+.ds-sidebar nav a.ds-sidebar__link--level-2 {
+  margin-left: 0.65rem;
 }
 
 .ds-sidebar nav a:hover,

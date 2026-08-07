@@ -24,6 +24,17 @@ const { data, status, error, refresh } = await useAsyncData(
 )
 
 const agents = computed(() => data.value?.items ?? [])
+const agentStatus = ref('all')
+const agentDepartments = ref<string[]>([])
+const agentSort = ref('alphabetical-asc')
+
+const agentDepartmentOptions = [
+  { value: 'engineering', label: 'Engineering' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'marketing', label: 'Marketing' },
+  { value: 'operations', label: 'Operations' },
+  { value: 'sales', label: 'Sales' },
+]
 
 const { personaIcon } = usePersonaIcon()
 
@@ -47,7 +58,14 @@ useHead({
       </template>
     </UiHeadingBlock>
 
-    <UiCatalogFilterBar class="catalog-filters" />
+    <UiCatalogFilterBar
+      v-model:status="agentStatus"
+      v-model:category="agentDepartments"
+      v-model:sort="agentSort"
+      interactive
+      :third-options="agentDepartmentOptions"
+      class="catalog-filters"
+    />
 
     <div v-if="status === 'pending'" class="catalog-state" role="status">Loading agents…</div>
     <div v-else-if="error" class="catalog-state catalog-state--error" role="alert">
