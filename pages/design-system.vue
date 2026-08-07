@@ -16,7 +16,6 @@ import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
 definePageMeta({
   layout: false,
-  alias: '/design-variants',
 })
 
 useHead({
@@ -274,7 +273,7 @@ onBeforeUnmount(() => {
     </header>
 
     <main>
-      <UiSection as="div" space="none" class="ds-page-canvas">
+      <UiSection as="div" class="ds-page-canvas">
         <section class="ds-hero">
         <div class="ds-hero__copy">
           <p class="ds-eyebrow"><span /> Foundations</p>
@@ -470,7 +469,7 @@ onBeforeUnmount(() => {
                     <h3>Button</h3>
                     <code>UiButton</code>
                   </div>
-                  <p>Actions and links with three levels of hierarchy.</p>
+                  <p>Actions and links across four visual variants.</p>
                 </div>
                 <span class="ds-status"><i /> Stable</span>
               </header>
@@ -914,7 +913,7 @@ onBeforeUnmount(() => {
               <div>
                 <h2>Layout</h2>
                 <p>
-                  Sections establish vertical rhythm, containers establish horizontal measure, and
+                  Sections establish semantic page chapters, containers establish horizontal measure, and
                   stages add the optional tonal surface and inverse geometry.
                 </p>
               </div>
@@ -1026,10 +1025,10 @@ onBeforeUnmount(() => {
                     <span>Canvas section</span>
                     <code>UiSection · no stage</code>
                   </div>
-                  <UiSection as="div" space="none">
+                  <UiSection as="div">
                     <div class="ds-section-demo__sample">
                       <h4>A clean page chapter</h4>
-                      <p>Without a stage, Section stays entirely on Canvas. Light 050 never appears implicitly.</p>
+                      <p>Without a stage, Section stays entirely on Canvas. Metal 025 never appears implicitly.</p>
                     </div>
                   </UiSection>
                 </div>
@@ -1039,14 +1038,14 @@ onBeforeUnmount(() => {
                     <span>Heading outside · regular stage</span>
                     <code>Section + Stage inverse="none"</code>
                   </div>
-                  <UiSection as="div" space="none" class="ds-section-composition">
+                  <UiSection as="div" class="ds-section-composition">
                     <div class="ds-section-demo__sample">
                       <h4>The title belongs to Canvas</h4>
                       <p>The stage starts afterwards, so the heading is not captured by its tonal background.</p>
                     </div>
                     <UiSectionStage>
                       <div class="ds-section-demo__sample ds-section-demo__sample--stage">
-                        <p>Light 050 begins here, with regular rounded edges.</p>
+                        <p>The Metal 025 Section surface begins here, with regular rounded edges.</p>
                       </div>
                     </UiSectionStage>
                   </UiSection>
@@ -1057,11 +1056,11 @@ onBeforeUnmount(() => {
                     <span>Inverse top</span>
                     <code>SectionStage inverse="top"</code>
                   </div>
-                  <UiSection as="div" space="none">
+                  <UiSection as="div">
                     <UiSectionStage inverse="top">
                       <div class="ds-section-demo__sample">
                         <h4>Arrive from the previous band</h4>
-                        <p>The upper Light 050 band opens to full width while the lower edge remains contained.</p>
+                        <p>The upper Metal 025 band opens to full width while the lower edge remains contained.</p>
                       </div>
                     </UiSectionStage>
                   </UiSection>
@@ -1072,11 +1071,11 @@ onBeforeUnmount(() => {
                     <span>Heading inside · inverse bottom</span>
                     <code>SectionStage inverse="bottom"</code>
                   </div>
-                  <UiSection as="div" space="none">
+                  <UiSection as="div">
                     <UiSectionStage inverse="bottom">
                       <div class="ds-section-demo__sample">
                         <h4>The title belongs to the collection</h4>
-                        <p>Heading and content share Light 050 before the lower edge expands through its inverse radius.</p>
+                        <p>Heading and content share Metal 025 before the lower edge expands through its inverse radius.</p>
                       </div>
                     </UiSectionStage>
                   </UiSection>
@@ -1087,11 +1086,11 @@ onBeforeUnmount(() => {
                     <span>Inverse top and bottom</span>
                     <code>SectionStage inverse="both"</code>
                   </div>
-                  <UiSection as="div" space="none">
+                  <UiSection as="div">
                     <UiSectionStage inverse="both">
                       <div class="ds-section-demo__sample">
                         <h4>A continuous tonal chapter</h4>
-                        <p>Both Light 050 padding bands reach full width while Canvas remains visible at the sides.</p>
+                        <p>Both Metal 025 padding bands reach full width while Canvas remains visible at the sides.</p>
                       </div>
                     </UiSectionStage>
                   </UiSection>
@@ -1102,12 +1101,11 @@ onBeforeUnmount(() => {
                 <div class="ds-property">
                   <div class="ds-property__label">
                     <span>Section</span>
-                    <code>space</code>
+                    <code>as</code>
                   </div>
                   <p class="ds-property__copy">
-                    Section is always Canvas and controls semantic grouping plus vertical rhythm.
-                    Choose <strong>none</strong>, <strong>sm</strong>, <strong>md</strong>, or
-                    <strong>lg</strong> for its fluid vertical spacing.
+                    Section is always Canvas and provides semantic grouping without imposing vertical
+                    spacing. Use <strong>as</strong> when the wrapper needs a different HTML element.
                   </p>
                 </div>
                 <div class="ds-property">
@@ -1116,7 +1114,7 @@ onBeforeUnmount(() => {
                     <code>UiSectionStage</code>
                   </div>
                   <p class="ds-property__copy">
-                    Stage is opt-in. It owns Light 050, the thin horizontal shell padding, and its
+                    Stage is opt-in. It owns the Metal 025 Section surface, the thin horizontal shell padding, and its
                     corner geometry. Put a heading inside only when it belongs to that visual group.
                   </p>
                 </div>
@@ -1191,7 +1189,7 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-collection-example">
-                <UiSection as="div" space="none" class="ds-collection-section">
+                <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-example__heading ds-collection-example__heading--outside">
                     <span>Media cards</span>
                     <code>heading outside · columns="3" · variant="media"</code>
@@ -1225,7 +1223,7 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="ds-collection-example">
-                <UiSection as="div" space="none" class="ds-collection-section">
+                <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-example__heading ds-collection-example__heading--outside">
                     <span>Agent books and latest releases</span>
                     <code>group titles outside Stage · content inside</code>
@@ -1264,7 +1262,7 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="ds-collection-example">
-                <UiSection as="div" space="none" class="ds-collection-section">
+                <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-example__heading ds-collection-example__heading--outside">
                     <span>Articles</span>
                     <code>heading outside · columns="2" · variant="editorial"</code>
@@ -1292,8 +1290,8 @@ onBeforeUnmount(() => {
 
               <div class="ds-properties">
                 <div class="ds-property">
-                  <div class="ds-property__label"><span>Grid</span><code>columns · gap</code></div>
-                  <p class="ds-property__copy">Columns collapse from four or three to two, then to one. Grid never styles its children.</p>
+                  <div class="ds-property__label"><span>Grid</span><code>columns · gap · collapse</code></div>
+                  <p class="ds-property__copy">Columns collapse from four or three to two, then to one unless <strong>collapse="never"</strong> preserves the requested layout. Grid never styles its children.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Card</span><code>media · editorial · row</code></div>
@@ -1315,7 +1313,7 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-collection-example ds-collection-example--directory">
-                <UiSection as="div" space="none" class="ds-collection-section">
+                <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-example__heading ds-collection-example__heading--outside">
                     <span>Customer directory</span>
                     <code>heading outside · Stage inverse="bottom" · GridList plain</code>
@@ -1331,7 +1329,7 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="ds-collection-example">
-                <UiSection as="div" space="none" class="ds-collection-section">
+                <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-example__heading ds-collection-example__heading--outside">
                     <span>Open positions</span>
                     <code>heading outside · GridList surface · clickable</code>
@@ -1348,7 +1346,7 @@ onBeforeUnmount(() => {
 
               <footer class="ds-component__footnote">
                 <span>Surface ownership</span>
-                <p>GridList remains transparent and responsive. Its optional SectionStage owns Light 050 and any inverse edge; Section stays on Canvas.</p>
+                <p>GridList remains transparent and responsive. Its optional SectionStage owns the Metal 025 Section surface and any inverse edge; Section stays on Canvas.</p>
               </footer>
             </article>
 
@@ -1365,7 +1363,7 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-collection-example">
-                <UiSection as="div" space="none" class="ds-collection-section">
+                <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-heading-outside">
                     <UiHeadingBlock align="start" size="subsection">
                       <template #title><h3>The crew</h3></template>
@@ -1402,14 +1400,14 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-collection-example ds-collection-example--accordion">
-                <UiSection as="div" space="none" class="ds-collection-section">
+                <UiSection as="div" class="ds-collection-section">
                   <div class="ds-grouped-collection">
                     <UiCollectionGroupTitle
                       heading-as="h3"
                       title="Frequently Asked Questions"
                     />
                     <UiSectionStage inverse="bottom" class="ds-collection-stage">
-                      <UiAccordion :items="faqItems" :default-open="['loop']" />
+                      <UiAccordion :items="faqItems" default-open="loop" />
                     </UiSectionStage>
                   </div>
                 </UiSection>

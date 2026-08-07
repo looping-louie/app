@@ -14,12 +14,10 @@ const props = withDefaults(defineProps<{
   modelValue: string
   options: SegmentOption[]
   ariaLabel?: string
-  fullWidth?: boolean
   accent?: SegmentAccent
   variant?: SegmentVariant
 }>(), {
-  ariaLabel: 'Seleccionar una opción',
-  fullWidth: false,
+  ariaLabel: 'Select an option',
   accent: 'secondary',
   variant: 'contained',
 })
@@ -141,10 +139,7 @@ onBeforeUnmount(() => {
     :class="[
       `ui-segmented-control--${accent}`,
       `ui-segmented-control--${variant}`,
-      {
-        'ui-segmented-control--full': fullWidth,
-        'ui-segmented-control--indicator-ready': inlineIndicatorReady,
-      },
+      { 'ui-segmented-control--indicator-ready': inlineIndicatorReady },
     ]"
     :style="segmentStyle"
     role="radiogroup"
@@ -199,10 +194,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 9px rgba(25, 26, 23, 0.1);
 }
 
-.ui-segmented-control--full {
-  width: 100%;
-}
-
 .ui-segmented-control--contained:has(.ui-segmented-control__option:hover:not(:disabled):not([data-selected="true"])) {
   --ui-segment-track-fill: #fcfbf8;
   --ui-segment-track-border-start: #ffffff;
@@ -242,10 +233,6 @@ onBeforeUnmount(() => {
   background: transparent;
   border: 0;
   box-shadow: none;
-}
-
-.ui-segmented-control--inline.ui-segmented-control--full {
-  width: 100%;
 }
 
 .ui-segmented-control--inline .ui-segmented-control__indicator {

@@ -7,22 +7,20 @@ interface AccordionItem {
 
 const props = withDefaults(defineProps<{
   items: AccordionItem[]
-  defaultOpen?: string[]
-  allowMultiple?: boolean
+  defaultOpen?: string
 }>(), {
-  defaultOpen: () => [],
-  allowMultiple: false,
+  defaultOpen: '',
 })
 
 const instanceId = useId().replaceAll(':', '')
-const openIds = ref(new Set(props.defaultOpen))
+const openIds = ref(new Set(props.defaultOpen ? [props.defaultOpen] : []))
 
 function isOpen(id: string) {
   return openIds.value.has(id)
 }
 
 function toggle(id: string) {
-  const next = props.allowMultiple ? new Set(openIds.value) : new Set<string>()
+  const next = new Set<string>()
   if (openIds.value.has(id)) next.delete(id)
   else next.add(id)
   openIds.value = next

@@ -28,11 +28,8 @@
 
   /* Semantic color roles */
   --ll-color-canvas: var(--ll-color-metal-050);
-  --ll-color-surface: var(--ll-color-metal-050);
   --ll-color-surface-raised: var(--ll-color-metal-025);
   --ll-color-surface-muted: var(--ll-color-metal-200);
-  --ll-color-section-subtle: var(--ll-color-metal-200);
-  --ll-color-section-backdrop: var(--ll-color-metal-200);
   --ll-color-ink: var(--ll-color-metal-950);
   --ll-color-text: var(--ll-color-metal-950);
   --ll-color-text-muted: var(--ll-color-metal-700);
@@ -47,19 +44,15 @@
   --ll-color-primary-depth-hover: #103a57;
   --ll-color-brand: var(--ll-color-red-700);
   --ll-color-brand-bright: var(--ll-color-red-500);
-  --ll-color-brand-soft: var(--ll-color-red-100);
   --ll-color-brand-ink: var(--ll-color-red-800);
   --ll-color-signal: var(--ll-color-blue-700);
-  --ll-color-signal-soft: var(--ll-color-blue-100);
   --ll-color-signal-ink: var(--ll-color-blue-800);
-  --ll-color-danger: var(--ll-color-red-700);
 
   /* Mastra-inspired, free and self-hosted */
   --ll-font-sans: "Instrument Sans Variable", "Segoe UI", sans-serif;
   --ll-font-display: var(--ll-font-sans);
   --ll-font-control: var(--ll-font-sans);
   --ll-font-mono: "Commit Mono", "SFMono-Regular", Consolas, monospace;
-  --font-sans: var(--ll-font-sans);
   --font-mono: var(--ll-font-mono);
 
   --ll-text-xs: 0.75rem;
@@ -89,14 +82,6 @@
   --ll-shadow-focus: 0 0 0 3px rgba(34, 102, 153, 0.2);
   --ll-shadow-raised: 0 16px 45px rgba(41, 47, 51, 0.09);
 
-  --ll-control-surface: var(--ll-color-metal-100);
-  --ll-control-surface-hover: var(--ll-color-metal-025);
-  --ll-control-surface-selected: var(--ll-color-metal-200);
-  --ll-control-shadow:
-    0 5px 14px rgba(41, 47, 51, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.58);
-
-  --ll-duration-fast: 120ms;
   --ll-duration-normal: 180ms;
   --ll-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }

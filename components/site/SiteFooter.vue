@@ -34,7 +34,7 @@ function linkBindings(link: FooterLink) {
 
 <template>
   <footer class="ui-site-footer">
-    <UiSection as="div" space="none">
+    <UiSection as="div">
       <UiSectionStage inverse="bottom">
         <UiContainer size="wide">
           <div class="ui-site-footer__content">
