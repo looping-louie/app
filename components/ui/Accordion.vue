@@ -85,9 +85,10 @@ function toggle(id: string) {
   border: 0;
   border-radius: calc(var(--ll-radius-structural) / 2);
   cursor: pointer;
-  font-size: var(--ll-text-sm);
-  font-weight: 620;
-  line-height: 1.35;
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
   text-align: left;
   transition: background-color var(--ll-duration-normal) var(--ll-ease-out);
 }
@@ -136,7 +137,7 @@ function toggle(id: string) {
   padding: 0 var(--ll-space-6) var(--ll-space-5);
   color: var(--ll-color-text-muted);
   font-size: var(--ll-text-sm);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 @media (prefers-reduced-motion: reduce) {

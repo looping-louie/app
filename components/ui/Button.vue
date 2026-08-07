@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type ButtonVariant = 'primary' | 'secondary' | 'stroke' | 'gray'
+type ButtonVariant = 'primary' | 'secondary' | 'stroke' | 'metal'
 type ButtonSize = 'sm' | 'md' | 'lg'
 type ButtonType = 'button' | 'submit' | 'reset'
 
@@ -218,15 +218,15 @@ function handleClick(event: MouseEvent) {
   transform: scale(0.98);
 }
 
-.ui-button--gray {
-  --ui-button-gray-fill: var(--ll-color-gray-950);
-  --ui-button-gray-border-start: #ffffff;
-  --ui-button-gray-border-end: #050607;
+.ui-button--metal {
+  --ui-button-metal-fill: var(--ll-color-metal-950);
+  --ui-button-metal-border-start: #ffffff;
+  --ui-button-metal-border-end: #050607;
 
-  color: var(--ll-color-gray-050);
+  color: var(--ll-color-metal-100);
   background-image:
-    linear-gradient(var(--ui-button-gray-fill), var(--ui-button-gray-fill)),
-    linear-gradient(180deg, var(--ui-button-gray-border-start) 0%, var(--ui-button-gray-border-end) 100%);
+    linear-gradient(var(--ui-button-metal-fill), var(--ui-button-metal-fill)),
+    linear-gradient(180deg, var(--ui-button-metal-border-start) 0%, var(--ui-button-metal-border-end) 100%);
   background-clip: padding-box, border-box;
   background-origin: padding-box, border-box;
   border-width: 1.5px;
@@ -234,13 +234,13 @@ function handleClick(event: MouseEvent) {
   box-shadow: 0 4px 9px rgba(17, 21, 24, 0.34);
 }
 
-.ui-button--gray:hover:not([aria-disabled="true"]) {
-  --ui-button-gray-fill: #343c41;
-  --ui-button-gray-border-start: #ffffff;
-  --ui-button-gray-border-end: #090b0c;
+.ui-button--metal:hover:not([aria-disabled="true"]) {
+  --ui-button-metal-fill: #343c41;
+  --ui-button-metal-border-start: #ffffff;
+  --ui-button-metal-border-end: #090b0c;
 }
 
-.ui-button--gray:active:not([aria-disabled="true"]) {
+.ui-button--metal:active:not([aria-disabled="true"]) {
   transform: scale(0.98);
 }
 

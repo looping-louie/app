@@ -158,13 +158,31 @@ function handleSelect(item: GridListItem) {
   min-width: 0;
 }
 
+.ui-grid-list__leading {
+  color: var(--ll-color-ink);
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.ui-grid-list__leading :deep(:is(strong, h3, h4, p)) {
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
 .ui-grid-list__metadata {
   color: var(--ll-color-text-muted);
   font-size: var(--ll-text-sm);
+  line-height: 1.5;
 }
 
 .ui-grid-list__trailing {
   justify-self: end;
+  font-size: var(--ll-text-md);
+  line-height: 1.5;
 }
 
 @media (max-width: 44rem) {

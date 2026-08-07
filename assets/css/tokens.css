@@ -1,12 +1,14 @@
 :root {
   /* Looping Louie — light design-system foundations */
   /* Small Airplane · Twitter / X Twemoji 2.0 */
-  --ll-color-gray-950: #292f33;
-  --ll-color-gray-600: #66757f;
-  --ll-color-gray-300: #ccd6dd;
-  --ll-color-gray-200: #dce3e7;
-  --ll-color-gray-100: #e8edf0;
-  --ll-color-gray-050: #f5f7f8;
+  --ll-color-metal-025: #fdfefe;
+  --ll-color-metal-050: #fafbfc;
+  --ll-color-metal-100: #f5f7f8;
+  --ll-color-metal-200: #eef2f4;
+  --ll-color-metal-400: #dce3e7;
+  --ll-color-metal-500: #ccd6dd;
+  --ll-color-metal-700: #66757f;
+  --ll-color-metal-950: #292f33;
   --ll-color-blue-800: #0b2d46;
   --ll-color-blue-700: #226699;
   --ll-color-blue-600: #2b75aa;
@@ -18,30 +20,25 @@
   --ll-color-red-500: #ea596e;
   --ll-color-red-100: #fbe9ec;
 
-  /* Light surface scale — Mastra hierarchy trial */
-  --ll-color-light-050: #fdfefe;
-  --ll-color-light-100: #fafbfc;
-  --ll-color-light-200: #f5f7f8;
-  --ll-color-light-300: #eef2f4;
-  --ll-color-light-400: #dce3e7;
-  --ll-color-section: var(--ll-color-light-050);
-  --ll-color-card: var(--ll-color-light-200);
-  --ll-color-highlight: var(--ll-color-light-300);
-  --ll-color-divider: var(--ll-color-light-400);
+  /* Neutral surface and text hierarchy */
+  --ll-color-section: var(--ll-color-metal-025);
+  --ll-color-card: var(--ll-color-metal-100);
+  --ll-color-highlight: var(--ll-color-metal-200);
+  --ll-color-divider: var(--ll-color-metal-400);
 
   /* Semantic color roles */
-  --ll-color-canvas: var(--ll-color-light-100);
-  --ll-color-surface: #fafbfc;
-  --ll-color-surface-raised: #ffffff;
-  --ll-color-surface-muted: var(--ll-color-gray-100);
-  --ll-color-section-subtle: #eef2f4;
-  --ll-color-section-backdrop: var(--ll-color-gray-100);
-  --ll-color-ink: var(--ll-color-gray-950);
-  --ll-color-text: var(--ll-color-gray-950);
-  --ll-color-text-muted: var(--ll-color-gray-600);
-  --ll-color-text-faint: #87949d;
+  --ll-color-canvas: var(--ll-color-metal-050);
+  --ll-color-surface: var(--ll-color-metal-050);
+  --ll-color-surface-raised: var(--ll-color-metal-025);
+  --ll-color-surface-muted: var(--ll-color-metal-200);
+  --ll-color-section-subtle: var(--ll-color-metal-200);
+  --ll-color-section-backdrop: var(--ll-color-metal-200);
+  --ll-color-ink: var(--ll-color-metal-950);
+  --ll-color-text: var(--ll-color-metal-950);
+  --ll-color-text-muted: var(--ll-color-metal-700);
+  --ll-color-text-faint: var(--ll-color-metal-700);
   --ll-color-border: var(--ll-color-divider);
-  --ll-color-border-strong: var(--ll-color-gray-300);
+  --ll-color-border-strong: var(--ll-color-metal-500);
   --ll-color-primary: var(--ll-color-blue-700);
   --ll-color-primary-hover: var(--ll-color-blue-600);
   --ll-color-primary-highlight: var(--ll-color-blue-300);
@@ -92,9 +89,9 @@
   --ll-shadow-focus: 0 0 0 3px rgba(34, 102, 153, 0.2);
   --ll-shadow-raised: 0 16px 45px rgba(41, 47, 51, 0.09);
 
-  --ll-control-surface: var(--ll-color-gray-050);
-  --ll-control-surface-hover: #ffffff;
-  --ll-control-surface-selected: var(--ll-color-gray-100);
+  --ll-control-surface: var(--ll-color-metal-100);
+  --ll-control-surface-hover: var(--ll-color-metal-025);
+  --ll-control-surface-selected: var(--ll-color-metal-200);
   --ll-control-shadow:
     0 5px 14px rgba(41, 47, 51, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.58);

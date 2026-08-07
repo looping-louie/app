@@ -362,7 +362,7 @@ onBeforeUnmount(() => {
               <div>
                 <h2>Foundations</h2>
                 <p>
-                  Louie’s fuselage turned into a system: metallic grays, brand red,
+                  Louie’s fuselage turned into a system: Metal neutrals, brand red,
                   action blue, and technical typography that does not need a helmet.
                 </p>
               </div>
@@ -382,23 +382,16 @@ onBeforeUnmount(() => {
 
               <div class="ds-palette">
                 <div class="ds-palette__group">
-                  <p>Metal</p>
+                  <p>Text and surfaces</p>
                   <div class="ds-swatches">
-                    <div class="ds-swatch ds-swatch--gray-950"><span>Gray 950</span><code>#292F33</code></div>
-                    <div class="ds-swatch ds-swatch--gray-600"><span>Gray 600</span><code>#66757F</code></div>
-                    <div class="ds-swatch ds-swatch--gray-300"><span>Gray 300</span><code>#CCD6DD</code></div>
-                    <div class="ds-swatch ds-swatch--gray-050"><span>Gray 050</span><code>#F5F7F8</code></div>
-                  </div>
-                </div>
-
-                <div class="ds-palette__group">
-                  <p>Light surfaces · trial</p>
-                  <div class="ds-swatches">
-                    <div class="ds-swatch ds-swatch--light-050"><span>Light 050 · Section</span><code>#FDFEFE</code></div>
-                    <div class="ds-swatch ds-swatch--light-100"><span>Light 100 · Canvas</span><code>#FAFBFC</code></div>
-                    <div class="ds-swatch ds-swatch--light-200"><span>Light 200 · Card</span><code>#F5F7F8</code></div>
-                    <div class="ds-swatch ds-swatch--light-300"><span>Light 300 · Highlight</span><code>#EEF2F4</code></div>
-                    <div class="ds-swatch ds-swatch--light-400"><span>Light 400 · Divider</span><code>#DCE3E7</code></div>
+                    <div class="ds-swatch ds-swatch--metal-950"><span>Metal 950 · Ink</span><code>#292F33</code></div>
+                    <div class="ds-swatch ds-swatch--metal-700"><span>Metal 700 · Text Muted</span><code>#66757F</code></div>
+                    <div class="ds-swatch ds-swatch--metal-500"><span>Metal 500 · Border Strong</span><code>#CCD6DD</code></div>
+                    <div class="ds-swatch ds-swatch--metal-400"><span>Metal 400 · Divider</span><code>#DCE3E7</code></div>
+                    <div class="ds-swatch ds-swatch--metal-200"><span>Metal 200 · Highlight</span><code>#EEF2F4</code></div>
+                    <div class="ds-swatch ds-swatch--metal-100"><span>Metal 100 · Card</span><code>#F5F7F8</code></div>
+                    <div class="ds-swatch ds-swatch--metal-050"><span>Metal 050 · Canvas</span><code>#FAFBFC</code></div>
+                    <div class="ds-swatch ds-swatch--metal-025"><span>Metal 025 · Section</span><code>#FDFEFE</code></div>
                   </div>
                 </div>
 
@@ -415,7 +408,7 @@ onBeforeUnmount(() => {
 
               <footer class="ds-component__footnote">
                 <span>Rule</span>
-                <p>Blue for primary actions, red for identity and emphasis; grays build the entire interface.</p>
+                <p>Blue for primary actions, red for identity and emphasis; Metal builds the entire interface.</p>
               </footer>
             </article>
 
@@ -498,7 +491,7 @@ onBeforeUnmount(() => {
                     <UiButton variant="primary" size="sm">Primary</UiButton>
                     <UiButton variant="secondary" size="sm">Secondary</UiButton>
                     <UiButton variant="stroke" size="sm">Stroke</UiButton>
-                    <UiButton variant="gray" size="sm">Gray 950</UiButton>
+                    <UiButton variant="metal" size="sm">Metal 950</UiButton>
                   </div>
                 </div>
 
@@ -653,7 +646,7 @@ onBeforeUnmount(() => {
                       <UiSegmentedControl
                         v-model="deployment"
                         :options="deploymentOptions"
-                        accent="gray"
+                        accent="metal"
                         aria-label="Deployment type"
                       />
                       <small>Selected: {{ deployment }}</small>
@@ -689,7 +682,7 @@ onBeforeUnmount(() => {
                         v-model="catalog"
                         :options="catalogOptions"
                         variant="inline"
-                        accent="gray"
+                        accent="metal"
                         aria-label="Catalog section"
                       />
                       <small>Selected: {{ catalog }}</small>
@@ -807,7 +800,7 @@ onBeforeUnmount(() => {
                           <UiSegmentedControl
                             v-model="headingDeployment"
                             :options="headingDeploymentOptions"
-                            accent="gray"
+                            accent="metal"
                             aria-label="Deployment model"
                           />
                         </div>
@@ -1347,7 +1340,7 @@ onBeforeUnmount(() => {
                     <UiGridList :items="jobRows" variant="surface" aria-label="Open positions" clickable>
                       <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
                       <template #metadata="{ item }">{{ item.categories }}</template>
-                      <template #trailing><UiButton as="span" variant="gray" size="sm">Apply</UiButton></template>
+                      <template #trailing><UiButton as="span" variant="metal" size="sm">Apply</UiButton></template>
                     </UiGridList>
                   </UiSectionStage>
                 </UiSection>
@@ -1463,7 +1456,7 @@ onBeforeUnmount(() => {
                   </template>
                   <template #actions>
                     <UiButton variant="stroke" size="sm">Log in</UiButton>
-                    <UiButton variant="gray" size="sm">Open app</UiButton>
+                    <UiButton variant="metal" size="sm">Open app</UiButton>
                   </template>
                 </UiMainNavigation>
                 <div class="ds-site-navigation-demo__body">
@@ -1562,7 +1555,7 @@ onBeforeUnmount(() => {
                       <label for="ds-footer-email">Get weekly flight notes</label>
                       <div>
                         <input id="ds-footer-email" type="email" placeholder="pilot@company.com">
-                        <UiButton type="submit" variant="gray" size="sm">Subscribe</UiButton>
+                        <UiButton type="submit" variant="metal" size="sm">Subscribe</UiButton>
                       </div>
                     </form>
                   </template>
@@ -1605,7 +1598,7 @@ onBeforeUnmount(() => {
 }
 
 .design-system-page {
-  --ll-color-canvas: var(--ll-color-light-100);
+  --ll-color-canvas: var(--ll-color-metal-050);
 
   min-height: 100vh;
   overflow-x: clip;
@@ -1971,19 +1964,18 @@ onBeforeUnmount(() => {
   opacity: 0.72;
 }
 
-.ds-swatch--gray-950 { color: #ffffff; background: var(--ll-color-gray-950); }
-.ds-swatch--gray-600 { color: #ffffff; background: var(--ll-color-gray-600); }
-.ds-swatch--gray-300 { color: var(--ll-color-gray-950); background: var(--ll-color-gray-300); }
-.ds-swatch--gray-050 { color: var(--ll-color-gray-950); background: var(--ll-color-gray-050); }
-.ds-swatch--light-050 { color: var(--ll-color-gray-950); background: var(--ll-color-light-050); }
-.ds-swatch--light-100 { color: var(--ll-color-gray-950); background: var(--ll-color-light-100); }
-.ds-swatch--light-200 { color: var(--ll-color-gray-950); background: var(--ll-color-light-200); }
-.ds-swatch--light-300 { color: var(--ll-color-gray-950); background: var(--ll-color-light-300); }
-.ds-swatch--light-400 { color: var(--ll-color-gray-950); background: var(--ll-color-light-400); }
+.ds-swatch--metal-950 { color: var(--ll-color-metal-025); background: var(--ll-color-metal-950); }
+.ds-swatch--metal-700 { color: var(--ll-color-metal-025); background: var(--ll-color-metal-700); }
+.ds-swatch--metal-500 { color: var(--ll-color-metal-950); background: var(--ll-color-metal-500); }
+.ds-swatch--metal-400 { color: var(--ll-color-metal-950); background: var(--ll-color-metal-400); }
+.ds-swatch--metal-200 { color: var(--ll-color-metal-950); background: var(--ll-color-metal-200); }
+.ds-swatch--metal-100 { color: var(--ll-color-metal-950); background: var(--ll-color-metal-100); }
+.ds-swatch--metal-050 { color: var(--ll-color-metal-950); background: var(--ll-color-metal-050); }
+.ds-swatch--metal-025 { color: var(--ll-color-metal-950); background: var(--ll-color-metal-025); }
 .ds-swatch--red-700 { color: #ffffff; background: var(--ll-color-red-700); }
-.ds-swatch--red-500 { color: var(--ll-color-gray-950); background: var(--ll-color-red-500); }
+.ds-swatch--red-500 { color: var(--ll-color-metal-950); background: var(--ll-color-red-500); }
 .ds-swatch--blue-700 { color: #ffffff; background: var(--ll-color-blue-700); }
-.ds-swatch--blue-300 { color: var(--ll-color-gray-950); background: var(--ll-color-blue-300); }
+.ds-swatch--blue-300 { color: var(--ll-color-metal-950); background: var(--ll-color-blue-300); }
 
 .ds-type-specimens {
   display: grid;
@@ -2598,11 +2590,6 @@ onBeforeUnmount(() => {
   min-height: 0;
 }
 
-.ds-resource-group :deep(.ui-card__title h4) {
-  font-size: var(--ll-text-sm);
-  letter-spacing: 0;
-}
-
 .ds-resource-group :deep(.ui-card--row .ui-card__content) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -2624,11 +2611,6 @@ onBeforeUnmount(() => {
 .ds-resource-group :deep(.ui-card--row .ui-card__footer) {
   grid-column: 2;
   grid-row: 1 / span 2;
-}
-
-.ds-resource-group time {
-  color: var(--ll-color-text-faint);
-  font-size: var(--ll-text-xs);
 }
 
 .ds-media-visual {
@@ -2656,8 +2638,8 @@ onBeforeUnmount(() => {
   top: 18%;
   left: 12%;
   background:
-    linear-gradient(var(--ll-color-gray-300) 0 0) 1rem 1rem / 58% 0.35rem no-repeat,
-    linear-gradient(var(--ll-color-gray-200) 0 0) 1rem 1.75rem / 78% 0.35rem no-repeat,
+    linear-gradient(var(--ll-color-metal-500) 0 0) 1rem 1rem / 58% 0.35rem no-repeat,
+    linear-gradient(var(--ll-color-metal-400) 0 0) 1rem 1.75rem / 78% 0.35rem no-repeat,
     #ffffff;
   border: 1px solid var(--ll-color-border);
   border-radius: var(--ll-radius-md);
@@ -2669,7 +2651,7 @@ onBeforeUnmount(() => {
   height: 26%;
   right: 10%;
   bottom: 12%;
-  background: var(--ll-color-gray-950);
+  background: var(--ll-color-metal-950);
   border-radius: var(--ll-radius-md);
   box-shadow: var(--ll-shadow-raised);
 }
@@ -2696,7 +2678,7 @@ onBeforeUnmount(() => {
 .ds-media-visual--console {
   background:
     linear-gradient(90deg, transparent 30%, rgba(255, 255, 255, 0.06) 30%),
-    var(--ll-color-gray-950);
+    var(--ll-color-metal-950);
 }
 
 .ds-media-visual--console::before {
@@ -2704,7 +2686,7 @@ onBeforeUnmount(() => {
   background:
     linear-gradient(var(--ll-color-red-500) 0 0) 10% 12% / 45% 0.35rem no-repeat,
     linear-gradient(var(--ll-color-blue-300) 0 0) 10% 32% / 72% 0.35rem no-repeat,
-    linear-gradient(var(--ll-color-gray-600) 0 0) 10% 52% / 58% 0.35rem no-repeat,
+    linear-gradient(var(--ll-color-metal-700) 0 0) 10% 52% / 58% 0.35rem no-repeat,
     linear-gradient(var(--ll-color-blue-300) 0 0) 10% 72% / 80% 0.35rem no-repeat;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--ll-radius-sm);
@@ -2724,7 +2706,6 @@ onBeforeUnmount(() => {
 
 .ds-grid-list-link {
   color: var(--ll-color-text-muted);
-  font-size: var(--ll-text-sm);
   text-decoration: none;
 }
 
@@ -2734,7 +2715,6 @@ onBeforeUnmount(() => {
 
 .ds-collection-example :deep(.ui-grid-list__leading strong) {
   color: var(--ll-color-ink);
-  font-size: var(--ll-text-md);
   font-weight: 650;
 }
 
@@ -2770,7 +2750,7 @@ onBeforeUnmount(() => {
   flex: none;
   place-items: center;
   color: #ffffff;
-  background: linear-gradient(145deg, var(--ll-color-blue-600), var(--ll-color-gray-950));
+  background: linear-gradient(145deg, var(--ll-color-blue-600), var(--ll-color-metal-950));
   border: 2px solid #ffffff;
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--ll-color-border);
@@ -2894,8 +2874,8 @@ onBeforeUnmount(() => {
 }
 
 .ds-interface-screen--harness {
-  --ds-interface-accent: var(--ll-color-gray-950);
-  --ds-interface-accent-soft: var(--ll-color-gray-100);
+  --ds-interface-accent: var(--ll-color-metal-950);
+  --ds-interface-accent-soft: var(--ll-color-metal-200);
 }
 
 .ds-interface-screen--memory {
@@ -2965,7 +2945,7 @@ onBeforeUnmount(() => {
   height: calc(100% - 3rem);
   padding: clamp(1.25rem, 4vw, 3rem);
   margin: 0;
-  color: var(--ll-color-gray-600);
+  color: var(--ll-color-metal-700);
   background: linear-gradient(145deg, #ffffff, var(--ds-interface-accent-soft));
   font-size: clamp(0.7rem, 1.5vw, 0.95rem);
   line-height: 1.9;
@@ -2985,7 +2965,7 @@ onBeforeUnmount(() => {
 .ds-interface-screen__app > header > span {
   width: 0.5rem;
   height: 0.5rem;
-  background: var(--ll-color-gray-300);
+  background: var(--ll-color-metal-500);
   border-radius: 50%;
 }
 

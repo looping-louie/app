@@ -7,7 +7,7 @@ interface SegmentOption {
   disabled?: boolean
 }
 
-type SegmentAccent = 'secondary' | 'primary' | 'gray'
+type SegmentAccent = 'secondary' | 'primary' | 'metal'
 type SegmentVariant = 'contained' | 'inline'
 
 const props = withDefaults(defineProps<{
@@ -272,8 +272,8 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 9px rgba(11, 45, 70, 0.28);
 }
 
-.ui-segmented-control--gray .ui-segmented-control__indicator {
-  --ui-segment-indicator-fill: var(--ll-color-gray-950);
+.ui-segmented-control--metal .ui-segmented-control__indicator {
+  --ui-segment-indicator-fill: var(--ll-color-metal-950);
   --ui-segment-indicator-border-start: #ffffff;
   --ui-segment-indicator-border-end: #050607;
 
@@ -304,7 +304,7 @@ onBeforeUnmount(() => {
   min-height: 2.25rem;
   padding-inline: 0.875rem;
   overflow: visible;
-  color: var(--ll-color-gray-600);
+  color: var(--ll-color-metal-700);
   font-size: 0.8125rem;
   font-weight: 470;
   letter-spacing: 0.0121875rem;
@@ -323,8 +323,8 @@ onBeforeUnmount(() => {
   color: #f4f8fb;
 }
 
-.ui-segmented-control--gray .ui-segmented-control__option[data-selected="true"] {
-  color: var(--ll-color-gray-050);
+.ui-segmented-control--metal .ui-segmented-control__option[data-selected="true"] {
+  color: var(--ll-color-metal-100);
 }
 
 .ui-segmented-control__option:focus-visible {
