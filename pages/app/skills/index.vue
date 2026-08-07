@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import UiCard from '~/components/ui/Card.vue'
+import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
@@ -57,12 +58,14 @@ useHead({
       </template>
     </UiHeadingBlock>
 
+    <UiCatalogFilterBar class="catalog-filters" />
+
     <div v-if="status === 'pending'" class="catalog-state" role="status">Loading skills…</div>
     <div v-else-if="error" class="catalog-state catalog-state--error" role="alert">
       <span>Skills could not be loaded.</span>
       <button type="button" @click="refresh">Retry</button>
     </div>
-    <UiSectionStage v-else inverse="bottom">
+    <UiSectionStage v-else inverse="bottom" class="catalog-stage">
       <div v-if="skills.length === 0" class="catalog-state">No skills found.</div>
       <UiGrid v-else :columns="3" gap="md">
         <UiCard
@@ -97,7 +100,15 @@ useHead({
 }
 
 .catalog-heading {
+  margin-bottom: var(--ll-space-6);
+}
+
+.catalog-filters {
   margin-bottom: var(--ll-space-10);
+}
+
+.catalog-stage :deep(.ui-section-stage__shell) {
+  width: 100%;
 }
 
 .catalog-state {

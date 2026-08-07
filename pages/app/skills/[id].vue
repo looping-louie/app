@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiContainer from '~/components/ui/Container.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
@@ -43,11 +44,18 @@ useHead(() => ({
       <UiButton variant="stroke" size="sm" @click="refresh">Retry</UiButton>
     </div>
     <template v-else-if="skill">
+      <UiBreadcrumb
+        class="skill-breadcrumb"
+        :items="[
+          { label: 'Skills', to: '/app/skills' },
+          { label: skill.name },
+        ]"
+      />
+
       <UiHeadingBlock
-        layout="centered"
-        size="hero"
-        eyebrow="Skills / Code"
-        eyebrow-to="/app/skills"
+        layout="split"
+        size="section"
+        align="start"
         class="skill-heading"
       >
         <template #title>
@@ -56,8 +64,12 @@ useHead(() => ({
         <template #description>
           <p>{{ skill.description }}</p>
         </template>
-        <template #actions>
-          <UiButton type="button">Editar</UiButton>
+        <template #aside>
+          <div class="skill-actions">
+            <UiButton type="button">Edit</UiButton>
+            <UiButton type="button" variant="stroke">Duplicate</UiButton>
+            <UiButton type="button" variant="metal">Delete</UiButton>
+          </div>
         </template>
       </UiHeadingBlock>
 
@@ -78,10 +90,20 @@ useHead(() => ({
   margin-bottom: var(--ll-space-12);
 }
 
+.skill-breadcrumb {
+  margin-bottom: var(--ll-space-4);
+}
+
+.skill-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--ll-space-3);
+}
+
 .skill-content {
   width: 100%;
   max-width: 48rem;
-  margin-inline: auto;
   text-align: left;
 }
 
@@ -202,6 +224,12 @@ useHead(() => ({
 @media (max-width: 38rem) {
   .skill-page {
     padding-block-start: var(--ll-space-8);
+  }
+}
+
+@media (max-width: 48rem) {
+  .skill-actions {
+    justify-content: flex-start;
   }
 }
 </style>
