@@ -9,6 +9,8 @@ interface SkillSummary {
   id: string
   name: string
   description: string
+  updated_at: string
+  enabled: boolean
 }
 
 interface SkillListResponse {
@@ -22,6 +24,18 @@ const { data, status, error, refresh } = await useAsyncData(
 )
 
 const skills = computed(() => data.value?.items ?? [])
+
+const skillDateFormatter = new Intl.DateTimeFormat('en-US', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  timeZone: 'UTC',
+})
+
+function formatSkillDate(value: string) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : skillDateFormatter.format(date)
+}
 
 definePageMeta({
   layout: 'app',
@@ -48,20 +62,28 @@ useHead({
       <span>Skills could not be loaded.</span>
       <button type="button" @click="refresh">Retry</button>
     </div>
-    <UiSectionStage v-else inverse="both">
+    <UiSectionStage v-else inverse="bottom">
       <div v-if="skills.length === 0" class="catalog-state">No skills found.</div>
-      <UiGrid v-else :columns="2" gap="md">
+      <UiGrid v-else :columns="3" gap="md">
         <UiCard
           v-for="skill in skills"
           :key="skill.id"
+          :to="`/app/skills/${skill.id}`"
           variant="editorial"
           class="catalog-card"
         >
+          <template #eyebrow>Engineering</template>
           <template #title>
             <h2>{{ skill.name }}</h2>
           </template>
           <template #description>
             <p>{{ skill.description }}</p>
+          </template>
+          <template #meta>
+            <time :datetime="skill.updated_at">{{ formatSkillDate(skill.updated_at) }}</time>
+          </template>
+          <template #trailing>
+            <span>{{ skill.enabled ? 'enabled' : 'disabled' }}</span>
           </template>
         </UiCard>
       </UiGrid>

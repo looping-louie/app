@@ -7,9 +7,13 @@ const props = withDefaults(defineProps<{
   layout?: HeadingLayout
   size?: HeadingSize
   align?: HeadingAlign
+  eyebrow?: string
+  eyebrowTo?: string
 }>(), {
   layout: 'centered',
   size: 'section',
+  eyebrow: undefined,
+  eyebrowTo: undefined,
 })
 
 const resolvedAlign = computed<HeadingAlign>(() => (
@@ -27,8 +31,11 @@ const resolvedAlign = computed<HeadingAlign>(() => (
     ]"
   >
     <div class="ui-heading-block__content">
-      <div v-if="$slots.eyebrow" class="ui-heading-block__eyebrow">
-        <slot name="eyebrow" />
+      <div v-if="$slots.eyebrow || eyebrow" class="ui-heading-block__eyebrow">
+        <NuxtLink v-if="eyebrowTo" :to="eyebrowTo" class="ui-heading-block__eyebrow-link">
+          <slot name="eyebrow">{{ eyebrow }}</slot>
+        </NuxtLink>
+        <slot v-else name="eyebrow">{{ eyebrow }}</slot>
       </div>
 
       <div v-if="$slots.title" class="ui-heading-block__title">
@@ -100,6 +107,22 @@ const resolvedAlign = computed<HeadingAlign>(() => (
   font-size: 0.8125rem;
   font-weight: 650;
   line-height: 1.2;
+}
+
+.ui-heading-block__eyebrow-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-heading-block__eyebrow-link:hover {
+  color: var(--ll-color-primary-hover);
+}
+
+.ui-heading-block__eyebrow-link:focus-visible {
+  border-radius: 0.125rem;
+  outline: 2px solid currentColor;
+  outline-offset: 0.25rem;
 }
 
 .ui-heading-block__title {
