@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import UiMainNavigation from '~/components/navigation/MainNavigation.vue'
+import UiSiteFooter from '~/components/site/SiteFooter.vue'
 import UiAccordion from '~/components/ui/Accordion.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
@@ -6,6 +8,7 @@ import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
@@ -21,7 +24,7 @@ useHead({
       name: 'description',
       content: 'Looping Louie components, foundations, and visual patterns.',
     },
-    { name: 'theme-color', content: '#f5f7f8' },
+    { name: 'theme-color', content: '#fafbfc' },
   ],
 })
 
@@ -30,6 +33,7 @@ const environment = ref('production')
 const catalog = ref('models')
 const settings = ref('api-keys')
 const headingDeployment = ref('platform')
+const interfaceView = ref('agents')
 const copiedCommand = ref<string | null>(null)
 const copyError = ref<string | null>(null)
 let copyResetTimer: ReturnType<typeof setTimeout> | undefined
@@ -61,6 +65,121 @@ const settingsOptions = [
 const headingDeploymentOptions = [
   { value: 'platform', label: 'Louie Cloud' },
   { value: 'self-hosted', label: 'Self-hosted' },
+]
+
+const mainNavigationMenus = [
+  {
+    label: 'Product',
+    sections: [
+      {
+        label: 'Open source',
+        items: [
+          { label: 'Framework', description: 'Build loops and agent teams', mark: '✣', to: '#site-navigation' },
+        ],
+      },
+      {
+        label: 'Platform',
+        items: [
+          { label: 'Observability', description: 'Metrics, logs, and traces', mark: '◉', to: '#site-navigation' },
+          { label: 'Studio', description: 'Collaborate and evaluate', mark: '⌘', to: '#site-navigation' },
+          { label: 'Builder', description: 'Create teams visually', mark: '⌁', to: '#site-navigation' },
+          { label: 'Server', description: 'Deploy Louie anywhere', mark: '↻', to: '#site-navigation' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Resources',
+    sections: [
+      {
+        label: 'Get started',
+        items: [
+          { label: 'Quickstart', description: 'Launch your first loop', mark: '↗', to: '#site-navigation' },
+          { label: 'Templates', description: 'Ready-made flight plans', mark: '▦', to: '#site-navigation' },
+        ],
+      },
+      {
+        label: 'Learn',
+        items: [
+          { label: 'Articles', description: 'Patterns from the hangar', mark: '≡', to: '#site-navigation' },
+          { label: 'Changelog', description: 'Every nut and bolt', mark: '＋', to: '#site-navigation' },
+        ],
+      },
+    ],
+  },
+]
+
+const mainNavigationLinks = [
+  { label: 'Pricing', to: '#site-navigation' },
+  { label: 'Customers', to: '#site-navigation' },
+  { label: 'Docs', to: '#site-navigation' },
+]
+
+const interfaceTabs = [
+  { value: 'agents', label: 'Agents', mark: '✣', description: 'Configure specialist agents, tools, models, and instructions in one clear workspace.' },
+  { value: 'workflows', label: 'Workflows', mark: '⌘', description: 'Compose typed steps, branches, retries, and human checkpoints into inspectable flows.' },
+  { value: 'harness', label: 'Harness', mark: '⌁', description: 'Coordinate multiple modes and specialists around shared state and a single objective.' },
+  { value: 'memory', label: 'Memory', mark: '◌', description: 'Give every loop durable context, semantic recall, and thread-aware storage.' },
+  { value: 'server', label: 'Server', mark: '↻', description: 'Register projects once, run them locally, and deploy the same system wherever it belongs.' },
+]
+
+const interfaceScreens: Record<string, {
+  file: string
+  title: string
+  navigation: string[]
+  code: string[]
+  status: string
+}> = {
+  agents: {
+    file: 'agent.ts',
+    title: 'Weather specialist',
+    navigation: ['Chat', 'Tools', 'Review'],
+    code: ['new Agent({', '  model: cockpitModel,', '  tools: { weather },', '})'],
+    status: 'Ready for takeoff',
+  },
+  workflows: {
+    file: 'workflow.ts',
+    title: 'Order fulfilment',
+    navigation: ['Graph', 'Runs', 'Checkpoints'],
+    code: ['createWorkflow()', '  .then(validate)', '  .branch(route)', '  .commit()'],
+    status: '4 steps connected',
+  },
+  harness: {
+    file: 'harness.ts',
+    title: 'Build crew',
+    navigation: ['Modes', 'Threads', 'Storage'],
+    code: ['new Harness({', '  modes: crewModes,', '  storage: hangar,', '})'],
+    status: '3 specialists online',
+  },
+  memory: {
+    file: 'memory.ts',
+    title: 'Flight memory',
+    navigation: ['Threads', 'Recall', 'Observations'],
+    code: ['new Memory({', '  lastMessages: 20,', '  semanticRecall: true,', '})'],
+    status: 'Context synchronized',
+  },
+  server: {
+    file: 'server.ts',
+    title: 'Louie Cloud',
+    navigation: ['Routes', 'Deployments', 'Logs'],
+    code: ['new LouieServer({', '  loops: flightCrew,', '  port: 4111,', '})'],
+    status: 'Healthy · eu-west',
+  },
+}
+
+const footerColumns = [
+  { label: 'Framework', links: [{ label: 'Loops', to: '#site-footer' }, { label: 'Teams', to: '#site-footer' }, { label: 'Tasks', to: '#site-footer' }, { label: 'Observability', to: '#site-footer' }] },
+  { label: 'Product', links: [{ label: 'Platform', to: '#site-footer' }, { label: 'Studio', to: '#site-footer' }, { label: 'Human review', to: '#site-footer' }, { label: 'Server', to: '#site-footer' }] },
+  { label: 'Developers', links: [{ label: 'Docs', to: '#site-footer' }, { label: 'Changelog', to: '#site-footer' }, { label: 'Templates', to: '#site-footer' }, { label: 'API reference', to: '#site-footer' }] },
+  { label: 'Resources', links: [{ label: 'Articles', to: '#site-footer' }, { label: 'Research', to: '#site-footer' }, { label: 'Guides', to: '#site-footer' }, { label: 'Flight manual', to: '#site-footer' }] },
+  { label: 'Company', links: [{ label: 'About', to: '#site-footer' }, { label: 'Customers', to: '#site-footer' }, { label: 'Careers', to: '#site-footer' }, { label: 'Contact', to: '#site-footer' }] },
+  { label: 'Connect', links: [{ label: 'GitHub', to: '#site-footer' }, { label: 'Discord', to: '#site-footer' }, { label: 'YouTube', to: '#site-footer' }, { label: 'X (Twitter)', to: '#site-footer' }] },
+]
+
+const footerLegalLinks = [
+  { label: 'Privacy', to: '/legal/privacy' },
+  { label: 'Terms', to: '/legal/terms' },
+  { label: 'Imprint', to: '/legal/imprint' },
 ]
 
 const customerRows = [
@@ -223,6 +342,10 @@ onBeforeUnmount(() => {
             <a href="#grid-list">Grid list</a>
             <a href="#team-grid">Team grid</a>
             <a href="#accordion">Accordion</a>
+            <a href="#site-chrome">06 · Site chrome</a>
+            <a href="#site-navigation">Main navigation</a>
+            <a href="#interface-showcase">Interface showcase</a>
+            <a href="#site-footer">Site footer</a>
           </nav>
           <div class="ds-sidebar__note">
             <span class="ds-sidebar__note-dot" />
@@ -263,6 +386,16 @@ onBeforeUnmount(() => {
                     <div class="ds-swatch ds-swatch--gray-600"><span>Gray 600</span><code>#66757F</code></div>
                     <div class="ds-swatch ds-swatch--gray-300"><span>Gray 300</span><code>#CCD6DD</code></div>
                     <div class="ds-swatch ds-swatch--gray-050"><span>Gray 050</span><code>#F5F7F8</code></div>
+                  </div>
+                </div>
+
+                <div class="ds-palette__group">
+                  <p>Light surfaces · trial</p>
+                  <div class="ds-swatches">
+                    <div class="ds-swatch ds-swatch--light-100"><span>Light 100 · Canvas</span><code>#FAFBFC</code></div>
+                    <div class="ds-swatch ds-swatch--light-200"><span>Light 200 · Navigation</span><code>#F5F7F8</code></div>
+                    <div class="ds-swatch ds-swatch--light-300"><span>Light 300 · Highlight</span><code>#EEF2F4</code></div>
+                    <div class="ds-swatch ds-swatch--light-400"><span>Light 400 · Divider</span><code>#DCE3E7</code></div>
                   </div>
                 </div>
 
@@ -1204,6 +1337,153 @@ onBeforeUnmount(() => {
               </footer>
             </article>
           </section>
+
+          <section id="site-chrome" class="ds-section">
+            <div class="ds-section__heading">
+              <p class="ds-index">06</p>
+              <div>
+                <h2>Site chrome</h2>
+                <p>
+                  The large compositional pieces around the product: animated navigation,
+                  connected interface views, and the final footer island.
+                </p>
+              </div>
+            </div>
+
+            <article id="site-navigation" class="ds-component ds-component--navigation">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Main navigation</h3>
+                    <code>UiMainNavigation</code>
+                  </div>
+                  <p>Data-driven dropdowns connected to a compact navigation bar.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-site-navigation-demo">
+                <UiMainNavigation :menus="mainNavigationMenus" :links="mainNavigationLinks">
+                  <template #brand>
+                    <a href="#site-navigation" class="ds-site-brand">
+                      <img src="/brand/twemoji-small-airplane.svg" alt="" width="26" height="26">
+                      <strong>Looping Louie</strong>
+                    </a>
+                  </template>
+                  <template #actions>
+                    <UiButton variant="stroke" size="sm">Log in</UiButton>
+                    <UiButton variant="gray" size="sm">Open app</UiButton>
+                  </template>
+                </UiMainNavigation>
+                <div class="ds-site-navigation-demo__body">
+                  <span>Hover Product or Resources</span>
+                  <h4>A menu that opens like part of the page.</h4>
+                  <p>The surface grows from the navigation bar while the content behind it recedes.</p>
+                </div>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Content</span><code>menus · links · slots</code></div>
+                  <p class="ds-property__copy">Menu sections and links come from the page. Brand and actions remain composable slots.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Motion</span><code>180–240ms</code></div>
+                  <p class="ds-property__copy">Opacity, vertical scale, radius, and the soft backdrop animate together from the top edge.</p>
+                </div>
+              </div>
+            </article>
+
+            <article id="interface-showcase" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Interface showcase</h3>
+                    <code>UiInterfaceShowcase</code>
+                  </div>
+                  <p>Connected tabs for moving between related product interfaces.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-showcase-example">
+                <UiInterfaceShowcase v-model="interfaceView" :tabs="interfaceTabs">
+                  <template #panel="{ item }">
+                    <div class="ds-interface-screen" :class="`ds-interface-screen--${item.value}`">
+                      <div class="ds-interface-screen__code">
+                        <header><span>{{ interfaceScreens[item.value]?.file }}</span><i /></header>
+                        <pre><code><span v-for="line in interfaceScreens[item.value]?.code" :key="line">{{ line }}</span></code></pre>
+                      </div>
+
+                      <div class="ds-interface-screen__app">
+                        <header>
+                          <span /><span /><span />
+                          <strong>{{ interfaceScreens[item.value]?.title }}</strong>
+                        </header>
+                        <div class="ds-interface-screen__app-body">
+                          <nav>
+                            <span
+                              v-for="(entry, index) in interfaceScreens[item.value]?.navigation"
+                              :key="entry"
+                              :class="{ 'is-active': index === 0 }"
+                            >{{ entry }}</span>
+                          </nav>
+                          <div class="ds-interface-screen__canvas">
+                            <p>{{ interfaceScreens[item.value]?.status }}</p>
+                            <div><span /><span /><span /></div>
+                            <div><span /><span /></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </UiInterfaceShowcase>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Keyboard</span>
+                <p>Arrow keys, Home, and End move between tabs. The page supplies the panel content through a scoped slot.</p>
+              </footer>
+            </article>
+
+            <article id="site-footer" class="ds-component ds-component--site-footer">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Site footer</h3>
+                    <code>UiSiteFooter</code>
+                  </div>
+                  <p>A large rounded island over a full-width tonal backdrop.</p>
+                </div>
+                <span class="ds-status"><i /> Composable</span>
+              </header>
+
+              <div class="ds-site-footer-demo">
+                <UiSiteFooter :columns="footerColumns" :legal-links="footerLegalLinks" status="All loops operational">
+                  <template #brand>
+                    <a href="#site-footer" class="ds-footer-brand">
+                      <img src="/brand/twemoji-small-airplane.svg" alt="" width="34" height="34">
+                      <strong>Looping Louie</strong>
+                    </a>
+                  </template>
+                  <template #newsletter>
+                    <form class="ds-footer-newsletter" @submit.prevent>
+                      <label for="ds-footer-email">Get weekly flight notes</label>
+                      <div>
+                        <input id="ds-footer-email" type="email" placeholder="pilot@company.com">
+                        <UiButton type="submit" variant="gray" size="sm">Subscribe</UiButton>
+                      </div>
+                    </form>
+                  </template>
+                </UiSiteFooter>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Ownership</span>
+                <p>Columns and legal links are data. Brand and newsletter are slots, so submission logic stays with the consuming page.</p>
+              </footer>
+            </article>
+          </section>
         </div>
           </div>
         </UiContainer>
@@ -1234,19 +1514,18 @@ onBeforeUnmount(() => {
 }
 
 .design-system-page {
+  --ll-color-canvas: var(--ll-color-light-100);
+
   min-height: 100vh;
   overflow-x: clip;
   color: var(--ll-color-text);
-  background-color: var(--ll-color-canvas);
+  background-color: var(--ll-color-light-100);
   font-family: var(--ll-font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 .ds-page-canvas {
-  background-image:
-    linear-gradient(rgba(41, 47, 51, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(41, 47, 51, 0.035) 1px, transparent 1px);
-  background-size: 4rem 4rem;
+  background-color: var(--ll-color-light-100);
 }
 
 .ds-header {
@@ -1254,7 +1533,7 @@ onBeforeUnmount(() => {
   top: 0;
   z-index: 20;
   min-height: 4.25rem;
-  background: rgba(245, 247, 248, 0.88);
+  background: color-mix(in srgb, var(--ll-color-light-100) 88%, transparent);
   border-bottom: 1px solid var(--ll-color-border);
   backdrop-filter: blur(16px);
 }
@@ -1436,7 +1715,7 @@ onBeforeUnmount(() => {
 .ds-shell {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
-  background: rgba(245, 247, 248, 0.92);
+  background: color-mix(in srgb, var(--ll-color-light-100) 92%, transparent);
   border-inline: 1px solid var(--ll-color-border);
 }
 
@@ -1601,6 +1880,10 @@ onBeforeUnmount(() => {
 .ds-swatch--gray-600 { color: #ffffff; background: var(--ll-color-gray-600); }
 .ds-swatch--gray-300 { color: var(--ll-color-gray-950); background: var(--ll-color-gray-300); }
 .ds-swatch--gray-050 { color: var(--ll-color-gray-950); background: var(--ll-color-gray-050); }
+.ds-swatch--light-100 { color: var(--ll-color-gray-950); background: var(--ll-color-light-100); }
+.ds-swatch--light-200 { color: var(--ll-color-gray-950); background: var(--ll-color-light-200); }
+.ds-swatch--light-300 { color: var(--ll-color-gray-950); background: var(--ll-color-light-300); }
+.ds-swatch--light-400 { color: var(--ll-color-gray-950); background: var(--ll-color-light-400); }
 .ds-swatch--red-700 { color: #ffffff; background: var(--ll-color-red-700); }
 .ds-swatch--red-500 { color: var(--ll-color-gray-950); background: var(--ll-color-red-500); }
 .ds-swatch--blue-700 { color: #ffffff; background: var(--ll-color-blue-700); }
@@ -2388,6 +2671,319 @@ onBeforeUnmount(() => {
 .ds-collection-example--accordion :deep(.ui-accordion) {
   width: min(100%, 58rem);
   margin-inline: auto;
+}
+
+.ds-component--navigation {
+  overflow: hidden;
+}
+
+.ds-site-navigation-demo {
+  position: relative;
+  min-height: 38rem;
+  overflow: hidden;
+  background: var(--ll-color-light-100);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-site-navigation-demo > :deep(.ui-main-navigation) {
+  position: absolute;
+  inset: 0 0 auto;
+}
+
+.ds-site-brand,
+.ds-footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ll-space-3);
+  color: var(--ll-color-ink);
+  text-decoration: none;
+}
+
+.ds-site-brand img,
+.ds-footer-brand img {
+  object-fit: contain;
+}
+
+.ds-site-brand strong,
+.ds-footer-brand strong {
+  font-weight: 680;
+  letter-spacing: -0.025em;
+}
+
+.ds-site-navigation-demo__body {
+  position: absolute;
+  top: 50%;
+  left: clamp(2rem, 7vw, 6rem);
+  width: min(30rem, calc(100% - 4rem));
+  transform: translateY(-35%);
+}
+
+.ds-site-navigation-demo__body > span {
+  color: var(--ll-color-primary);
+  font: 600 var(--ll-text-xs) / 1 var(--ll-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ds-site-navigation-demo__body h4 {
+  max-width: 28rem;
+  margin: var(--ll-space-4) 0;
+  color: var(--ll-color-ink);
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  font-weight: 630;
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.ds-site-navigation-demo__body p {
+  max-width: 25rem;
+  margin: 0;
+  color: var(--ll-color-text-muted);
+  line-height: 1.6;
+}
+
+.ds-showcase-example {
+  padding: clamp(1rem, 3vw, 2rem);
+  background: var(--ll-color-surface-raised);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-interface-screen {
+  --ds-interface-accent: var(--ll-color-primary);
+  --ds-interface-accent-soft: var(--ll-color-blue-100);
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.ds-interface-screen--workflows {
+  --ds-interface-accent: var(--ll-color-red-700);
+  --ds-interface-accent-soft: var(--ll-color-red-100);
+}
+
+.ds-interface-screen--harness {
+  --ds-interface-accent: var(--ll-color-gray-950);
+  --ds-interface-accent-soft: var(--ll-color-gray-100);
+}
+
+.ds-interface-screen--memory {
+  --ds-interface-accent: #6f63a8;
+  --ds-interface-accent-soft: #efedf8;
+}
+
+.ds-interface-screen--server {
+  --ds-interface-accent: #3d8b5c;
+  --ds-interface-accent-soft: #e5f4ea;
+}
+
+.ds-interface-screen__code,
+.ds-interface-screen__app {
+  position: absolute;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid var(--ll-color-border-strong);
+  border-radius: var(--ll-radius-lg);
+  box-shadow: 0 2rem 4rem rgba(41, 47, 51, 0.14);
+}
+
+.ds-interface-screen__code {
+  bottom: 7%;
+  left: 5%;
+  width: 48%;
+  height: 56%;
+}
+
+.ds-interface-screen__app {
+  top: 14%;
+  right: -3%;
+  width: 64%;
+  height: 70%;
+}
+
+.ds-interface-screen__code > header,
+.ds-interface-screen__app > header {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  gap: var(--ll-space-2);
+  padding: 0 var(--ll-space-5);
+  background: var(--ll-color-surface);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-interface-screen__code > header {
+  justify-content: space-between;
+}
+
+.ds-interface-screen__code > header span {
+  color: var(--ll-color-text-muted);
+  font: 600 var(--ll-text-xs) / 1 var(--ll-font-mono);
+  text-transform: uppercase;
+}
+
+.ds-interface-screen__code > header i {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--ds-interface-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0.25rem var(--ds-interface-accent-soft);
+}
+
+.ds-interface-screen__code pre {
+  height: calc(100% - 3rem);
+  padding: clamp(1.25rem, 4vw, 3rem);
+  margin: 0;
+  color: var(--ll-color-gray-600);
+  background: linear-gradient(145deg, #ffffff, var(--ds-interface-accent-soft));
+  font-size: clamp(0.7rem, 1.5vw, 0.95rem);
+  line-height: 1.9;
+}
+
+.ds-interface-screen__code code,
+.ds-interface-screen__code code span {
+  display: block;
+}
+
+.ds-interface-screen__code code span:first-child,
+.ds-interface-screen__code code span:last-child {
+  color: var(--ds-interface-accent);
+  font-weight: 600;
+}
+
+.ds-interface-screen__app > header > span {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--ll-color-gray-300);
+  border-radius: 50%;
+}
+
+.ds-interface-screen__app > header > span:first-child {
+  background: var(--ll-color-red-500);
+}
+
+.ds-interface-screen__app > header strong {
+  margin-left: auto;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-xs);
+  font-weight: 600;
+}
+
+.ds-interface-screen__app-body {
+  display: grid;
+  height: calc(100% - 3rem);
+  grid-template-columns: minmax(8rem, 0.3fr) minmax(0, 1fr);
+}
+
+.ds-interface-screen__app-body nav {
+  display: grid;
+  align-content: start;
+  gap: var(--ll-space-2);
+  padding: var(--ll-space-5);
+  background: var(--ll-color-surface);
+  border-right: 1px solid var(--ll-color-border);
+}
+
+.ds-interface-screen__app-body nav span {
+  padding: var(--ll-space-3);
+  color: var(--ll-color-text-muted);
+  border-radius: var(--ll-radius-sm);
+  font-size: var(--ll-text-xs);
+}
+
+.ds-interface-screen__app-body nav span.is-active {
+  color: var(--ds-interface-accent);
+  background: var(--ds-interface-accent-soft);
+  font-weight: 650;
+}
+
+.ds-interface-screen__canvas {
+  display: grid;
+  align-content: center;
+  gap: var(--ll-space-5);
+  padding: clamp(1.25rem, 4vw, 3rem);
+  background: #ffffff;
+}
+
+.ds-interface-screen__canvas > p {
+  width: fit-content;
+  margin: 0;
+  padding: var(--ll-space-2) var(--ll-space-3);
+  color: var(--ds-interface-accent);
+  background: var(--ds-interface-accent-soft);
+  border-radius: var(--ll-radius-pill);
+  font: 600 var(--ll-text-xs) / 1 var(--ll-font-mono);
+}
+
+.ds-interface-screen__canvas > div {
+  display: flex;
+  min-height: 5rem;
+  align-items: end;
+  gap: var(--ll-space-3);
+  padding: var(--ll-space-4);
+  background: var(--ll-color-surface);
+  border: 1px solid var(--ll-color-border);
+  border-radius: var(--ll-radius-md);
+}
+
+.ds-interface-screen__canvas > div span {
+  width: 22%;
+  height: 65%;
+  background: var(--ds-interface-accent-soft);
+  border-radius: var(--ll-radius-sm);
+}
+
+.ds-interface-screen__canvas > div span:nth-child(2) {
+  height: 100%;
+  background: var(--ds-interface-accent);
+}
+
+.ds-interface-screen__canvas > div span:nth-child(3) {
+  height: 45%;
+}
+
+.ds-site-footer-demo {
+  overflow: hidden;
+  background: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-border);
+}
+
+.ds-site-footer-demo :deep(.ui-site-footer) {
+  padding-top: var(--ll-space-10);
+}
+
+.ds-footer-newsletter {
+  display: grid;
+  gap: var(--ll-space-3);
+}
+
+.ds-footer-newsletter label {
+  color: var(--ll-color-brand);
+  font: 600 var(--ll-text-xs) / 1 var(--ll-font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ds-footer-newsletter > div {
+  display: flex;
+  gap: var(--ll-space-2);
+}
+
+.ds-footer-newsletter input {
+  width: 100%;
+  min-width: 0;
+  height: 2.125rem;
+  padding: 0 var(--ll-space-4);
+  color: var(--ll-color-ink);
+  background: var(--ll-color-surface);
+  border: 1px solid var(--ll-color-border-strong);
+  border-radius: var(--ll-radius-pill);
+  outline: 0;
+}
+
+.ds-footer-newsletter input:focus {
+  border-color: var(--ll-color-primary);
+  box-shadow: var(--ll-shadow-focus);
 }
 
 @keyframes ds-media-float {

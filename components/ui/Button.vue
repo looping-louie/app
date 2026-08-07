@@ -270,6 +270,7 @@ function handleClick(event: MouseEvent) {
 
 .ui-button__label {
   overflow: hidden;
+  line-height: 1.2;
   text-overflow: ellipsis;
 }
 

@@ -18,6 +18,14 @@
   --ll-color-red-500: #ea596e;
   --ll-color-red-100: #fbe9ec;
 
+  /* Light surface scale — Mastra hierarchy trial */
+  --ll-color-light-100: #fafbfc;
+  --ll-color-light-200: #f5f7f8;
+  --ll-color-light-300: #eef2f4;
+  --ll-color-light-400: #dce3e7;
+  --ll-color-navigation: var(--ll-color-light-200);
+  --ll-color-highlight: var(--ll-color-light-300);
+
   /* Semantic color roles */
   --ll-color-canvas: var(--ll-color-gray-050);
   --ll-color-surface: #fafbfc;
