@@ -63,6 +63,7 @@ useHead({
       v-model:category="agentDepartments"
       v-model:sort="agentSort"
       interactive
+      :show-search="false"
       :third-options="agentDepartmentOptions"
       class="catalog-filters"
     />
