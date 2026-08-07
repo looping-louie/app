@@ -5,6 +5,7 @@ import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
+import UiStatusText from '~/components/ui/StatusText.vue'
 
 interface SkillSummary {
   id: string
@@ -73,6 +74,7 @@ useHead({
       v-model:category="skillTasks"
       v-model:sort="skillSort"
       interactive
+      :show-search="false"
       third-label="Task"
       third-icon="task"
       :third-options="skillTaskOptions"
@@ -92,6 +94,7 @@ useHead({
           :key="skill.id"
           :to="`/app/skills/${skill.id}`"
           variant="editorial"
+          accent-on-hover
           class="catalog-card"
         >
           <template #eyebrow>Engineering</template>
@@ -105,7 +108,12 @@ useHead({
             <time :datetime="skill.updated_at">{{ formatSkillDate(skill.updated_at) }}</time>
           </template>
           <template #trailing>
-            <span>{{ skill.enabled ? 'enabled' : 'disabled' }}</span>
+            <UiStatusText
+              :tone="skill.enabled ? 'enabled' : 'disabled'"
+              activation="card-hover"
+            >
+              {{ skill.enabled ? 'enabled' : 'disabled' }}
+            </UiStatusText>
           </template>
         </UiCard>
       </UiGrid>
