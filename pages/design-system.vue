@@ -15,6 +15,7 @@ import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
+import UiStatusText from '~/components/ui/StatusText.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
 
 definePageMeta({
@@ -912,12 +913,13 @@ onBeforeUnmount(() => {
                       <small>Selected: {{ catalog }}</small>
                     </div>
                     <div class="ds-segment-example">
-                      <span class="ds-stage__caption">Settings</span>
+                      <span class="ds-stage__caption">Settings · Bordered options</span>
                       <UiSegmentedControl
                         v-model="settings"
                         :options="settingsOptions"
                         variant="inline"
                         accent="primary"
+                        bordered-options
                         aria-label="Settings section"
                       />
                       <small>Selected: {{ settings }}</small>
@@ -1566,14 +1568,45 @@ onBeforeUnmount(() => {
                 </UiSection>
               </div>
 
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Semantic hover accents</span>
+                    <code>accent-on-hover · UiStatusText</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiGrid :columns="2" gap="md">
+                      <UiCard to="#grid-card" variant="editorial" accent-on-hover>
+                        <template #eyebrow>Engineering</template>
+                        <template #title><h4>Reliable coding assistant</h4></template>
+                        <template #description><p>Hover to reveal identity and status accents without changing the card surface.</p></template>
+                        <template #meta>Aug 1, 2026</template>
+                        <template #trailing><UiStatusText tone="enabled" activation="card-hover">enabled</UiStatusText></template>
+                      </UiCard>
+                      <UiCard to="#grid-card" variant="editorial" accent-on-hover>
+                        <template #eyebrow>Engineering</template>
+                        <template #title><h4>Legacy deployment helper</h4></template>
+                        <template #description><p>The same interaction contract carries a different semantic status tone.</p></template>
+                        <template #meta>Jul 26, 2026</template>
+                        <template #trailing><UiStatusText tone="disabled" activation="card-hover">disabled</UiStatusText></template>
+                      </UiCard>
+                    </UiGrid>
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
               <div class="ds-properties">
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Grid</span><code>columns · gap · collapse</code></div>
                   <p class="ds-property__copy">Columns collapse from four or three to two, then to one unless <strong>collapse="never"</strong> preserves the requested layout. Grid never styles its children.</p>
                 </div>
                 <div class="ds-property">
-                  <div class="ds-property__label"><span>Card</span><code>media · editorial · row</code></div>
-                  <p class="ds-property__copy">Cards share surface, radius, and slots. Media cards crossfade to the optional hover layer on hover or keyboard focus.</p>
+                  <div class="ds-property__label"><span>Card</span><code>media · editorial · row · accentOnHover</code></div>
+                  <p class="ds-property__copy">Cards share surface, radius, and slots. <strong>accentOnHover</strong> reveals the Cockpit Blue eyebrow and semantic status colors on hover or keyboard focus.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Status text</span><code>enabled · disabled · card-hover</code></div>
+                  <p class="ds-property__copy"><strong>UiStatusText</strong> maps domain state to design tokens. Pages provide the label and state, never palette values.</p>
                 </div>
               </div>
             </article>

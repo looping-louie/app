@@ -45,6 +45,8 @@
   --ll-color-brand: var(--ll-color-red-700);
   --ll-color-brand-bright: var(--ll-color-red-500);
   --ll-color-brand-ink: var(--ll-color-red-800);
+  --ll-color-status-enabled: var(--ll-color-blue-700);
+  --ll-color-status-disabled: var(--ll-color-red-500);
   --ll-color-signal: var(--ll-color-blue-700);
   --ll-color-signal-ink: var(--ll-color-blue-800);
 

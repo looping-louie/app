@@ -16,10 +16,12 @@ const props = withDefaults(defineProps<{
   ariaLabel?: string
   accent?: SegmentAccent
   variant?: SegmentVariant
+  borderedOptions?: boolean
 }>(), {
   ariaLabel: 'Select an option',
   accent: 'secondary',
   variant: 'contained',
+  borderedOptions: false,
 })
 
 const emit = defineEmits<{
@@ -139,7 +141,10 @@ onBeforeUnmount(() => {
     :class="[
       `ui-segmented-control--${accent}`,
       `ui-segmented-control--${variant}`,
-      { 'ui-segmented-control--indicator-ready': inlineIndicatorReady },
+      {
+        'ui-segmented-control--indicator-ready': inlineIndicatorReady,
+        'ui-segmented-control--bordered-options': borderedOptions,
+      },
     ]"
     :style="segmentStyle"
     role="radiogroup"
@@ -235,6 +240,10 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
+.ui-segmented-control--inline.ui-segmented-control--bordered-options {
+  gap: var(--ll-space-3);
+}
+
 .ui-segmented-control--inline .ui-segmented-control__indicator {
   z-index: 0;
   inset-block: 0;
@@ -272,6 +281,7 @@ onBeforeUnmount(() => {
   z-index: 1;
   min-width: 0;
   height: 100%;
+  box-sizing: border-box;
   padding: 0 0.875rem;
   overflow: hidden;
   color: #333333;
@@ -296,6 +306,18 @@ onBeforeUnmount(() => {
   font-weight: 470;
   letter-spacing: 0.0121875rem;
   text-overflow: clip;
+}
+
+.ui-segmented-control--inline.ui-segmented-control--bordered-options .ui-segmented-control__option {
+  border: 1px solid var(--ll-color-divider);
+}
+
+.ui-segmented-control--inline.ui-segmented-control--bordered-options .ui-segmented-control__option[data-selected="true"] {
+  border-color: transparent;
+}
+
+.ui-segmented-control--inline.ui-segmented-control--bordered-options .ui-segmented-control__option:hover:not(:disabled):not([data-selected="true"]) {
+  border-color: var(--ll-color-border-strong);
 }
 
 .ui-segmented-control__option:hover:not(:disabled):not([data-selected="true"]) {

@@ -6,11 +6,13 @@ const props = withDefaults(defineProps<{
   variant?: CardVariant
   to?: string
   href?: string
+  accentOnHover?: boolean
 }>(), {
   as: 'article',
   variant: 'editorial',
   to: undefined,
   href: undefined,
+  accentOnHover: false,
 })
 
 const rootComponent = computed(() => {
@@ -33,7 +35,10 @@ const linkBindings = computed(() => {
     class="ui-card"
     :class="[
       `ui-card--${variant}`,
-      { 'ui-card--interactive': to || href },
+      {
+        'ui-card--interactive': to || href,
+        'ui-card--accent-on-hover': accentOnHover,
+      },
     ]"
   >
     <div class="ui-card__content">
@@ -99,6 +104,7 @@ const linkBindings = computed(() => {
   font: 550 0.6875rem / 1.2 var(--ll-font-mono);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  transition: color var(--ll-duration-normal) var(--ll-ease-out);
 }
 
 .ui-card__title :deep(:is(h2, h3, h4, p)) {
@@ -188,6 +194,18 @@ const linkBindings = computed(() => {
   opacity: 1;
 }
 
+.ui-card--accent-on-hover:is(:hover, :focus-visible) .ui-card__eyebrow {
+  color: var(--ll-color-primary);
+}
+
+.ui-card--accent-on-hover:is(:hover, :focus-visible) :deep(.ui-status-text--card-hover.ui-status-text--enabled) {
+  color: var(--ll-color-status-enabled);
+}
+
+.ui-card--accent-on-hover:is(:hover, :focus-visible) :deep(.ui-status-text--card-hover.ui-status-text--disabled) {
+  color: var(--ll-color-status-disabled);
+}
+
 .ui-card--interactive:focus-visible {
   outline: 2px solid var(--ll-color-primary);
   outline-offset: 3px;
@@ -201,6 +219,7 @@ const linkBindings = computed(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .ui-card__media-hover,
+  .ui-card__eyebrow,
   .ui-card--interactive {
     transition: none;
   }

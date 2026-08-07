@@ -64,23 +64,38 @@ function toggle() {
   align-items: center;
   padding: 0.125rem;
   appearance: none;
-  background: var(--ll-color-metal-400);
+  background: transparent;
   border: 0;
   border-radius: var(--ll-radius-pill);
-  box-shadow: inset 0 0 0 1px rgba(41, 47, 51, 0.08);
   cursor: pointer;
+}
+
+.ui-toggle::before {
+  position: absolute;
+  top: 50%;
+  right: 0.125rem;
+  left: 0.125rem;
+  height: 0.875rem;
+  box-sizing: border-box;
+  background: var(--ll-color-metal-400);
+  border: 1px solid var(--ll-color-metal-500);
+  border-radius: var(--ll-radius-pill);
+  content: '';
+  transform: translateY(-50%);
   transition:
     background-color var(--ll-duration-normal) var(--ll-ease-out),
+    border-color var(--ll-duration-normal) var(--ll-ease-out),
     box-shadow var(--ll-duration-normal) var(--ll-ease-out);
 }
 
-.ui-toggle--checked {
-  background: var(--ll-color-primary);
-  box-shadow: inset 0 0 0 1px var(--ll-color-primary-depth);
+.ui-toggle--checked::before {
+  background: var(--ll-color-primary-highlight);
+  border-color: var(--ll-color-primary);
 }
 
 .ui-toggle__thumb {
   position: relative;
+  z-index: 1;
   display: block;
   width: 1.25rem;
   height: 1.25rem;
@@ -129,12 +144,14 @@ function toggle() {
   transition-timing-function: ease-in;
 }
 
-.ui-toggle:not(.ui-toggle--readonly):hover:not(:disabled) {
+.ui-toggle:not(.ui-toggle--readonly):hover:not(:disabled)::before {
   background: var(--ll-color-metal-500);
 }
 
-.ui-toggle--checked:not(.ui-toggle--readonly):hover:not(:disabled) {
-  background: var(--ll-color-primary-hover);
+.ui-toggle--checked:not(.ui-toggle--readonly):hover:not(:disabled)::before {
+  background: var(--ll-color-primary-highlight);
+  border-color: var(--ll-color-primary);
+  box-shadow: 0 0 0 2px var(--ll-color-blue-100);
 }
 
 .ui-toggle:focus-visible {
@@ -153,6 +170,7 @@ function toggle() {
 
 @media (prefers-reduced-motion: reduce) {
   .ui-toggle,
+  .ui-toggle::before,
   .ui-toggle__thumb,
   .ui-toggle__icon {
     transition: none;
