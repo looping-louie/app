@@ -91,6 +91,7 @@ useHead({
       v-model:category="modelLabs"
       v-model:sort="modelSort"
       interactive
+      :show-search="false"
       third-label="Labs"
       third-icon="labs"
       :third-options="modelLabOptions"
