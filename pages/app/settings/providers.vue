@@ -1,43 +1,19 @@
 <script setup lang="ts">
 import UiButton from '~/components/ui/Button.vue'
-import UiGridList from '~/components/ui/GridList.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
+import ProviderAccordion from '~/components/settings/ProviderAccordion.vue'
+import type { Provider } from '~/composables/useProviders'
 import { useProviders } from '~/composables/useProviders'
 
-interface ProviderListItem {
-  [key: string]: unknown
-  id: string
-  name: string
-  description: string
-  checked: boolean
-  disabled: boolean
-  actionLabel: string
-  ariaLabel: string
-}
-
-const { providers, pending, error, fetchProviders, setEnabled } = useProviders()
+const { providers, pending, error, fetchProviders, saveCredential, setEnabled } = useProviders()
 const togglingId = ref<string | null>(null)
+const savingId = ref<string | null>(null)
 const feedback = ref('')
 
 await useAsyncData('settings-providers', () => fetchProviders())
 
-const providerItems = computed<ProviderListItem[]>(() => (
-  providers.value.map(provider => ({
-    id: provider.id,
-    name: provider.name,
-    description: provider.description,
-    checked: provider.enabled,
-    disabled: togglingId.value === provider.id,
-    actionLabel: provider.enabled ? 'Disable' : 'Enable',
-    ariaLabel: `${provider.enabled ? 'Disable' : 'Enable'} ${provider.name}`,
-  }))
-))
-
-async function updateProvider(item: { id: string }, enabled: boolean) {
+async function updateProvider(provider: Provider, enabled: boolean) {
   if (togglingId.value) return
-
-  const provider = providers.value.find(candidate => candidate.id === item.id)
-  if (!provider) return
 
   const previousValue = provider.enabled
   provider.enabled = enabled
@@ -55,6 +31,26 @@ async function updateProvider(item: { id: string }, enabled: boolean) {
       : `Unable to update ${provider.name}.`
   } finally {
     togglingId.value = null
+  }
+}
+
+async function saveProviderKey(provider: Provider, apiKey: string) {
+  if (savingId.value) return
+
+  savingId.value = provider.id
+  feedback.value = ''
+
+  try {
+    const result = await saveCredential(provider.id, { api_key: apiKey })
+    provider.keyTrimmed = result.key_trimmed
+    provider.modelCount = result.model_count
+    feedback.value = `${provider.name} API key saved.`
+  } catch (cause) {
+    feedback.value = cause instanceof Error
+      ? cause.message
+      : `Unable to save the ${provider.name} API key.`
+  } finally {
+    savingId.value = null
   }
 }
 
@@ -76,17 +72,15 @@ useHead({
       <span>{{ error }}</span>
       <UiButton variant="stroke" size="sm" @click="fetchProviders">Retry</UiButton>
     </div>
-    <UiSectionStage v-else inverse="both">
-      <UiGridList
-        :items="providerItems"
-        variant="plain"
-        action="toggle"
+    <UiSectionStage v-else inverse="bottom">
+      <ProviderAccordion
+        :providers="providers"
+        :toggling-id="togglingId"
+        :saving-id="savingId"
         aria-label="Providers"
         @toggle="updateProvider"
-      >
-        <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
-        <template #metadata="{ item }">{{ item.description }}</template>
-      </UiGridList>
+        @save="saveProviderKey"
+      />
     </UiSectionStage>
 
     <p class="settings-feedback" aria-live="polite">{{ feedback }}</p>

@@ -59,6 +59,7 @@ definePageMeta({
         :options="sectionOptions"
         variant="inline"
         accent="metal"
+        bordered-options
         aria-label="Settings section"
       />
     </header>
