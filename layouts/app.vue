@@ -1,6 +1,6 @@
 <template>
   <div class="app-shell">
-    <aside class="sidebar" :class="{ open: mobileOpen }">
+    <aside ref="sidebarRef" class="sidebar" :class="{ open: mobileOpen }">
       <div class="sidebar-header">
         <NuxtLink to="/app" class="sidebar-logo" aria-label="Looping Louie home" @click="closeMobile">
           <img class="logo-icon" src="/brand/twemoji-small-airplane.svg" alt="" width="30" height="30">
@@ -10,7 +10,7 @@
         </button>
       </div>
 
-      <nav class="sidebar-nav" aria-label="Navegación principal">
+      <nav class="sidebar-nav" aria-label="Navegación principal" @scroll="hideNavTooltip">
         <template v-for="(group, groupIndex) in navGroups" :key="groupIndex">
           <div v-if="groupIndex > 0" class="nav-divider" />
           <NuxtLink
@@ -20,7 +20,10 @@
             class="nav-item"
             :class="{ active: isActive(item.to) }"
             :aria-label="item.label"
-            :title="item.label"
+            @mouseenter="showNavTooltip(item.label, $event)"
+            @mouseleave="hideNavTooltip"
+            @focus="showNavTooltip(item.label, $event)"
+            @blur="hideNavTooltip"
             @click="closeMobile"
           >
             <span class="nav-icon" v-html="item.icon" />
@@ -34,6 +37,20 @@
     </aside>
 
     <div class="sidebar-backdrop" :class="{ visible: mobileOpen }" @click="closeMobile" />
+
+    <Teleport to="body">
+      <Transition name="nav-tooltip">
+        <div
+          v-if="navTooltip.visible"
+          class="nav-tooltip"
+          :class="{ 'nav-tooltip--active': navTooltip.active }"
+          :style="navTooltipStyle"
+          role="tooltip"
+        >
+          {{ navTooltip.label }}
+        </div>
+      </Transition>
+    </Teleport>
 
     <div class="app-body">
       <header class="app-topbar">
@@ -54,6 +71,41 @@
 const route = useRoute()
 
 const mobileOpen = ref(false)
+const sidebarRef = ref<HTMLElement | null>(null)
+const navTooltip = reactive({
+  visible: false,
+  active: false,
+  label: '',
+  top: 0,
+  left: 0,
+  height: 0,
+})
+const navTooltipStyle = computed(() => ({
+  top: `${navTooltip.top}px`,
+  left: `${navTooltip.left}px`,
+  height: `${navTooltip.height}px`,
+}))
+
+function showNavTooltip(label: string, event: MouseEvent | FocusEvent) {
+  const item = event.currentTarget
+  const sidebar = sidebarRef.value
+  if (!(item instanceof HTMLElement) || !sidebar) return
+
+  const itemBounds = item.getBoundingClientRect()
+  const sidebarBounds = sidebar.getBoundingClientRect()
+  const mirroredGap = Math.max(0, sidebarBounds.right - itemBounds.right)
+
+  navTooltip.label = label
+  navTooltip.active = item.classList.contains('active')
+  navTooltip.top = itemBounds.top
+  navTooltip.left = sidebarBounds.right + mirroredGap
+  navTooltip.height = itemBounds.height
+  navTooltip.visible = true
+}
+
+function hideNavTooltip() {
+  navTooltip.visible = false
+}
 
 function phosphorIcon(path: string) {
   return `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="${path}"/></svg>`
@@ -107,6 +159,7 @@ function openMobile() {
 }
 
 function closeMobile() {
+  hideNavTooltip()
   mobileOpen.value = false
 }
 </script>
@@ -238,18 +291,6 @@ function closeMobile() {
   background: var(--ll-color-blue-100);
 }
 
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: -0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 24px;
-  border-radius: 0 3px 3px 0;
-  background: var(--ll-color-primary);
-}
-
 .nav-icon {
   display: flex;
   align-items: center;
@@ -259,6 +300,42 @@ function closeMobile() {
 .nav-icon :deep(svg) {
   width: 22px;
   height: 22px;
+}
+
+.nav-tooltip {
+  position: fixed;
+  z-index: 310;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding-inline: var(--ll-space-4);
+  color: var(--ll-color-ink);
+  background: var(--ll-color-highlight);
+  border-radius: 0.625rem;
+  font: 600 var(--ll-text-xs) / 1 var(--ll-font-control);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--ll-shadow-raised);
+}
+
+.nav-tooltip--active {
+  color: var(--ll-color-primary-depth);
+  background: var(--ll-color-blue-100);
+}
+
+.nav-tooltip-enter-active,
+.nav-tooltip-leave-active {
+  transition:
+    opacity var(--ll-duration-normal) var(--ll-ease-out),
+    transform var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.nav-tooltip-enter-from,
+.nav-tooltip-leave-to {
+  opacity: 0;
+  transform: translateX(-0.25rem);
 }
 
 .sidebar-footer {

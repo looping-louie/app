@@ -101,7 +101,7 @@ const linkBindings = computed(() => {
   letter-spacing: 0.06em;
 }
 
-.ui-card__title :deep(:is(h3, h4, p)) {
+.ui-card__title :deep(:is(h2, h3, h4, p)) {
   margin: 0;
   color: var(--ll-color-ink);
   font-size: 1.25rem;
