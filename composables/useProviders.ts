@@ -33,7 +33,7 @@ export function useProviders() {
     pending.value = true
     error.value = null
     try {
-      const data = await $fetch<Provider[]>('/api/v1/providers/list')
+      const data = await $fetch<Provider[]>('/api/v1/providers')
       providers.value = data
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Unable to load providers.'

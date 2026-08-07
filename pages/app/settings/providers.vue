@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import UiButton from '~/components/ui/Button.vue'
-import UiContainer from '~/components/ui/Container.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import { useProviders } from '~/composables/useProviders'
@@ -60,7 +59,7 @@ async function updateProvider(item: { id: string }, enabled: boolean) {
 }
 
 definePageMeta({
-  layout: 'app',
+  pageTransition: false,
 })
 
 useHead({
@@ -69,21 +68,15 @@ useHead({
 </script>
 
 <template>
-  <UiContainer size="wide" class="providers-page">
-    <header class="providers-header">
-      <div>
-        <NuxtLink to="/app/settings" class="providers-back">Settings</NuxtLink>
-        <h1>Providers</h1>
-        <p>Enable the model providers available to agents and pipelines.</p>
-      </div>
-    </header>
+  <section aria-labelledby="providers-heading">
+    <h2 id="providers-heading" class="visually-hidden">Providers</h2>
 
-    <div v-if="pending" class="providers-state" role="status">Loading providers…</div>
-    <div v-else-if="error" class="providers-state providers-state--error" role="alert">
+    <div v-if="pending" class="settings-state" role="status">Loading providers…</div>
+    <div v-else-if="error" class="settings-state settings-state--error" role="alert">
       <span>{{ error }}</span>
       <UiButton variant="stroke" size="sm" @click="fetchProviders">Retry</UiButton>
     </div>
-    <UiSectionStage v-else inverse="both" class="providers-stage">
+    <UiSectionStage v-else inverse="both">
       <UiGridList
         :items="providerItems"
         variant="plain"
@@ -91,64 +84,17 @@ useHead({
         aria-label="Providers"
         @toggle="updateProvider"
       >
-        <template #leading="{ item }">
-          <strong>{{ item.name }}</strong>
-        </template>
-        <template #metadata="{ item }">
-          {{ item.description }}
-        </template>
+        <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
+        <template #metadata="{ item }">{{ item.description }}</template>
       </UiGridList>
     </UiSectionStage>
 
-    <p class="providers-feedback" aria-live="polite">{{ feedback }}</p>
-  </UiContainer>
+    <p class="settings-feedback" aria-live="polite">{{ feedback }}</p>
+  </section>
 </template>
 
 <style scoped>
-.providers-page {
-  padding-block: var(--ll-space-10) var(--ll-space-16);
-}
-
-.providers-header {
-  margin-bottom: var(--ll-space-10);
-}
-
-.providers-back {
-  display: inline-flex;
-  margin-bottom: var(--ll-space-3);
-  color: var(--ll-color-primary-depth);
-  font-size: var(--ll-text-sm);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.providers-back::before {
-  content: '←';
-  margin-right: var(--ll-space-2);
-}
-
-.providers-back:hover {
-  color: var(--ll-color-primary);
-}
-
-.providers-header h1 {
-  margin: 0;
-  color: var(--ll-color-ink);
-  font-family: var(--ll-font-display);
-  font-size: clamp(2rem, 4vw, 3.25rem);
-  font-weight: 620;
-  line-height: 1.03;
-  letter-spacing: -0.045em;
-}
-
-.providers-header p {
-  max-width: 42rem;
-  margin: var(--ll-space-3) 0 0;
-  color: var(--ll-color-text-muted);
-  line-height: 1.6;
-}
-
-.providers-state {
+.settings-state {
   display: flex;
   min-height: 10rem;
   align-items: center;
@@ -160,14 +106,26 @@ useHead({
   font-size: var(--ll-text-sm);
 }
 
-.providers-state--error {
+.settings-state--error {
   color: var(--ll-color-brand-ink);
 }
 
-.providers-feedback {
+.settings-feedback {
   min-height: 1.5rem;
   margin: var(--ll-space-4) 0 0;
   color: var(--ll-color-text-muted);
   font-size: var(--ll-text-sm);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  margin: -1px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

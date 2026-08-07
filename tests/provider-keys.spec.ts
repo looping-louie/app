@@ -191,14 +191,11 @@ describe('provider keys page', () => {
       expect(labels).toEqual([
         'Runs',
         'Observability',
-        'Human review',
-        'Ideas',
-        'Tasks',
+        'Human gates',
+        'Pipelines',
         'Loops',
-        'Councils',
-        'Personas',
+        'Agents',
         'Skills',
-        'Models',
         'Settings',
       ])
     })
@@ -208,8 +205,8 @@ describe('provider keys page', () => {
       await flushPromises()
 
       const dividers = wrapper.findAll('.nav-divider')
-      // 5 groups → 4 dividers between them
-      expect(dividers).toHaveLength(4)
+      // 4 groups → 3 dividers between them
+      expect(dividers).toHaveLength(3)
 
       // No heading elements inside the nav
       const nav = wrapper.find('.sidebar-nav')
