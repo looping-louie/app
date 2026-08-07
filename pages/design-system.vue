@@ -9,6 +9,7 @@ import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import UiIconPill from '~/components/ui/IconPill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
@@ -345,6 +346,7 @@ onBeforeUnmount(() => {
             <a href="#actions">02 · Actions</a>
             <a href="#buttons">Buttons</a>
             <a href="#toggle">Toggle</a>
+            <a href="#icon-pill">Icon pill</a>
             <a href="#copy-command">Copyable command</a>
             <a href="#segmented-control">Segmented control</a>
             <a href="#composition">03 · Composition</a>
@@ -599,6 +601,65 @@ onBeforeUnmount(() => {
               </footer>
             </article>
 
+            <article id="icon-pill" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Icon pill</h3>
+                    <code>UiIconPill</code>
+                  </div>
+                  <p>Compact icon-and-label metadata, optionally upgraded into a connected dropdown trigger.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage ds-stage--icon-pills">
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Non-clickable</span>
+                  <UiIconPill aria-label="Time range: Last 24 hours">
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V88H208ZM48,72V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V72Z" />
+                      </svg>
+                    </template>
+                    Last 24 hours
+                  </UiIconPill>
+                </div>
+
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Clickable · connected dropdown</span>
+                  <UiIconPill clickable aria-label="Add filter" dropdown-label="Available filters">
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M40,72a8,8,0,0,1,8-8H208a8,8,0,0,1,0,16H48A8,8,0,0,1,40,72Zm32,56a8,8,0,0,1,8-8h96a8,8,0,0,1,0,16H80A8,8,0,0,1,72,128Zm40,56a8,8,0,0,1,8-8h16a8,8,0,0,1,0,16H120A8,8,0,0,1,112,184Z" />
+                      </svg>
+                    </template>
+                    Add filter
+                    <template #dropdown="{ close }">
+                      <div class="ds-pill-dropdown">
+                        <p>Filter by</p>
+                        <button type="button" @click="close()"><span>Status</span><small>Running, paused, failed</small></button>
+                        <button type="button" @click="close()"><span>Provider</span><small>OpenAI, Anthropic, local</small></button>
+                        <button type="button" @click="close()"><span>Model</span><small>Choose a deployed model</small></button>
+                      </div>
+                    </template>
+                  </UiIconPill>
+                </div>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Variants</span><code>clickable</code></div>
+                  <p class="ds-property__copy">The default pill is presentational. Add <strong>clickable</strong> and the dropdown slot to create an accessible disclosure with connected border geometry.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Icons</span>
+                <p>Use <a href="https://phosphoricons.com/" target="_blank" rel="noreferrer">Phosphor Icons</a> as inline SVG through the icon slot. The component standardises sizing, not the icon artwork.</p>
+              </footer>
+            </article>
+
             <article id="copy-command" class="ds-component">
               <header class="ds-component__header">
                 <div>
@@ -789,11 +850,15 @@ onBeforeUnmount(() => {
                       <span>Centered · Hero</span>
                       <p>Use for a page hero that needs context, explanation, and primary actions.</p>
                     </div>
-                    <code>layout="centered" · size="hero"</code>
+                    <code>layout="centered" · size="hero" · eyebrowTo</code>
                   </header>
                   <div class="ds-heading-case__preview ds-heading-case__preview--hero">
-                    <UiHeadingBlock layout="centered" size="hero">
-                      <template #eyebrow>Agent observability</template>
+                    <UiHeadingBlock
+                      layout="centered"
+                      size="hero"
+                      eyebrow="Agent observability / Code"
+                      eyebrow-to="/app/personas"
+                    >
                       <template #title>
                         <h2>Every loop, fully visible in production</h2>
                       </template>
@@ -943,6 +1008,16 @@ onBeforeUnmount(() => {
                     Use <strong>eyebrow</strong>, <strong>title</strong>, <strong>description</strong>,
                     <strong>actions</strong>, and <strong>aside</strong> independently. Only title is
                     normally required; the page supplies the correct semantic heading level.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Eyebrow link</span>
+                    <code>eyebrow · eyebrowTo</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Supply both props to turn the eyebrow into an accessible internal link. The
+                    <strong>eyebrow</strong> slot remains available when richer content is required.
                   </p>
                 </div>
               </div>
@@ -2184,6 +2259,70 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-3);
 }
 
+.ds-stage--icon-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--ll-space-8);
+}
+
+.ds-icon-pill-example {
+  display: grid;
+  justify-items: start;
+  gap: var(--ll-space-3);
+}
+
+.ds-pill-dropdown {
+  display: grid;
+  gap: var(--ll-space-2);
+}
+
+.ds-pill-dropdown > p {
+  margin: 0;
+  padding: var(--ll-space-2) var(--ll-space-3);
+  color: var(--ll-color-text-muted);
+  background: var(--ll-color-card);
+  border-radius: var(--ll-radius-pill);
+  font: 550 var(--ll-text-xs) / 1 var(--ll-font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ds-pill-dropdown > button {
+  display: grid;
+  gap: 0.2rem;
+  padding: var(--ll-space-3);
+  color: var(--ll-color-ink);
+  background: transparent;
+  border: 0;
+  border-radius: var(--ll-radius-md);
+  font-family: var(--ll-font-control);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ds-pill-dropdown > button:hover,
+.ds-pill-dropdown > button:focus-visible {
+  background: var(--ll-color-card);
+}
+
+.ds-pill-dropdown > button:focus-visible {
+  outline: 2px solid var(--ll-color-primary);
+  outline-offset: -2px;
+}
+
+.ds-pill-dropdown > button span {
+  font-size: var(--ll-text-sm);
+  font-weight: 650;
+}
+
+.ds-pill-dropdown > button small {
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-xs);
+}
+
 .ds-toggle-example {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3403,6 +3542,10 @@ onBeforeUnmount(() => {
 
   .ds-stage--toggles {
     grid-template-columns: 1fr;
+  }
+
+  .ds-stage--icon-pills {
+    justify-content: flex-start;
   }
 
   :deep(.ds-command-button) {
