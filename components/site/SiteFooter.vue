@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import UiContainer from '~/components/ui/Container.vue'
 import UiSection from '~/components/ui/Section.vue'
+import UiSectionStage from '~/components/ui/SectionStage.vue'
 
 interface FooterLink {
   label: string
@@ -33,49 +34,44 @@ function linkBindings(link: FooterLink) {
 
 <template>
   <footer class="ui-site-footer">
-    <UiContainer size="wide">
-      <UiSection
-        as="div"
-        surface="raised"
-        space="none"
-        rounded
-        backdrop="bottom"
-        class="ui-site-footer__island"
-      >
-        <div class="ui-site-footer__content">
-          <div class="ui-site-footer__top">
-            <div class="ui-site-footer__brand"><slot name="brand" /></div>
-            <div v-if="$slots.newsletter" class="ui-site-footer__newsletter">
-              <slot name="newsletter" />
+    <UiSection as="div" space="none">
+      <UiSectionStage inverse="bottom">
+        <UiContainer size="wide">
+          <div class="ui-site-footer__content">
+            <div class="ui-site-footer__top">
+              <div class="ui-site-footer__brand"><slot name="brand" /></div>
+              <div v-if="$slots.newsletter" class="ui-site-footer__newsletter">
+                <slot name="newsletter" />
+              </div>
+            </div>
+
+            <nav class="ui-site-footer__columns" aria-label="Footer navigation">
+              <section v-for="column in columns" :key="column.label">
+                <h2>{{ column.label }}</h2>
+                <component
+                  :is="linkComponent(link)"
+                  v-for="link in column.links"
+                  :key="link.label"
+                  v-bind="linkBindings(link)"
+                >{{ link.label }}</component>
+              </section>
+            </nav>
+
+            <div class="ui-site-footer__bottom">
+              <p class="ui-site-footer__status"><span aria-hidden="true" />{{ status }}</p>
+              <nav class="ui-site-footer__legal" aria-label="Legal">
+                <component
+                  :is="linkComponent(link)"
+                  v-for="link in legalLinks"
+                  :key="link.label"
+                  v-bind="linkBindings(link)"
+                >{{ link.label }}</component>
+              </nav>
             </div>
           </div>
-
-          <nav class="ui-site-footer__columns" aria-label="Footer navigation">
-            <section v-for="column in columns" :key="column.label">
-              <h2>{{ column.label }}</h2>
-              <component
-                :is="linkComponent(link)"
-                v-for="link in column.links"
-                :key="link.label"
-                v-bind="linkBindings(link)"
-              >{{ link.label }}</component>
-            </section>
-          </nav>
-
-          <div class="ui-site-footer__bottom">
-            <p class="ui-site-footer__status"><span aria-hidden="true" />{{ status }}</p>
-            <nav class="ui-site-footer__legal" aria-label="Legal">
-              <component
-                :is="linkComponent(link)"
-                v-for="link in legalLinks"
-                :key="link.label"
-                v-bind="linkBindings(link)"
-              >{{ link.label }}</component>
-            </nav>
-          </div>
-        </div>
-      </UiSection>
-    </UiContainer>
+        </UiContainer>
+      </UiSectionStage>
+    </UiSection>
   </footer>
 </template>
 

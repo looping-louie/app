@@ -235,10 +235,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .ui-main-navigation {
   --ui-navigation-motion-ease: cubic-bezier(0.55, 0, 1, 0.45);
-  --ui-navigation-surface: var(--ll-color-navigation);
-  --ui-navigation-border: var(--ll-color-light-400);
+  --ui-navigation-surface: var(--ll-color-card);
+  --ui-navigation-border: var(--ll-color-divider);
   --ui-navigation-dropdown-inset: 7%;
-  --ui-navigation-shoulder: 3.5rem;
+  --ui-navigation-shoulder: calc(var(--ll-radius-structural) + var(--ll-space-6));
 
   position: relative;
   z-index: 30;
@@ -348,7 +348,7 @@ onBeforeUnmount(() => {
   background: var(--ui-navigation-surface);
   border: 1px solid var(--ui-navigation-border);
   border-top: 0;
-  border-radius: 0 0 2rem 2rem;
+  border-radius: 0 0 var(--ll-radius-structural) var(--ll-radius-structural);
   transform-origin: top center;
 }
 
@@ -365,7 +365,7 @@ onBeforeUnmount(() => {
 .ui-main-navigation__dropdown::before {
   right: calc(100% - 1px);
   background-image: radial-gradient(
-    ellipse 3.4375rem 3.5rem at bottom left,
+    ellipse calc(var(--ui-navigation-shoulder) - 1px) var(--ui-navigation-shoulder) at bottom left,
     var(--ll-color-canvas) calc(100% - 1px),
     var(--ui-navigation-border) calc(100% - 1px) 100%,
     var(--ui-navigation-surface) 100%
@@ -375,7 +375,7 @@ onBeforeUnmount(() => {
 .ui-main-navigation__dropdown::after {
   left: calc(100% - 1px);
   background-image: radial-gradient(
-    ellipse 3.4375rem 3.5rem at bottom right,
+    ellipse calc(var(--ui-navigation-shoulder) - 1px) var(--ui-navigation-shoulder) at bottom right,
     var(--ll-color-canvas) calc(100% - 1px),
     var(--ui-navigation-border) calc(100% - 1px) 100%,
     var(--ui-navigation-surface) 100%
@@ -391,6 +391,7 @@ onBeforeUnmount(() => {
   display: grid;
   min-width: 13rem;
   flex: var(--ui-navigation-section-weight) 1 0;
+  grid-template-rows: auto 1fr;
   align-content: start;
   gap: var(--ll-space-4);
 }
@@ -410,7 +411,7 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
   overflow: hidden;
-  border: 1px solid var(--ll-color-border);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-lg);
 }
 
@@ -423,8 +424,8 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-6);
   padding: var(--ll-space-5);
   color: var(--ll-color-ink);
-  background: rgba(255, 255, 255, 0.72);
-  border-right: 1px solid var(--ll-color-border);
+  background: var(--ll-color-card);
+  border-right: 1px solid var(--ll-color-divider);
   text-decoration: none;
   transition: background var(--ll-duration-normal) var(--ll-ease-out);
 }
@@ -434,7 +435,7 @@ onBeforeUnmount(() => {
 }
 
 .ui-main-navigation__item:hover {
-  background: #ffffff;
+  background: var(--ll-color-highlight);
 }
 
 .ui-main-navigation__item-copy {
@@ -532,7 +533,7 @@ onBeforeUnmount(() => {
     max-height: min(38rem, calc(100vh - 6rem));
     gap: var(--ll-space-5);
     overflow-y: auto;
-    border-radius: 0 0 var(--ll-radius-lg) var(--ll-radius-lg);
+    border-radius: 0 0 var(--ll-radius-structural) var(--ll-radius-structural);
   }
 
   .ui-main-navigation__mobile-panel::before,

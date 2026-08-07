@@ -19,15 +19,18 @@
   --ll-color-red-100: #fbe9ec;
 
   /* Light surface scale — Mastra hierarchy trial */
+  --ll-color-light-050: #fdfefe;
   --ll-color-light-100: #fafbfc;
   --ll-color-light-200: #f5f7f8;
   --ll-color-light-300: #eef2f4;
   --ll-color-light-400: #dce3e7;
-  --ll-color-navigation: var(--ll-color-light-200);
+  --ll-color-section: var(--ll-color-light-050);
+  --ll-color-card: var(--ll-color-light-200);
   --ll-color-highlight: var(--ll-color-light-300);
+  --ll-color-divider: var(--ll-color-light-400);
 
   /* Semantic color roles */
-  --ll-color-canvas: var(--ll-color-gray-050);
+  --ll-color-canvas: var(--ll-color-light-100);
   --ll-color-surface: #fafbfc;
   --ll-color-surface-raised: #ffffff;
   --ll-color-surface-muted: var(--ll-color-gray-100);
@@ -37,7 +40,7 @@
   --ll-color-text: var(--ll-color-gray-950);
   --ll-color-text-muted: var(--ll-color-gray-600);
   --ll-color-text-faint: #87949d;
-  --ll-color-border: var(--ll-color-gray-200);
+  --ll-color-border: var(--ll-color-divider);
   --ll-color-border-strong: var(--ll-color-gray-300);
   --ll-color-primary: var(--ll-color-blue-700);
   --ll-color-primary-hover: var(--ll-color-blue-600);
@@ -83,6 +86,7 @@
   --ll-radius-sm: 0.625rem;
   --ll-radius-md: 0.875rem;
   --ll-radius-lg: 1.5rem;
+  --ll-radius-structural: 1.875rem;
   --ll-radius-pill: 999px;
 
   --ll-shadow-focus: 0 0 0 3px rgba(34, 102, 153, 0.2);
@@ -98,6 +102,12 @@
   --ll-duration-fast: 120ms;
   --ll-duration-normal: 180ms;
   --ll-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --ll-radius-structural: 2.5rem;
+  }
 }
 
 html {

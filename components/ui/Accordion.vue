@@ -43,7 +43,7 @@ function toggle(id: string) {
         >
           <span>{{ item.title }}</span>
           <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path d="M4 6.5 8 10l4-3.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M6 4 10 8l-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
       </h3>
@@ -63,13 +63,10 @@ function toggle(id: string) {
 <style scoped>
 .ui-accordion {
   overflow: hidden;
-  background: var(--ll-color-surface-raised);
-  border: 1px solid var(--ll-color-border);
-  border-radius: var(--ll-radius-lg);
-}
-
-.ui-accordion__item + .ui-accordion__item {
-  border-top: 1px solid var(--ll-color-border);
+  padding: var(--ll-space-6);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
+  border-radius: var(--ll-radius-structural);
 }
 
 .ui-accordion__heading {
@@ -86,15 +83,18 @@ function toggle(id: string) {
   color: var(--ll-color-ink);
   background: transparent;
   border: 0;
+  border-radius: calc(var(--ll-radius-structural) / 2);
   cursor: pointer;
   font-size: var(--ll-text-sm);
   font-weight: 620;
   line-height: 1.35;
   text-align: left;
+  transition: background-color var(--ll-duration-normal) var(--ll-ease-out);
 }
 
-.ui-accordion__trigger:hover {
-  background: var(--ll-color-surface);
+.ui-accordion__trigger[aria-expanded="false"]:hover,
+.ui-accordion__trigger[aria-expanded="false"]:focus-visible {
+  background: var(--ll-color-highlight);
 }
 
 .ui-accordion__trigger:focus-visible {
@@ -113,7 +113,7 @@ function toggle(id: string) {
 }
 
 .ui-accordion__trigger[aria-expanded="true"] svg {
-  transform: rotate(180deg);
+  transform: rotate(90deg);
 }
 
 .ui-accordion__panel {

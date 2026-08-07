@@ -4,12 +4,14 @@ import UiSiteFooter from '~/components/site/SiteFooter.vue'
 import UiAccordion from '~/components/ui/Accordion.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
+import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
 import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiSection from '~/components/ui/Section.vue'
+import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
 definePageMeta({
@@ -272,7 +274,7 @@ onBeforeUnmount(() => {
     </header>
 
     <main>
-      <UiSection as="div" surface="canvas" space="none" class="ds-page-canvas">
+      <UiSection as="div" space="none" class="ds-page-canvas">
         <section class="ds-hero">
         <div class="ds-hero__copy">
           <p class="ds-eyebrow"><span /> Foundations</p>
@@ -392,8 +394,9 @@ onBeforeUnmount(() => {
                 <div class="ds-palette__group">
                   <p>Light surfaces · trial</p>
                   <div class="ds-swatches">
+                    <div class="ds-swatch ds-swatch--light-050"><span>Light 050 · Section</span><code>#FDFEFE</code></div>
                     <div class="ds-swatch ds-swatch--light-100"><span>Light 100 · Canvas</span><code>#FAFBFC</code></div>
-                    <div class="ds-swatch ds-swatch--light-200"><span>Light 200 · Navigation</span><code>#F5F7F8</code></div>
+                    <div class="ds-swatch ds-swatch--light-200"><span>Light 200 · Card</span><code>#F5F7F8</code></div>
                     <div class="ds-swatch ds-swatch--light-300"><span>Light 300 · Highlight</span><code>#EEF2F4</code></div>
                     <div class="ds-swatch ds-swatch--light-400"><span>Light 400 · Divider</span><code>#DCE3E7</code></div>
                   </div>
@@ -918,8 +921,8 @@ onBeforeUnmount(() => {
               <div>
                 <h2>Layout</h2>
                 <p>
-                  Containers establish the horizontal rhythm; sections establish vertical rhythm,
-                  surface, and shape. They compose together without knowing what content they carry.
+                  Sections establish vertical rhythm, containers establish horizontal measure, and
+                  stages add the optional tonal surface and inverse geometry.
                 </p>
               </div>
             </div>
@@ -1017,9 +1020,9 @@ onBeforeUnmount(() => {
                 <div>
                   <div class="ds-component__title-row">
                     <h3>Section</h3>
-                    <code>UiSection</code>
+                    <code>UiSection · UiSectionStage</code>
                   </div>
-                  <p>Full-width tonal bands and rounded content islands with shared spacing.</p>
+                  <p>Semantic page chapters separated from optional tonal stages and inverse edges.</p>
                 </div>
                 <span class="ds-status"><i /> Stable</span>
               </header>
@@ -1027,40 +1030,77 @@ onBeforeUnmount(() => {
               <div class="ds-section-demos">
                 <div class="ds-section-demo">
                   <div class="ds-section-demo__meta">
-                    <span>Canvas</span>
-                    <code>surface="canvas"</code>
+                    <span>Canvas section</span>
+                    <code>UiSection · no stage</code>
                   </div>
-                  <UiSection as="div" surface="canvas" space="sm">
-                    <UiContainer size="reading">
-                      <h4>The continuous page background</h4>
-                      <p>Use as the quiet base layer beneath bands and raised surfaces.</p>
-                    </UiContainer>
+                  <UiSection as="div" space="none">
+                    <div class="ds-section-demo__sample">
+                      <h4>A clean page chapter</h4>
+                      <p>Without a stage, Section stays entirely on Canvas. Light 050 never appears implicitly.</p>
+                    </div>
                   </UiSection>
                 </div>
 
                 <div class="ds-section-demo">
                   <div class="ds-section-demo__meta">
-                    <span>Subtle band</span>
-                    <code>surface="subtle"</code>
+                    <span>Heading outside · regular stage</span>
+                    <code>Section + Stage inverse="none"</code>
                   </div>
-                  <UiSection as="div" surface="subtle" space="sm">
-                    <UiContainer size="reading">
-                      <h4>A gentle change of altitude</h4>
-                      <p>Separate chapters without introducing a floating card.</p>
-                    </UiContainer>
+                  <UiSection as="div" space="none" class="ds-section-composition">
+                    <div class="ds-section-demo__sample">
+                      <h4>The title belongs to Canvas</h4>
+                      <p>The stage starts afterwards, so the heading is not captured by its tonal background.</p>
+                    </div>
+                    <UiSectionStage>
+                      <div class="ds-section-demo__sample ds-section-demo__sample--stage">
+                        <p>Light 050 begins here, with regular rounded edges.</p>
+                      </div>
+                    </UiSectionStage>
                   </UiSection>
                 </div>
 
-                <div class="ds-section-demo ds-section-demo--padded">
+                <div class="ds-section-demo">
                   <div class="ds-section-demo__meta">
-                    <span>Raised island</span>
-                    <code>surface="raised" · rounded · backdrop="bottom"</code>
+                    <span>Inverse top</span>
+                    <code>SectionStage inverse="top"</code>
                   </div>
-                  <UiSection as="div" surface="raised" space="sm" rounded backdrop="bottom">
-                    <UiContainer size="reading">
-                      <h4>A bounded, elevated composition</h4>
-                      <p>Use for showcases, media panels, feature groups, and footer islands.</p>
-                    </UiContainer>
+                  <UiSection as="div" space="none">
+                    <UiSectionStage inverse="top">
+                      <div class="ds-section-demo__sample">
+                        <h4>Arrive from the previous band</h4>
+                        <p>The upper Light 050 band opens to full width while the lower edge remains contained.</p>
+                      </div>
+                    </UiSectionStage>
+                  </UiSection>
+                </div>
+
+                <div class="ds-section-demo">
+                  <div class="ds-section-demo__meta">
+                    <span>Heading inside · inverse bottom</span>
+                    <code>SectionStage inverse="bottom"</code>
+                  </div>
+                  <UiSection as="div" space="none">
+                    <UiSectionStage inverse="bottom">
+                      <div class="ds-section-demo__sample">
+                        <h4>The title belongs to the collection</h4>
+                        <p>Heading and content share Light 050 before the lower edge expands through its inverse radius.</p>
+                      </div>
+                    </UiSectionStage>
+                  </UiSection>
+                </div>
+
+                <div class="ds-section-demo">
+                  <div class="ds-section-demo__meta">
+                    <span>Inverse top and bottom</span>
+                    <code>SectionStage inverse="both"</code>
+                  </div>
+                  <UiSection as="div" space="none">
+                    <UiSectionStage inverse="both">
+                      <div class="ds-section-demo__sample">
+                        <h4>A continuous tonal chapter</h4>
+                        <p>Both Light 050 padding bands reach full width while Canvas remains visible at the sides.</p>
+                      </div>
+                    </UiSectionStage>
                   </UiSection>
                 </div>
               </div>
@@ -1068,43 +1108,57 @@ onBeforeUnmount(() => {
               <div class="ds-properties">
                 <div class="ds-property">
                   <div class="ds-property__label">
-                    <span>Surface</span>
-                    <code>surface</code>
-                  </div>
-                  <p class="ds-property__copy">
-                    <strong>transparent</strong> inherits its surroundings. <strong>canvas</strong>
-                    establishes the page base, <strong>subtle</strong> creates a tonal band, and
-                    <strong>raised</strong> creates the brightest surface.
-                  </p>
-                </div>
-                <div class="ds-property">
-                  <div class="ds-property__label">
-                    <span>Backdrop</span>
-                    <code>backdrop="bottom"</code>
-                  </div>
-                  <p class="ds-property__copy">
-                    Adds a full-bleed tonal layer behind the lower edge. Pair it with
-                    <strong>rounded</strong> to expose the page background at both corners.
-                  </p>
-                </div>
-                <div class="ds-property">
-                  <div class="ds-property__label">
-                    <span>Spacing</span>
+                    <span>Section</span>
                     <code>space</code>
                   </div>
                   <p class="ds-property__copy">
+                    Section is always Canvas and controls semantic grouping plus vertical rhythm.
                     Choose <strong>none</strong>, <strong>sm</strong>, <strong>md</strong>, or
-                    <strong>lg</strong>. The values are fluid and control vertical padding only.
+                    <strong>lg</strong> for its fluid vertical spacing.
                   </p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label">
-                    <span>Shape</span>
-                    <code>rounded</code>
+                    <span>Stage surface</span>
+                    <code>UiSectionStage</code>
                   </div>
                   <p class="ds-property__copy">
-                    Rounded sections use the shared large radius, clip overflowing media, and gain
-                    a border. Reserve them for content that should read as an island, not every band.
+                    Stage is opt-in. It owns Light 050, the thin horizontal shell padding, and its
+                    corner geometry. Put a heading inside only when it belongs to that visual group.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Stage edges</span>
+                    <code>inverse</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Choose <strong>none</strong>, <strong>top</strong>, <strong>bottom</strong>, or
+                    <strong>both</strong>. Normal edges finish inside the shell; inverse edges expand
+                    their vertical padding to the full width of the section.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Container</span>
+                    <code>size</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    Container remains a measurement primitive. It controls maximum width and page
+                    gutters, but never paints a surface or decides corner geometry.
+                  </p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Stage shell</span>
+                    <code>--ui-section-stage-shell-padding</code>
+                  </div>
+                  <p class="ds-property__copy">
+                    The shell owns the thin padding band and the corner geometry. Its structural
+                    radius is shared with cards and the main navigation dropdown: 30px on small
+                    screens and 40px from 640px upwards, following Mastra’s antigrid radius. The
+                    stage adds its shell inset to the outer SVG curve so its inner visual radius
+                    remains identical.
                   </p>
                 </div>
               </div>
@@ -1112,9 +1166,8 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>Composition</span>
                 <p>
-                  Section owns the vertical and tonal layer. Place a Container inside it to align
-                  content; place Section inside a wide Container when the rounded surface itself
-                  must have a maximum width.
+                  Section owns the chapter, Container owns measure, and SectionStage owns paint and
+                  shape. Grid and GridList stay transparent and only distribute their content.
                 </p>
               </footer>
             </article>
@@ -1145,89 +1198,103 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-collection-example">
-                <div class="ds-collection-example__heading">
-                  <span>Media cards</span>
-                  <code>columns="3" · variant="media"</code>
-                </div>
-                <UiGrid :columns="3" gap="md">
-                  <UiCard to="#grid-card" variant="media">
-                    <template #eyebrow>Use case</template>
-                    <template #title><h4>Internal agents</h4></template>
-                    <template #description><p>Automate the work that keeps your team circling the same runway.</p></template>
-                    <template #media><div class="ds-media-visual ds-media-visual--messages" /></template>
-                    <template #media-hover><div class="ds-media-visual ds-media-visual--messages is-animated" /></template>
-                  </UiCard>
-                  <UiCard to="#grid-card" variant="media">
-                    <template #eyebrow>Use case</template>
-                    <template #title><h4>Customer-facing agents</h4></template>
-                    <template #description><p>Answer, complete tasks, and hand off without losing context.</p></template>
-                    <template #media><div class="ds-media-visual ds-media-visual--signal" /></template>
-                    <template #media-hover><div class="ds-media-visual ds-media-visual--signal is-animated" /></template>
-                  </UiCard>
-                  <UiCard to="#grid-card" variant="media">
-                    <template #eyebrow>Use case</template>
-                    <template #title><h4>Developer platform agents</h4></template>
-                    <template #description><p>Build reliable AI operations on shared primitives.</p></template>
-                    <template #media><div class="ds-media-visual ds-media-visual--console" /></template>
-                    <template #media-hover><div class="ds-media-visual ds-media-visual--console is-animated" /></template>
-                  </UiCard>
-                </UiGrid>
+                <UiSection as="div" space="none" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Media cards</span>
+                    <code>heading outside · columns="3" · variant="media"</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiGrid :columns="3" gap="md">
+                      <UiCard to="#grid-card" variant="media">
+                        <template #eyebrow>Use case</template>
+                        <template #title><h4>Internal agents</h4></template>
+                        <template #description><p>Automate the work that keeps your team circling the same runway.</p></template>
+                        <template #media><div class="ds-media-visual ds-media-visual--messages" /></template>
+                        <template #media-hover><div class="ds-media-visual ds-media-visual--messages is-animated" /></template>
+                      </UiCard>
+                      <UiCard to="#grid-card" variant="media">
+                        <template #eyebrow>Use case</template>
+                        <template #title><h4>Customer-facing agents</h4></template>
+                        <template #description><p>Answer, complete tasks, and hand off without losing context.</p></template>
+                        <template #media><div class="ds-media-visual ds-media-visual--signal" /></template>
+                        <template #media-hover><div class="ds-media-visual ds-media-visual--signal is-animated" /></template>
+                      </UiCard>
+                      <UiCard to="#grid-card" variant="media">
+                        <template #eyebrow>Use case</template>
+                        <template #title><h4>Developer platform agents</h4></template>
+                        <template #description><p>Build reliable AI operations on shared primitives.</p></template>
+                        <template #media><div class="ds-media-visual ds-media-visual--console" /></template>
+                        <template #media-hover><div class="ds-media-visual ds-media-visual--console is-animated" /></template>
+                      </UiCard>
+                    </UiGrid>
+                  </UiSectionStage>
+                </UiSection>
               </div>
 
               <div class="ds-collection-example">
-                <div class="ds-collection-example__heading">
-                  <span>Agent books and latest releases</span>
-                  <code>columns="2" · editorial + row</code>
-                </div>
-                <UiGrid :columns="2" gap="md">
-                  <div class="ds-resource-group">
-                    <span>Agent books</span>
-                    <UiCard to="#grid-card" variant="editorial">
-                      <template #eyebrow>Field manual · Volume 01</template>
-                      <template #title><h4>Principles of Building Reliable Loops</h4></template>
-                      <template #description><p>A practical guide to agents that know when to take another lap.</p></template>
-                      <template #meta>240K+ copies distributed</template>
-                    </UiCard>
+                <UiSection as="div" space="none" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Agent books and latest releases</span>
+                    <code>group titles outside Stage · content inside</code>
                   </div>
-                  <div class="ds-resource-group">
-                    <span>Latest releases</span>
-                    <UiCard to="#grid-card" variant="row">
-                      <template #title><h4>Human checkpoints</h4></template>
-                      <template #trailing><time datetime="2026-08-05">Aug 5</time></template>
-                    </UiCard>
-                    <UiCard to="#grid-card" variant="row">
-                      <template #title><h4>Persistent loop memory</h4></template>
-                      <template #trailing><time datetime="2026-08-03">Aug 3</time></template>
-                    </UiCard>
-                    <UiCard to="#grid-card" variant="row">
-                      <template #title><h4>Provider fallback policies</h4></template>
-                      <template #trailing><time datetime="2026-07-28">Jul 28</time></template>
-                    </UiCard>
+                  <div class="ds-grouped-collection">
+                    <UiGrid :columns="2" gap="md" collapse="never" class="ds-grouped-collection__titles">
+                      <UiCollectionGroupTitle title="Agent books" />
+                      <UiCollectionGroupTitle title="Latest releases" to="#grid-card" />
+                    </UiGrid>
+                    <UiSectionStage inverse="bottom" class="ds-collection-stage ds-collection-stage--grouped">
+                      <UiGrid :columns="2" gap="md" collapse="never">
+                        <div class="ds-resource-group">
+                          <UiCard to="#grid-card" variant="editorial">
+                            <template #eyebrow>Field manual · Volume 01</template>
+                            <template #title><h4>Principles of Building Reliable Loops</h4></template>
+                            <template #description><p>A practical guide to agents that know when to take another lap.</p></template>
+                            <template #meta>240K+ copies distributed</template>
+                          </UiCard>
+                        </div>
+                        <div class="ds-resource-group ds-resource-group--releases">
+                          <UiCard to="#grid-card" variant="row">
+                            <template #title><h4>Human checkpoints</h4></template>
+                            <template #description><p>Pause sensitive runs for review without losing execution context.</p></template>
+                            <template #trailing><time datetime="2026-08-05">Aug 5</time></template>
+                          </UiCard>
+                          <UiCard to="#grid-card" variant="row">
+                            <template #title><h4>Persistent loop memory</h4></template>
+                            <template #description><p>Carry decisions and state across long-running agent workflows.</p></template>
+                            <template #trailing><time datetime="2026-08-03">Aug 3</time></template>
+                          </UiCard>
+                        </div>
+                      </UiGrid>
+                    </UiSectionStage>
                   </div>
-                </UiGrid>
+                </UiSection>
               </div>
 
               <div class="ds-collection-example">
-                <div class="ds-collection-example__heading">
-                  <span>Articles</span>
-                  <code>columns="2" · variant="editorial"</code>
-                </div>
-                <UiGrid :columns="2" gap="md">
-                  <UiCard to="#grid-card" variant="editorial">
-                    <template #eyebrow>Engineering</template>
-                    <template #title><h4>How to review long-running agents without slowing them down</h4></template>
-                    <template #description><p>Patterns for parallel review, confidence thresholds, and useful retries.</p></template>
-                    <template #meta>Aug 1, 2026</template>
-                    <template #trailing><span># foundations</span></template>
-                  </UiCard>
-                  <UiCard to="#grid-card" variant="editorial">
-                    <template #eyebrow>Architecture</template>
-                    <template #title><h4>Choosing models for generators, reviewers, and aggregators</h4></template>
-                    <template #description><p>Match model strengths to roles without turning configuration into archaeology.</p></template>
-                    <template #meta>Jul 26, 2026</template>
-                    <template #trailing><span># models</span></template>
-                  </UiCard>
-                </UiGrid>
+                <UiSection as="div" space="none" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Articles</span>
+                    <code>heading outside · columns="2" · variant="editorial"</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiGrid :columns="2" gap="md">
+                      <UiCard to="#grid-card" variant="editorial">
+                        <template #eyebrow>Engineering</template>
+                        <template #title><h4>How to review long-running agents without slowing them down</h4></template>
+                        <template #description><p>Patterns for parallel review, confidence thresholds, and useful retries.</p></template>
+                        <template #meta>Aug 1, 2026</template>
+                        <template #trailing><span># foundations</span></template>
+                      </UiCard>
+                      <UiCard to="#grid-card" variant="editorial">
+                        <template #eyebrow>Architecture</template>
+                        <template #title><h4>Choosing models for generators, reviewers, and aggregators</h4></template>
+                        <template #description><p>Match model strengths to roles without turning configuration into archaeology.</p></template>
+                        <template #meta>Jul 26, 2026</template>
+                        <template #trailing><span># models</span></template>
+                      </UiCard>
+                    </UiGrid>
+                  </UiSectionStage>
+                </UiSection>
               </div>
 
               <div class="ds-properties">
@@ -1255,32 +1322,40 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-collection-example ds-collection-example--directory">
-                <div class="ds-collection-example__heading">
-                  <span>Customer directory</span>
-                  <code>variant="plain" · clickable</code>
-                </div>
-                <UiGridList :items="customerRows" aria-label="Customer directory" clickable>
-                  <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
-                  <template #metadata="{ item }">{{ item.categories }}</template>
-                  <template #trailing><span class="ds-grid-list-link">Read story →</span></template>
-                </UiGridList>
+                <UiSection as="div" space="none" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Customer directory</span>
+                    <code>heading outside · Stage inverse="bottom" · GridList plain</code>
+                  </div>
+                  <UiSectionStage inverse="bottom" class="ds-collection-stage">
+                    <UiGridList :items="customerRows" aria-label="Customer directory" clickable>
+                      <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
+                      <template #metadata="{ item }">{{ item.categories }}</template>
+                      <template #trailing><span class="ds-grid-list-link">Read story →</span></template>
+                    </UiGridList>
+                  </UiSectionStage>
+                </UiSection>
               </div>
 
               <div class="ds-collection-example">
-                <div class="ds-collection-example__heading">
-                  <span>Open positions</span>
-                  <code>variant="surface" · clickable</code>
-                </div>
-                <UiGridList :items="jobRows" variant="surface" aria-label="Open positions" clickable>
-                  <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
-                  <template #metadata="{ item }">{{ item.categories }}</template>
-                  <template #trailing><UiButton as="span" variant="gray" size="sm">Apply</UiButton></template>
-                </UiGridList>
+                <UiSection as="div" space="none" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Open positions</span>
+                    <code>heading outside · GridList surface · clickable</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiGridList :items="jobRows" variant="surface" aria-label="Open positions" clickable>
+                      <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
+                      <template #metadata="{ item }">{{ item.categories }}</template>
+                      <template #trailing><UiButton as="span" variant="gray" size="sm">Apply</UiButton></template>
+                    </UiGridList>
+                  </UiSectionStage>
+                </UiSection>
               </div>
 
               <footer class="ds-component__footnote">
-                <span>Responsive</span>
-                <p>Clickable rows render as links when an item provides <code>to</code> or <code>href</code>, remain keyboard accessible, and keep the trailing affordance visible.</p>
+                <span>Surface ownership</span>
+                <p>GridList remains transparent and responsive. Its optional SectionStage owns Light 050 and any inverse edge; Section stays on Canvas.</p>
               </footer>
             </article>
 
@@ -1297,16 +1372,22 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-collection-example">
-                <UiHeadingBlock align="start" size="subsection">
-                  <template #title><h3>The crew</h3></template>
-                  <template #description><p>Six people keeping Louie in the air from around the world.</p></template>
-                </UiHeadingBlock>
-                <UiGrid :columns="3" gap="lg" class="ds-team-grid">
-                  <div v-for="member in teamMembers" :key="member.id" class="ds-team-member">
-                    <span class="ds-team-member__avatar">{{ member.initials }}</span>
-                    <div><strong>{{ member.name }}</strong><span>{{ member.role }}</span></div>
+                <UiSection as="div" space="none" class="ds-collection-section">
+                  <div class="ds-collection-heading-outside">
+                    <UiHeadingBlock align="start" size="subsection">
+                      <template #title><h3>The crew</h3></template>
+                      <template #description><p>Six people keeping Louie in the air from around the world.</p></template>
+                    </UiHeadingBlock>
                   </div>
-                </UiGrid>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiGrid :columns="3" gap="lg" class="ds-team-grid">
+                      <div v-for="member in teamMembers" :key="member.id" class="ds-team-member">
+                        <span class="ds-team-member__avatar">{{ member.initials }}</span>
+                        <div><strong>{{ member.name }}</strong><span>{{ member.role }}</span></div>
+                      </div>
+                    </UiGrid>
+                  </UiSectionStage>
+                </UiSection>
               </div>
 
               <footer class="ds-component__footnote">
@@ -1328,7 +1409,17 @@ onBeforeUnmount(() => {
               </header>
 
               <div class="ds-collection-example ds-collection-example--accordion">
-                <UiAccordion :items="faqItems" :default-open="['loop']" />
+                <UiSection as="div" space="none" class="ds-collection-section">
+                  <div class="ds-grouped-collection">
+                    <UiCollectionGroupTitle
+                      heading-as="h3"
+                      title="Frequently Asked Questions"
+                    />
+                    <UiSectionStage inverse="bottom" class="ds-collection-stage">
+                      <UiAccordion :items="faqItems" :default-open="['loop']" />
+                    </UiSectionStage>
+                  </div>
+                </UiSection>
               </div>
 
               <footer class="ds-component__footnote">
@@ -1453,7 +1544,7 @@ onBeforeUnmount(() => {
                     <h3>Site footer</h3>
                     <code>UiSiteFooter</code>
                   </div>
-                  <p>A large rounded island over a full-width tonal backdrop.</p>
+                  <p>A composable footer placed inside a Section with an inverse-bottom edge.</p>
                 </div>
                 <span class="ds-status"><i /> Composable</span>
               </header>
@@ -1519,13 +1610,14 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   overflow-x: clip;
   color: var(--ll-color-text);
-  background-color: var(--ll-color-light-100);
+  background-color: var(--ll-color-canvas);
   font-family: var(--ll-font-sans);
   -webkit-font-smoothing: antialiased;
 }
 
 .ds-page-canvas {
-  background-color: var(--ll-color-light-100);
+  overflow: visible;
+  background-color: var(--ll-color-canvas);
 }
 
 .ds-header {
@@ -1533,9 +1625,8 @@ onBeforeUnmount(() => {
   top: 0;
   z-index: 20;
   min-height: 4.25rem;
-  background: color-mix(in srgb, var(--ll-color-light-100) 88%, transparent);
-  border-bottom: 1px solid var(--ll-color-border);
-  backdrop-filter: blur(16px);
+  background: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-header__container {
@@ -1651,15 +1742,15 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   padding-left: clamp(2rem, 5vw, 6rem);
-  background: rgba(255, 255, 255, 0.28);
-  border-left: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-left: 1px solid var(--ll-color-divider);
 }
 
 .ds-preview-window {
   width: min(100%, 31rem);
   overflow: hidden;
-  background: var(--ll-color-surface-raised);
-  border: 1px solid var(--ll-color-border-strong);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-lg);
   box-shadow: var(--ll-shadow-raised);
 }
@@ -1670,8 +1761,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.375rem;
   padding: 0 var(--ll-space-4);
-  background: var(--ll-color-surface-muted);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-highlight);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-preview-window__topbar > span {
@@ -1715,8 +1806,8 @@ onBeforeUnmount(() => {
 .ds-shell {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
-  background: color-mix(in srgb, var(--ll-color-light-100) 92%, transparent);
-  border-inline: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-inline: 1px solid var(--ll-color-divider);
 }
 
 .ds-shell-frame {
@@ -1727,9 +1818,13 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 4.25rem;
   align-self: start;
-  min-height: calc(100vh - 4.25rem);
+  height: calc(100vh - 4.25rem);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--ll-space-12) var(--ll-space-6);
   border-right: 1px solid var(--ll-color-border);
+  scrollbar-gutter: stable;
 }
 
 .ds-sidebar > p {
@@ -1827,8 +1922,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   overflow: hidden;
   margin-bottom: var(--ll-space-10);
-  background: var(--ll-color-surface);
-  border: 1px solid var(--ll-color-border);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-lg);
 }
 
@@ -1836,8 +1931,8 @@ onBeforeUnmount(() => {
   display: grid;
   gap: var(--ll-space-8);
   padding: var(--ll-space-6);
-  background: var(--ll-color-surface-raised);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-palette__group > p {
@@ -1861,7 +1956,7 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 0.35rem;
   padding: var(--ll-space-4);
-  border: 1px solid rgba(41, 47, 51, 0.08);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-md);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
@@ -1880,6 +1975,7 @@ onBeforeUnmount(() => {
 .ds-swatch--gray-600 { color: #ffffff; background: var(--ll-color-gray-600); }
 .ds-swatch--gray-300 { color: var(--ll-color-gray-950); background: var(--ll-color-gray-300); }
 .ds-swatch--gray-050 { color: var(--ll-color-gray-950); background: var(--ll-color-gray-050); }
+.ds-swatch--light-050 { color: var(--ll-color-gray-950); background: var(--ll-color-light-050); }
 .ds-swatch--light-100 { color: var(--ll-color-gray-950); background: var(--ll-color-light-100); }
 .ds-swatch--light-200 { color: var(--ll-color-gray-950); background: var(--ll-color-light-200); }
 .ds-swatch--light-300 { color: var(--ll-color-gray-950); background: var(--ll-color-light-300); }
@@ -1894,15 +1990,15 @@ onBeforeUnmount(() => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ll-space-4);
   padding: var(--ll-space-6);
-  background: var(--ll-color-surface-raised);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-type-specimen {
   min-width: 0;
   padding: clamp(1.5rem, 4vw, 2.5rem);
-  background: var(--ll-color-gray-050);
-  border: 1px solid var(--ll-color-border);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-md);
 }
 
@@ -1982,7 +2078,7 @@ onBeforeUnmount(() => {
 .ds-property__label code {
   padding: 0.3rem 0.45rem;
   color: var(--ll-color-text-muted);
-  background: var(--ll-color-surface-muted);
+  background: var(--ll-color-highlight);
   border-radius: 0.375rem;
   font: 500 0.6875rem / 1 var(--ll-font-mono);
 }
@@ -2012,12 +2108,8 @@ onBeforeUnmount(() => {
 .ds-stage {
   min-height: 15rem;
   padding: clamp(2rem, 6vw, 5rem);
-  background-color: var(--ll-color-surface-raised);
-  background-image:
-    linear-gradient(rgba(41, 47, 51, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(41, 47, 51, 0.045) 1px, transparent 1px);
-  background-size: 2rem 2rem;
-  border-bottom: 1px solid var(--ll-color-border);
+  background-color: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-stage--buttons {
@@ -2099,14 +2191,14 @@ onBeforeUnmount(() => {
   min-height: 15rem;
   flex-direction: column;
   padding: var(--ll-space-5);
-  background: var(--ll-color-surface-raised);
-  border: 1px solid var(--ll-color-border);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-md);
 }
 
 .ds-plan-card--featured {
-  background: linear-gradient(180deg, var(--ll-color-surface-raised), var(--ll-color-brand-soft));
-  border-color: var(--ll-color-brand-bright);
+  background: var(--ll-color-card);
+  border-color: var(--ll-color-divider);
 }
 
 .ds-plan-card__badge {
@@ -2174,8 +2266,8 @@ onBeforeUnmount(() => {
 .ds-segment-variant {
   min-width: 0;
   overflow: hidden;
-  background: color-mix(in srgb, var(--ll-color-surface) 94%, transparent);
-  border: 1px solid var(--ll-color-border);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-md);
   box-shadow: 0 0.75rem 2rem rgba(41, 47, 51, 0.06);
 }
@@ -2212,7 +2304,7 @@ onBeforeUnmount(() => {
 .ds-segment-variant__header code {
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
-  background: var(--ll-color-surface-muted);
+  background: var(--ll-color-highlight);
   border-radius: 0.375rem;
   font: 500 0.625rem / 1 var(--ll-font-mono);
   white-space: nowrap;
@@ -2238,12 +2330,8 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-5);
   overflow: hidden;
   padding: clamp(2rem, 5vw, 4rem) 0;
-  background-color: var(--ll-color-surface-raised);
-  background-image:
-    linear-gradient(rgba(41, 47, 51, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(41, 47, 51, 0.04) 1px, transparent 1px);
-  background-size: 2rem 2rem;
-  border-bottom: 1px solid var(--ll-color-border);
+  background-color: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-container-demo > div {
@@ -2254,8 +2342,8 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-4);
   padding: var(--ll-space-4) var(--ll-space-5);
   color: var(--ll-color-ink);
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid var(--ll-color-border-strong);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-md);
   box-shadow: 0 0.5rem 1.5rem rgba(41, 47, 51, 0.06);
 }
@@ -2273,8 +2361,8 @@ onBeforeUnmount(() => {
 .ds-section-demos {
   display: grid;
   gap: 1px;
-  background: var(--ll-color-border);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-divider);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-section-demo {
@@ -2292,8 +2380,8 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: var(--ll-space-4);
   padding: var(--ll-space-4) var(--ll-space-6);
-  background: var(--ll-color-surface);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-card);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-section-demo__meta span {
@@ -2307,9 +2395,15 @@ onBeforeUnmount(() => {
   font-size: 0.625rem;
 }
 
-.ds-section-demo--padded > :deep(.ui-section) {
-  width: auto;
-  margin: var(--ll-space-6);
+.ds-section-demo__sample {
+  display: grid;
+  min-height: 10rem;
+  align-content: center;
+  padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+.ds-section-demo__sample--stage {
+  min-height: 7rem;
 }
 
 .ds-section-demo :deep(h4) {
@@ -2333,13 +2427,13 @@ onBeforeUnmount(() => {
 .ds-heading-cases {
   display: grid;
   gap: 1px;
-  background: var(--ll-color-border);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-divider);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-heading-case {
   min-width: 0;
-  background: var(--ll-color-surface-raised);
+  background: var(--ll-color-card);
 }
 
 .ds-heading-case__meta {
@@ -2348,8 +2442,8 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: var(--ll-space-6);
   padding: var(--ll-space-5) var(--ll-space-6);
-  background: var(--ll-color-surface);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-card);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-heading-case__meta > div {
@@ -2374,7 +2468,7 @@ onBeforeUnmount(() => {
   flex: none;
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
-  background: var(--ll-color-surface-muted);
+  background: var(--ll-color-highlight);
   border-radius: 0.375rem;
   font: 500 0.625rem / 1 var(--ll-font-mono);
   white-space: nowrap;
@@ -2385,11 +2479,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   padding: clamp(2.5rem, 7vw, 6rem);
-  background-color: var(--ll-color-surface-raised);
-  background-image:
-    linear-gradient(rgba(41, 47, 51, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(41, 47, 51, 0.035) 1px, transparent 1px);
-  background-size: 2rem 2rem;
+  background-color: var(--ll-color-canvas);
 }
 
 .ds-heading-case__preview--hero {
@@ -2439,19 +2529,36 @@ onBeforeUnmount(() => {
 }
 
 .ds-collection-example {
-  display: grid;
-  gap: var(--ll-space-6);
-  padding: clamp(2rem, 5vw, 4rem);
-  background-color: var(--ll-color-surface-raised);
-  background-image:
-    linear-gradient(rgba(41, 47, 51, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(41, 47, 51, 0.035) 1px, transparent 1px);
-  background-size: 2rem 2rem;
-  border-bottom: 1px solid var(--ll-color-border);
+  padding: 0;
+  background-color: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
-.ds-collection-example--directory {
-  padding-inline: clamp(1.5rem, 3vw, 2.5rem);
+.ds-collection-section :deep(.ui-section__inner) {
+  --ds-stage-shell-padding: 1rem;
+
+  display: grid;
+  gap: var(--ll-space-6);
+}
+
+.ds-collection-stage :deep(.ui-section-stage__content) {
+  display: grid;
+  gap: var(--ll-space-6);
+}
+
+.ds-grouped-collection {
+  display: grid;
+  min-width: 0;
+  background: var(--ll-color-canvas);
+}
+
+.ds-grouped-collection__titles {
+  padding-inline: calc(2 * var(--ds-stage-shell-padding));
+}
+
+.ds-collection-example__heading--outside,
+.ds-collection-heading-outside {
+  padding-inline: calc(2 * var(--ds-stage-shell-padding));
 }
 
 .ds-collection-example__heading {
@@ -2462,8 +2569,7 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-3);
 }
 
-.ds-collection-example__heading span,
-.ds-resource-group > span {
+.ds-collection-example__heading span {
   color: var(--ll-color-ink);
   font-size: var(--ll-text-sm);
   font-weight: 650;
@@ -2472,27 +2578,52 @@ onBeforeUnmount(() => {
 .ds-collection-example__heading code {
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
-  background: var(--ll-color-surface-muted);
+  background: var(--ll-color-highlight);
   border-radius: 0.375rem;
   font-size: 0.625rem;
 }
 
 .ds-resource-group {
   display: grid;
-  align-content: start;
+  min-width: 0;
+  align-content: stretch;
   gap: var(--ll-space-3);
 }
 
-.ds-resource-group > span {
-  margin-bottom: var(--ll-space-2);
+.ds-resource-group--releases {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
 .ds-resource-group :deep(.ui-card--row) {
-  min-height: 5rem;
+  min-height: 0;
 }
 
-.ds-resource-group :deep(.ui-card--row h4) {
-  font-size: var(--ll-text-md);
+.ds-resource-group :deep(.ui-card__title h4) {
+  font-size: var(--ll-text-sm);
+  letter-spacing: 0;
+}
+
+.ds-resource-group :deep(.ui-card--row .ui-card__content) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: var(--ll-space-2) var(--ll-space-5);
+}
+
+.ds-resource-group :deep(.ui-card--row .ui-card__title) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.ds-resource-group :deep(.ui-card--row .ui-card__description) {
+  grid-column: 1;
+  grid-row: 2;
+  margin-top: 0;
+}
+
+.ds-resource-group :deep(.ui-card--row .ui-card__footer) {
+  grid-column: 2;
+  grid-row: 1 / span 2;
 }
 
 .ds-resource-group time {
@@ -2608,7 +2739,7 @@ onBeforeUnmount(() => {
 }
 
 .ds-team-grid {
-  margin-top: var(--ll-space-4);
+  margin-top: 0;
 }
 
 .ds-team-member {
@@ -2619,7 +2750,7 @@ onBeforeUnmount(() => {
   padding: var(--ll-space-3);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--ll-radius-lg);
+  border-radius: var(--ll-radius-structural);
   transition:
     border-color var(--ll-duration-normal) var(--ll-ease-out),
     background var(--ll-duration-normal) var(--ll-ease-out),
@@ -2627,8 +2758,8 @@ onBeforeUnmount(() => {
 }
 
 .ds-team-member:hover {
-  background: #ffffff;
-  border-color: var(--ll-color-border-strong);
+  background: var(--ll-color-card);
+  border-color: var(--ll-color-divider);
   box-shadow: var(--ll-shadow-raised);
 }
 
@@ -2681,8 +2812,8 @@ onBeforeUnmount(() => {
   position: relative;
   min-height: 38rem;
   overflow: hidden;
-  background: var(--ll-color-light-100);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-site-navigation-demo > :deep(.ui-main-navigation) {
@@ -2744,8 +2875,8 @@ onBeforeUnmount(() => {
 
 .ds-showcase-example {
   padding: clamp(1rem, 3vw, 2rem);
-  background: var(--ll-color-surface-raised);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-interface-screen {
@@ -2781,8 +2912,8 @@ onBeforeUnmount(() => {
 .ds-interface-screen__app {
   position: absolute;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid var(--ll-color-border-strong);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-lg);
   box-shadow: 0 2rem 4rem rgba(41, 47, 51, 0.14);
 }
@@ -2808,8 +2939,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--ll-space-2);
   padding: 0 var(--ll-space-5);
-  background: var(--ll-color-surface);
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-interface-screen__code > header {
@@ -2880,8 +3011,8 @@ onBeforeUnmount(() => {
   align-content: start;
   gap: var(--ll-space-2);
   padding: var(--ll-space-5);
-  background: var(--ll-color-surface);
-  border-right: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-right: 1px solid var(--ll-color-divider);
 }
 
 .ds-interface-screen__app-body nav span {
@@ -2902,7 +3033,7 @@ onBeforeUnmount(() => {
   align-content: center;
   gap: var(--ll-space-5);
   padding: clamp(1.25rem, 4vw, 3rem);
-  background: #ffffff;
+  background: var(--ll-color-canvas);
 }
 
 .ds-interface-screen__canvas > p {
@@ -2921,8 +3052,8 @@ onBeforeUnmount(() => {
   align-items: end;
   gap: var(--ll-space-3);
   padding: var(--ll-space-4);
-  background: var(--ll-color-surface);
-  border: 1px solid var(--ll-color-border);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-md);
 }
 
@@ -2945,7 +3076,7 @@ onBeforeUnmount(() => {
 .ds-site-footer-demo {
   overflow: hidden;
   background: var(--ll-color-canvas);
-  border-bottom: 1px solid var(--ll-color-border);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ds-site-footer-demo :deep(.ui-site-footer) {
@@ -2975,8 +3106,8 @@ onBeforeUnmount(() => {
   height: 2.125rem;
   padding: 0 var(--ll-space-4);
   color: var(--ll-color-ink);
-  background: var(--ll-color-surface);
-  border: 1px solid var(--ll-color-border-strong);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-pill);
   outline: 0;
 }
@@ -3064,7 +3195,8 @@ onBeforeUnmount(() => {
 
 .ds-footer {
   color: var(--ll-color-text-muted);
-  background: var(--ll-color-ink);
+  background: var(--ll-color-canvas);
+  border-top: 1px solid var(--ll-color-divider);
   font-size: var(--ll-text-xs);
 }
 
@@ -3077,8 +3209,14 @@ onBeforeUnmount(() => {
 
 .ds-footer p {
   margin: 0;
-  color: var(--ll-color-surface-raised);
+  color: var(--ll-color-ink);
   font-weight: 650;
+}
+
+@media (min-width: 40rem) {
+  .ds-collection-section :deep(.ui-section__inner) {
+    --ds-stage-shell-padding: 1.6875rem;
+  }
 }
 
 @media (max-width: 64rem) {

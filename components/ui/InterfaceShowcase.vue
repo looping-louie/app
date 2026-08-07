@@ -105,13 +105,13 @@ function handleKeydown(event: KeyboardEvent, index: number) {
 
 <style scoped>
 .ui-interface-showcase {
-  --ui-interface-panel: #ffffff;
+  --ui-interface-panel: var(--ll-color-card);
 
   position: relative;
   padding: var(--ll-space-5);
   overflow: hidden;
-  background: var(--ll-color-section-subtle);
-  border: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border: 1px solid var(--ll-color-divider);
   border-radius: 2rem;
 }
 
@@ -140,7 +140,7 @@ function handleKeydown(event: KeyboardEvent, index: number) {
   gap: var(--ll-space-3);
   padding: 0 var(--ll-space-5);
   color: var(--ll-color-text-muted);
-  background: rgba(255, 255, 255, 0.56);
+  background: var(--ll-color-canvas);
   border: 1px solid transparent;
   border-radius: var(--ll-radius-pill);
   font: 600 var(--ll-text-xs) / 1 var(--ll-font-mono);
@@ -160,14 +160,14 @@ function handleKeydown(event: KeyboardEvent, index: number) {
 
 .ui-interface-showcase__tab:hover {
   color: var(--ll-color-ink);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--ll-color-highlight);
 }
 
 .ui-interface-showcase__tab.is-active {
   z-index: 3;
   color: var(--ll-color-ink);
   background: var(--ui-interface-panel);
-  border-color: var(--ll-color-border-strong);
+  border-color: var(--ll-color-divider);
   border-bottom-color: var(--ui-interface-panel);
   border-radius: var(--ll-radius-lg) var(--ll-radius-lg) 0 0;
   transform: translateY(var(--ll-space-3));
@@ -206,7 +206,7 @@ function handleKeydown(event: KeyboardEvent, index: number) {
   overflow: hidden;
   margin-top: var(--ll-space-3);
   background: var(--ui-interface-panel);
-  border: 1px solid var(--ll-color-border-strong);
+  border: 1px solid var(--ll-color-divider);
   border-radius: var(--ll-radius-lg);
   box-shadow: 0 2rem 4rem rgba(41, 47, 51, 0.1);
 }
@@ -215,12 +215,8 @@ function handleKeydown(event: KeyboardEvent, index: number) {
   position: relative;
   min-height: clamp(24rem, 48vw, 38rem);
   overflow: hidden;
-  background:
-    linear-gradient(rgba(41, 47, 51, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(41, 47, 51, 0.035) 1px, transparent 1px),
-    var(--ll-color-surface-raised);
-  background-size: 2rem 2rem;
-  border-bottom: 1px solid var(--ll-color-border);
+  background: var(--ll-color-canvas);
+  border-bottom: 1px solid var(--ll-color-divider);
 }
 
 .ui-interface-showcase__caption {

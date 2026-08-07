@@ -95,7 +95,7 @@ function handleSelect(item: GridListItem) {
   padding: var(--ll-space-4) var(--ll-space-5);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--ll-radius-lg);
+  border-radius: var(--ll-radius-structural);
   appearance: none;
   color: inherit;
   font: inherit;
@@ -117,9 +117,27 @@ function handleSelect(item: GridListItem) {
 }
 
 .ui-grid-list--surface .ui-grid-list__item {
-  min-height: 5.25rem;
-  background: var(--ll-color-surface-raised);
-  border: 1px solid var(--ll-color-border);
+  min-height: 6rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: var(--ll-space-1) var(--ll-space-6);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
+}
+
+.ui-grid-list--surface .ui-grid-list__leading {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.ui-grid-list--surface .ui-grid-list__metadata {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.ui-grid-list--surface .ui-grid-list__trailing {
+  grid-column: 2;
+  grid-row: 1 / span 2;
 }
 
 .ui-grid-list--plain .ui-grid-list__item {
@@ -129,8 +147,8 @@ function handleSelect(item: GridListItem) {
 
 .ui-grid-list__item:hover,
 .ui-grid-list__item:focus-within {
-  background: #ffffff;
-  border-color: var(--ll-color-border-strong);
+  background: var(--ll-color-card);
+  border-color: var(--ll-color-divider);
   box-shadow: var(--ll-shadow-raised);
 }
 

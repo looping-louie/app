@@ -62,9 +62,9 @@ const linkBindings = computed(() => {
   box-sizing: border-box;
   overflow: hidden;
   color: var(--ll-color-ink);
-  background: var(--ll-color-surface-raised);
-  border: 1px solid var(--ll-color-border);
-  border-radius: var(--ll-radius-lg);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
+  border-radius: var(--ll-radius-structural);
   text-decoration: none;
 }
 
@@ -152,9 +152,9 @@ const linkBindings = computed(() => {
   min-height: 11rem;
   overflow: hidden;
   margin: 0 var(--ll-space-3) var(--ll-space-3);
-  background: var(--ll-color-section-subtle);
-  border: 1px solid var(--ll-color-border);
-  border-radius: calc(var(--ll-radius-lg) - 0.375rem);
+  background: var(--ll-color-canvas);
+  border: 1px solid var(--ll-color-divider);
+  border-radius: calc(var(--ll-radius-structural) - 0.375rem);
 }
 
 .ui-card__media-default,
@@ -178,8 +178,8 @@ const linkBindings = computed(() => {
 
 .ui-card--interactive:hover,
 .ui-card--interactive:focus-visible {
-  background: #ffffff;
-  border-color: var(--ll-color-border-strong);
+  background: var(--ll-color-card);
+  border-color: var(--ll-color-divider);
   box-shadow: var(--ll-shadow-raised);
 }
 
