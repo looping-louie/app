@@ -1,29 +1,44 @@
 <script setup lang="ts">
+import UiButton from '~/components/ui/Button.vue'
+import UiToggle from '~/components/ui/Toggle.vue'
+
 interface GridListItem {
   id: string
   to?: string
   href?: string
   target?: string
   rel?: string
-  [key: string]: string | undefined
+  actionLabel?: string
+  checked?: boolean
+  disabled?: boolean
+  ariaLabel?: string
+  [key: string]: unknown
 }
 
 type GridListVariant = 'plain' | 'surface'
+type GridListAction = 'text' | 'button' | 'toggle'
 
 const props = withDefaults(defineProps<{
   items: GridListItem[]
   variant?: GridListVariant
+  action?: GridListAction
   ariaLabel?: string
   clickable?: boolean
 }>(), {
   variant: 'plain',
+  action: undefined,
   ariaLabel: 'Items',
   clickable: false,
 })
 
 const emit = defineEmits<{
   select: [item: GridListItem]
+  toggle: [item: GridListItem, value: boolean]
 }>()
+
+const resolvedAction = computed<GridListAction>(() => (
+  props.action ?? (props.variant === 'surface' ? 'button' : 'text')
+))
 
 function itemComponent(item: GridListItem) {
   if (!props.clickable) return 'div'
@@ -48,6 +63,10 @@ function itemBindings(item: GridListItem) {
 function handleSelect(item: GridListItem) {
   if (props.clickable) emit('select', item)
 }
+
+function actionLabel(item: GridListItem) {
+  return item.actionLabel ?? (resolvedAction.value === 'button' ? 'Open' : 'View')
+}
 </script>
 
 <template>
@@ -66,7 +85,30 @@ function handleSelect(item: GridListItem) {
       >
         <div class="ui-grid-list__leading"><slot name="leading" :item="item" /></div>
         <div class="ui-grid-list__metadata"><slot name="metadata" :item="item" /></div>
-        <div class="ui-grid-list__trailing"><slot name="trailing" :item="item" /></div>
+        <div
+          class="ui-grid-list__trailing"
+          :class="`ui-grid-list__trailing--${resolvedAction}`"
+        >
+          <slot name="trailing" :item="item" :action="resolvedAction">
+            <UiToggle
+              v-if="resolvedAction === 'toggle'"
+              :model-value="Boolean(item.checked)"
+              :disabled="Boolean(item.disabled)"
+              :aria-label="item.ariaLabel || `${actionLabel(item)} ${item.id}`"
+              @click.stop
+              @update:model-value="emit('toggle', item, $event)"
+            />
+            <UiButton
+              v-else-if="resolvedAction === 'button'"
+              as="span"
+              variant="metal"
+              size="sm"
+            >
+              {{ actionLabel(item) }}
+            </UiButton>
+            <span v-else class="ui-grid-list__action-text">{{ actionLabel(item) }} →</span>
+          </slot>
+        </div>
       </component>
     </li>
   </ul>
@@ -183,6 +225,13 @@ function handleSelect(item: GridListItem) {
   justify-self: end;
   font-size: var(--ll-text-md);
   line-height: 1.5;
+}
+
+.ui-grid-list__action-text {
+  color: var(--ll-color-primary-depth);
+  font-size: var(--ll-text-sm);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 @media (max-width: 44rem) {

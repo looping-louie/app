@@ -56,7 +56,9 @@ withDefaults(defineProps<{
 }
 
 @media (max-width: 44rem) {
-  .ui-grid--collapse-responsive {
+  .ui-grid--collapse-responsive.ui-grid--columns-2,
+  .ui-grid--collapse-responsive.ui-grid--columns-3,
+  .ui-grid--collapse-responsive.ui-grid--columns-4 {
     --ui-grid-columns: 1;
   }
 }

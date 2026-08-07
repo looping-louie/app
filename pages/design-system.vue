@@ -13,6 +13,7 @@ import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
+import UiToggle from '~/components/ui/Toggle.vue'
 
 definePageMeta({
   layout: false,
@@ -35,6 +36,8 @@ const catalog = ref('models')
 const settings = ref('api-keys')
 const headingDeployment = ref('platform')
 const interfaceView = ref('agents')
+const automaticRetries = ref(true)
+const humanReview = ref(false)
 const copiedCommand = ref<string | null>(null)
 const copyError = ref<string | null>(null)
 let copyResetTimer: ReturnType<typeof setTimeout> | undefined
@@ -184,16 +187,26 @@ const footerLegalLinks = [
 ]
 
 const customerRows = [
-  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding agent', to: '#grid-list' },
-  { id: 'airframe', name: 'Airframe', categories: 'AI · Infrastructure', to: '#grid-list' },
-  { id: 'runway', name: 'Runway Labs', categories: 'FinTech · Enterprise', to: '#grid-list' },
-  { id: 'hangar', name: 'Hangar Cloud', categories: 'AI · Infrastructure', to: '#grid-list' },
+  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding agent', actionLabel: 'Read story', to: '#grid-list' },
+  { id: 'airframe', name: 'Airframe', categories: 'AI · Infrastructure', actionLabel: 'Read story', to: '#grid-list' },
+  { id: 'runway', name: 'Runway Labs', categories: 'FinTech · Enterprise', actionLabel: 'Read story', to: '#grid-list' },
+  { id: 'hangar', name: 'Hangar Cloud', categories: 'AI · Infrastructure', actionLabel: 'Read story', to: '#grid-list' },
 ]
 
 const jobRows = [
-  { id: 'product-designer', name: 'Product Designer', categories: 'Growth · Remote · Full-time', to: '#grid-list' },
-  { id: 'product-engineer', name: 'Product Engineer', categories: 'Engineering · Remote · Full-time', to: '#grid-list' },
+  { id: 'product-designer', name: 'Product Designer', categories: 'Growth · Remote · Full-time', actionLabel: 'Apply', to: '#grid-list' },
+  { id: 'product-engineer', name: 'Product Engineer', categories: 'Engineering · Remote · Full-time', actionLabel: 'Apply', to: '#grid-list' },
 ]
+
+const providerRows = ref([
+  { id: 'openai', name: 'OpenAI', categories: 'GPT models and reasoning', checked: true, actionLabel: 'Enable', ariaLabel: 'Enable OpenAI' },
+  { id: 'anthropic', name: 'Anthropic', categories: 'Claude models', checked: false, actionLabel: 'Enable', ariaLabel: 'Enable Anthropic' },
+])
+
+function updateProviderRow(item: { id: string }, checked: boolean) {
+  const provider = providerRows.value.find(row => row.id === item.id)
+  if (provider) provider.checked = checked
+}
 
 const teamMembers = [
   { id: 'maya', initials: 'MR', name: 'Maya Rivera', role: 'Founder & CEO' },
@@ -331,6 +344,7 @@ onBeforeUnmount(() => {
             <a href="#typography">Typography</a>
             <a href="#actions">02 · Actions</a>
             <a href="#buttons">Buttons</a>
+            <a href="#toggle">Toggle</a>
             <a href="#copy-command">Copyable command</a>
             <a href="#segmented-control">Segmented control</a>
             <a href="#composition">03 · Composition</a>
@@ -547,6 +561,42 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
               </div>
+            </article>
+
+            <article id="toggle" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Toggle</h3>
+                    <code>UiToggle</code>
+                  </div>
+                  <p>A compact binary setting with Phosphor state icons and system color tokens.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage ds-stage--toggles">
+                <label class="ds-toggle-example">
+                  <span>Automatic retries</span>
+                  <UiToggle v-model="automaticRetries" aria-label="Automatic retries" />
+                  <small>{{ automaticRetries ? 'Enabled' : 'Disabled' }}</small>
+                </label>
+                <label class="ds-toggle-example">
+                  <span>Human review</span>
+                  <UiToggle v-model="humanReview" aria-label="Human review" />
+                  <small>{{ humanReview ? 'Enabled' : 'Disabled' }}</small>
+                </label>
+                <label class="ds-toggle-example">
+                  <span>Unavailable</span>
+                  <UiToggle :model-value="false" disabled aria-label="Unavailable setting" />
+                  <small>Disabled control</small>
+                </label>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Uses the switch role, exposes its checked and disabled state, and keeps a visible keyboard focus ring.</p>
+              </footer>
             </article>
 
             <article id="copy-command" class="ds-component">
@@ -1322,7 +1372,6 @@ onBeforeUnmount(() => {
                     <UiGridList :items="customerRows" aria-label="Customer directory" clickable>
                       <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
                       <template #metadata="{ item }">{{ item.categories }}</template>
-                      <template #trailing><span class="ds-grid-list-link">Read story →</span></template>
                     </UiGridList>
                   </UiSectionStage>
                 </UiSection>
@@ -1338,7 +1387,26 @@ onBeforeUnmount(() => {
                     <UiGridList :items="jobRows" variant="surface" aria-label="Open positions" clickable>
                       <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
                       <template #metadata="{ item }">{{ item.categories }}</template>
-                      <template #trailing><UiButton as="span" variant="metal" size="sm">Apply</UiButton></template>
+                    </UiGridList>
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-collection-example ds-collection-example--directory">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Provider controls</span>
+                    <code>GridList plain · action="toggle"</code>
+                  </div>
+                  <UiSectionStage inverse="both" class="ds-collection-stage">
+                    <UiGridList
+                      :items="providerRows"
+                      action="toggle"
+                      aria-label="Provider controls"
+                      @toggle="updateProviderRow"
+                    >
+                      <template #leading="{ item }"><strong>{{ item.name }}</strong></template>
+                      <template #metadata="{ item }">{{ item.categories }}</template>
                     </UiGridList>
                   </UiSectionStage>
                 </UiSection>
@@ -2108,6 +2176,32 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: var(--ll-space-3);
+}
+
+.ds-stage--toggles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ll-space-3);
+}
+
+.ds-toggle-example {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ll-space-2) var(--ll-space-4);
+  padding: var(--ll-space-5);
+  color: var(--ll-color-ink);
+  background: var(--ll-color-card);
+  border: 1px solid var(--ll-color-divider);
+  border-radius: var(--ll-radius-md);
+  font-size: var(--ll-text-sm);
+  font-weight: 650;
+}
+
+.ds-toggle-example small {
+  grid-column: 1 / -1;
+  color: var(--ll-color-text-muted);
+  font: 500 var(--ll-text-xs) / 1.4 var(--ll-font-mono);
 }
 
 .ds-properties {
@@ -3305,6 +3399,10 @@ onBeforeUnmount(() => {
 
   .ds-stage--buttons {
     justify-content: flex-start;
+  }
+
+  .ds-stage--toggles {
+    grid-template-columns: 1fr;
   }
 
   :deep(.ds-command-button) {
