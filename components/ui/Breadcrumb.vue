@@ -22,14 +22,14 @@ withDefaults(defineProps<{
         class="ui-breadcrumb__item"
       >
         <NuxtLink
-          v-if="index < items.length - 1 && item.to"
+          v-if="item.to"
           :to="item.to"
           class="ui-breadcrumb__link"
         >
           {{ item.label }}
         </NuxtLink>
         <a
-          v-else-if="index < items.length - 1 && item.href"
+          v-else-if="item.href"
           :href="item.href"
           class="ui-breadcrumb__link"
         >
