@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export interface IconPillOption {
+export interface PillOption {
   value: string
   label: string
   disabled?: boolean
@@ -7,16 +7,23 @@ export interface IconPillOption {
 
 type DropdownAlign = 'left' | 'right'
 type SelectionType = 'radio' | 'checkbox'
+type IconStyle = 'plain' | 'circle'
 
 const props = withDefaults(defineProps<{
+  src?: string
+  alt?: string
+  iconStyle?: IconStyle
   clickable?: boolean
   ariaLabel?: string
   dropdownLabel?: string
   dropdownAlign?: DropdownAlign
   selectionType?: SelectionType
-  options?: IconPillOption[]
+  options?: PillOption[]
   modelValue?: string | string[]
 }>(), {
+  src: undefined,
+  alt: '',
+  iconStyle: 'plain',
   clickable: false,
   ariaLabel: undefined,
   dropdownLabel: 'Options',
@@ -30,6 +37,11 @@ const emit = defineEmits<{
   'update:modelValue': [value: string | string[]]
 }>()
 
+const slots = useSlots()
+const hasIcon = computed(() => Boolean(slots.icon))
+const hasLabel = computed(() => Boolean(slots.default))
+const hasMedia = computed(() => Boolean(props.src || hasIcon.value))
+const circularMedia = computed(() => Boolean(props.src || (hasIcon.value && props.iconStyle === 'circle')))
 const root = ref<HTMLElement | null>(null)
 const trigger = ref<HTMLButtonElement | null>(null)
 const open = ref(false)
@@ -37,7 +49,7 @@ const closing = ref(false)
 const confirmingValue = ref<string | null>(null)
 const restoreFocusAfterClose = ref(false)
 let confirmationTimer: ReturnType<typeof setTimeout> | undefined
-const dropdownId = `ui-icon-pill-${useId().replaceAll(':', '')}`
+const dropdownId = `ui-pill-${useId().replaceAll(':', '')}`
 const connected = computed(() => open.value || closing.value)
 
 function toggleDropdown() {
@@ -78,8 +90,8 @@ function isSelected(value: string) {
   return props.modelValue === value
 }
 
-function selectOption(option: IconPillOption) {
-  if (option.disabled || confirmingValue.value) return
+function selectOption(option: PillOption) {
+  if (option.disabled || confirmingValue.value !== null) return
 
   if (props.selectionType === 'checkbox') {
     const selected = Array.isArray(props.modelValue) ? props.modelValue : []
@@ -128,6 +140,10 @@ onBeforeUnmount(() => {
     :class="[
       `ui-icon-pill--align-${dropdownAlign}`,
       {
+        'ui-icon-pill--text-only': !hasMedia,
+        'ui-icon-pill--icon-only': hasMedia && !hasLabel,
+        'ui-icon-pill--circular-media': circularMedia,
+        'ui-icon-pill--image': Boolean(src),
         'ui-icon-pill--clickable': clickable,
         'ui-icon-pill--open': connected,
         'ui-icon-pill--closing': closing,
@@ -144,13 +160,31 @@ onBeforeUnmount(() => {
       :aria-controls="dropdownId"
       @click="toggleDropdown"
     >
-      <span class="ui-icon-pill__icon" aria-hidden="true"><slot name="icon" /></span>
-      <span class="ui-icon-pill__label"><slot /></span>
+      <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
+        <img :src="src" :alt="alt" width="28" height="28" loading="lazy">
+      </span>
+      <span
+        v-else-if="$slots.icon"
+        :class="iconStyle === 'circle' ? 'ui-icon-pill__media ui-icon-pill__media--icon' : 'ui-icon-pill__icon'"
+        aria-hidden="true"
+      >
+        <slot name="icon" />
+      </span>
+      <span v-if="hasLabel" class="ui-icon-pill__label"><slot /></span>
     </button>
 
     <span v-else class="ui-icon-pill__trigger" :aria-label="ariaLabel">
-      <span class="ui-icon-pill__icon" aria-hidden="true"><slot name="icon" /></span>
-      <span class="ui-icon-pill__label"><slot /></span>
+      <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
+        <img :src="src" :alt="alt" width="28" height="28" loading="lazy">
+      </span>
+      <span
+        v-else-if="$slots.icon"
+        :class="iconStyle === 'circle' ? 'ui-icon-pill__media ui-icon-pill__media--icon' : 'ui-icon-pill__icon'"
+        aria-hidden="true"
+      >
+        <slot name="icon" />
+      </span>
+      <span v-if="hasLabel" class="ui-icon-pill__label"><slot /></span>
     </span>
 
     <svg
@@ -245,6 +279,17 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.ui-icon-pill--circular-media .ui-icon-pill__trigger {
+  gap: 0.5rem;
+  padding-left: 0.125rem;
+}
+
+.ui-icon-pill--icon-only .ui-icon-pill__trigger {
+  width: var(--ui-icon-pill-height);
+  justify-content: center;
+  padding: 0;
+}
+
 button.ui-icon-pill__trigger {
   appearance: none;
   cursor: pointer;
@@ -278,6 +323,50 @@ button.ui-icon-pill__trigger:focus-visible {
 }
 
 .ui-icon-pill__icon :deep(svg) { display: block; width: 100%; height: 100%; }
+
+.ui-icon-pill__media {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.ui-icon-pill__media--image {
+  background: var(--ll-color-metal-950);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px var(--ui-icon-pill-border);
+}
+
+.ui-icon-pill__media--image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ui-icon-pill__media--icon {
+  color: var(--ll-color-ink);
+  background: var(--ll-color-canvas);
+  border: 1px solid var(--ui-icon-pill-border);
+}
+
+.ui-icon-pill__media--icon :deep(svg) {
+  display: block;
+  width: 0.9375rem;
+  height: 0.9375rem;
+}
+
+.ui-icon-pill__label {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .ui-icon-pill__shoulder {
   position: absolute;
