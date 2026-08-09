@@ -41,29 +41,73 @@ const { data, status, error, refresh } = await useAsyncData(
   () => $fetch<LoopListResponse>('/api/v1/loops'),
 )
 
+const route = useRoute()
+const router = useRouter()
 const loops = computed(() => data.value?.items ?? [])
 const loopStatus = ref('all')
-const loopTasks = ref<string[]>([])
 const loopSort = ref('alphabetical-asc')
 
-const loopTaskOptions = [
-  { value: 'coding', label: 'Coding' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'selling', label: 'Selling' },
-  { value: 'writing', label: 'Writing' },
+const loopStatusOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'running', label: 'Running' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'archived', label: 'Archived' },
 ]
 
-const loopDateFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
+const loopFlowOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'direct', label: 'Direct' },
+  { value: 'eval', label: 'Eval' },
+  { value: 'roundtable', label: 'Roundtable' },
+]
+
+const validFlows = new Set(loopFlowOptions.map(option => option.value))
+
+function flowFromQuery(value: unknown): string {
+  const flow = Array.isArray(value) ? value[0] : value
+  return typeof flow === 'string' && validFlows.has(flow) ? flow : 'all'
+}
+
+function statusForFilter(status: string): string {
+  return status.toLowerCase() === 'disabled' ? 'inactive' : status.toLowerCase()
+}
+
+function flowForFilter(flow: string): string {
+  return flow.toLowerCase() === 'refinement' ? 'eval' : flow.toLowerCase()
+}
+
+const loopFlow = ref(flowFromQuery(route.query.flow))
+
+watch(() => route.query.flow, (flow) => {
+  loopFlow.value = flowFromQuery(flow)
 })
 
-function formatLoopDate(value: string) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : loopDateFormatter.format(date)
-}
+watch(loopFlow, async (flow) => {
+  const currentFlow = flowFromQuery(route.query.flow)
+  if (flow === currentFlow && (flow !== 'all' || route.query.flow == null)) return
+
+  const query = { ...route.query }
+  if (flow === 'all') delete query.flow
+  else query.flow = flow
+  await router.replace({ query })
+})
+
+const displayedLoops = computed(() => {
+  const filtered = loops.value.filter(loop => (
+    (loopStatus.value === 'all' || statusForFilter(loop.status) === loopStatus.value)
+    && (loopFlow.value === 'all' || flowForFilter(loop.flow) === loopFlow.value)
+  ))
+
+  return [...filtered].sort((first, second) => {
+    if (loopSort.value === 'alphabetical-desc') return second.title.localeCompare(first.title)
+    if (loopSort.value === 'newest') return Date.parse(second.updated_at) - Date.parse(first.updated_at)
+    if (loopSort.value === 'oldest') return Date.parse(first.updated_at) - Date.parse(second.updated_at)
+    return first.title.localeCompare(second.title)
+  })
+})
+
+const { formatDate } = useDateTime()
 
 function loopStatusTone(value: string) {
   return value.toLowerCase() === 'disabled' ? 'disabled' : 'enabled'
@@ -96,13 +140,15 @@ useHead({
 
     <UiCatalogFilterBar
       v-model:status="loopStatus"
-      v-model:category="loopTasks"
+      v-model:category="loopFlow"
       v-model:sort="loopSort"
       interactive
       :show-search="false"
-      third-label="Task"
-      third-icon="task"
-      :third-options="loopTaskOptions"
+      :status-options="loopStatusOptions"
+      third-label="Flow"
+      third-icon="scribble-loop"
+      third-selection-type="radio"
+      :third-options="loopFlowOptions"
       class="catalog-filters"
     />
 
@@ -112,20 +158,19 @@ useHead({
       <button type="button" @click="refresh">Retry</button>
     </div>
     <UiSectionStage v-else inverse="bottom" class="catalog-stage">
-      <div v-if="loops.length === 0" class="catalog-state">No loops found.</div>
+      <div v-if="displayedLoops.length === 0" class="catalog-state">No loops match these filters.</div>
       <UiGrid v-else :columns="3" gap="md">
         <UiCard
-          v-for="loop in loops"
+          v-for="loop in displayedLoops"
           :key="loop.id"
+          :to="`/app/loops/${encodeURIComponent(loop.id)}`"
           variant="editorial"
           accent-on-hover
           class="catalog-card"
         >
           <template #eyebrow>{{ loop.flow }}</template>
           <template #title>
-            <NuxtLink :to="`/app/loops/${encodeURIComponent(loop.id)}`" class="catalog-card__title-link">
-              <h2>{{ loop.title }}</h2>
-            </NuxtLink>
+            <h2>{{ loop.title }}</h2>
           </template>
           <template #description>
             <p>{{ loop.description }}</p>
@@ -135,7 +180,7 @@ useHead({
             />
           </template>
           <template #meta>
-            <time :datetime="loop.updated_at">{{ formatLoopDate(loop.updated_at) }}</time>
+            <time :datetime="loop.updated_at">{{ formatDate(loop.updated_at) }}</time>
           </template>
           <template #trailing>
             <UiStatusText :tone="loopStatusTone(loop.status)" activation="card-hover">
@@ -214,14 +259,4 @@ useHead({
   box-shadow: var(--ll-shadow-raised);
 }
 
-.catalog-card__title-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.catalog-card__title-link:focus-visible {
-  border-radius: 0.125rem;
-  outline: 2px solid var(--ll-color-primary);
-  outline-offset: 3px;
-}
 </style>

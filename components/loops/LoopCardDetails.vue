@@ -19,44 +19,14 @@ const props = withDefaults(defineProps<{
 })
 
 const { personaIcon } = usePersonaIcon()
-
-const modelLogoPatterns = [
-  { logo: 'anthropic', patterns: ['anthropic', 'claude'] },
-  { logo: 'deepseek', patterns: ['deepseek'] },
-  { logo: 'gemma', patterns: ['gemma'] },
-  { logo: 'gemini', patterns: ['gemini', 'google'] },
-  { logo: 'grok', patterns: ['grok', 'x.ai', 'xai'] },
-  { logo: 'kimi', patterns: ['kimi', 'moonshot'] },
-  { logo: 'meta', patterns: ['meta', 'llama'] },
-  { logo: 'minimax', patterns: ['minimax'] },
-  { logo: 'nvidia', patterns: ['nvidia', 'nemotron'] },
-  { logo: 'openai', patterns: ['openai', 'gpt-', '/gpt', ':gpt', 'o1-', 'o3-', 'o4-'] },
-  { logo: 'qwen', patterns: ['qwen'] },
-] as const
+const { modelLogo } = useModelLogo()
+const { formatLoopStopConditions } = useLoopStopConditions()
 
 const uniqueModels = computed(() => (
   Array.from(new Set(props.agents.map(agent => agent.model_id).filter(Boolean)))
 ))
 
-const stopCondition = computed(() => {
-  const conditions = props.stopConditions
-  if (!conditions) return ''
-
-  return [
-    conditions.max_iterations != null ? `${conditions.max_iterations} loops` : null,
-    conditions.max_tokens != null ? `${conditions.max_tokens.toLocaleString('en-US')} tokens` : null,
-    conditions.timeout_seconds != null ? `${conditions.timeout_seconds} seconds` : null,
-  ].filter(Boolean).join(', ')
-})
-
-function modelLogo(modelId: string) {
-  const normalizedId = modelId.toLowerCase()
-  const match = modelLogoPatterns.find(candidate => (
-    candidate.patterns.some(pattern => normalizedId.includes(pattern))
-  ))
-
-  return `/images/models/${match?.logo ?? 'openai'}.webp`
-}
+const stopCondition = computed(() => formatLoopStopConditions(props.stopConditions))
 
 function personaLabel(personaId: string) {
   return personaId.replace(/^builtin:persona:/, '')
