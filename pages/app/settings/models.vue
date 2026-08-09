@@ -22,6 +22,7 @@ const { data, status, error, refresh } = await useAsyncData(
 )
 
 const models = computed(() => data.value?.items ?? [])
+const { providerLogo } = useModelLogo()
 const modelStatus = ref('all')
 const modelLabs = ref<string[]>([])
 const modelSort = ref('alphabetical-asc')
@@ -41,27 +42,6 @@ const modelLabOptions = [
   { value: 'qwen', label: 'Qwen' },
   { value: 'z', label: 'Z' },
 ]
-
-const modelLogoByVendor: Record<string, string> = {
-  anthropic: '/images/models/anthropic.webp',
-  deepseek: '/images/models/deepseek.webp',
-  meta: '/images/models/meta.webp',
-  minimax: '/images/models/minimax.webp',
-  'moonshot ai': '/images/models/kimi.webp',
-  openai: '/images/models/openai.webp',
-  qwen: '/images/models/qwen.webp',
-  'x.ai': '/images/models/grok.webp',
-}
-
-function modelLogo(model: ModelSummaryResponse) {
-  if (model.vendor === 'Google') {
-    return model.family.toLowerCase().startsWith('gemma')
-      ? '/images/models/gemma.webp'
-      : '/images/models/gemini.webp'
-  }
-
-  return modelLogoByVendor[model.vendor.toLowerCase()]
-}
 
 function vendorInitials(vendor: string) {
   return vendor
@@ -107,9 +87,9 @@ useHead({
       <UiGrid :columns="3" gap="lg">
         <div v-for="model in models" :key="model.id" class="model-item">
           <img
-            v-if="modelLogo(model)"
+            v-if="providerLogo(model.vendor, model.family)"
             class="model-item__logo"
-            :src="modelLogo(model)"
+            :src="providerLogo(model.vendor, model.family)"
             :alt="`${model.vendor} logo`"
             width="44"
             height="44"

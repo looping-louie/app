@@ -12,6 +12,27 @@ const modelLogoPatterns = [
   { logo: 'qwen', patterns: ['qwen'] },
 ] as const
 
+const providerLogoFiles: Record<string, string> = {
+  anthropic: 'anthropic',
+  deepcogito: 'deepcogito',
+  deepseek: 'deepseek',
+  meta: 'meta',
+  minimax: 'minimax',
+  mistral: 'mistral',
+  mistralai: 'mistral',
+  moonshot: 'moonshot',
+  moonshotai: 'moonshot',
+  nvidia: 'nvidia',
+  openai: 'openai',
+  qwen: 'qwen',
+  xai: 'grok',
+  zai: 'zai',
+}
+
+function normalizeProvider(provider: string): string {
+  return provider.toLowerCase().replace(/[^a-z0-9]+/g, '')
+}
+
 export function useModelLogo() {
   function modelLogo(modelId: string): string {
     const normalizedId = modelId.toLowerCase()
@@ -22,5 +43,17 @@ export function useModelLogo() {
     return `/images/models/${match?.logo ?? 'openai'}.webp`
   }
 
-  return { modelLogo }
+  function providerLogo(provider: string, family = ''): string | undefined {
+    const normalizedProvider = normalizeProvider(provider)
+
+    if (normalizedProvider === 'google') {
+      const googleLogo = family.toLowerCase().startsWith('gemma') ? 'gemma' : 'gemini'
+      return `/images/models/${googleLogo}.webp`
+    }
+
+    const logo = providerLogoFiles[normalizedProvider]
+    return logo ? `/images/models/${logo}.webp` : undefined
+  }
+
+  return { modelLogo, providerLogo }
 }
