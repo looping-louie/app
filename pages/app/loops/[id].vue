@@ -602,9 +602,40 @@ function handleAction(value: unknown) {
   beginEdit(value)
 }
 
+function closeEditing() {
+  const field = editingField.value
+  if (!field) return
+
+  if (field === 'prompt' && promptSaveTimer) {
+    clearTimeout(promptSaveTimer)
+    promptSaveTimer = undefined
+    void persistPrompt()
+  }
+  if (field === 'schema' && schemaSaveTimer) {
+    clearTimeout(schemaSaveTimer)
+    schemaSaveTimer = undefined
+    void persistSchema()
+  }
+
+  editingField.value = null
+  editError.value = ''
+}
+
+function onDocumentPointerDown(event: PointerEvent) {
+  if (!editingField.value) return
+  const target = event.target as HTMLElement | null
+  if (target?.closest('[data-loop-editor]')) return
+  closeEditing()
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', onDocumentPointerDown)
+})
+
 onBeforeUnmount(() => {
   if (promptSaveTimer) clearTimeout(promptSaveTimer)
   if (schemaSaveTimer) clearTimeout(schemaSaveTimer)
+  document.removeEventListener('pointerdown', onDocumentPointerDown)
 })
 
 definePageMeta({
@@ -674,7 +705,11 @@ useHead(() => ({
             </template>
 
             <template #metadata="{ item }">
-              <div v-if="item.id === 'status'" class="basic-editor">
+              <div
+                v-if="item.id === 'status'"
+                class="basic-editor"
+                :data-loop-editor="editingField === 'status' ? '' : undefined"
+              >
                 <UiPill
                   v-if="editingField === 'status'"
                   :model-value="statusDraft"
@@ -695,7 +730,11 @@ useHead(() => ({
                 <UiPill v-else>{{ item.description }}</UiPill>
               </div>
 
-              <div v-else-if="item.id === 'flow'" class="basic-editor">
+              <div
+                v-else-if="item.id === 'flow'"
+                class="basic-editor"
+                :data-loop-editor="editingField === 'flow' ? '' : undefined"
+              >
                 <UiPill
                   v-if="editingField === 'flow'"
                   :model-value="flowDraft"
@@ -717,7 +756,7 @@ useHead(() => ({
               </div>
 
               <template v-else-if="item.id === 'stop-condition'">
-                <div v-if="editingField === 'stop-condition'" class="stop-condition-editor">
+                <div v-if="editingField === 'stop-condition'" class="stop-condition-editor" data-loop-editor>
                   <UiPill
                     :model-value="stopDraft.max_iterations"
                     clickable
@@ -769,7 +808,7 @@ useHead(() => ({
               </template>
 
               <template v-else-if="item.kind === 'agents'">
-                <div v-if="editingField === 'agents'" class="agent-editor">
+                <div v-if="editingField === 'agents'" class="agent-editor" data-loop-editor>
                   <p v-if="loadingAgentOptions" class="agent-editor__status" role="status">Loading agents and models…</p>
                   <div v-for="(agent, index) in agentDrafts" :key="agent.clientId" class="agent-value">
                     <UiPill
@@ -852,6 +891,7 @@ useHead(() => ({
               <template v-else-if="item.id === 'type'">
                 <UiPill
                   v-if="editingField === 'type'"
+                  data-loop-editor
                   :model-value="outputTypeDraft"
                   clickable
                   :options="outputTypeOptions"
@@ -872,6 +912,7 @@ useHead(() => ({
               <template v-else-if="item.id === 'files'">
                 <UiPill
                   v-if="editingField === 'files'"
+                  data-loop-editor
                   :model-value="outputFilesDraft"
                   clickable
                   dropdown-align="right"
@@ -896,6 +937,7 @@ useHead(() => ({
                 <textarea
                   v-if="editingField === 'schema'"
                   v-model="schemaDraft"
+                  data-loop-editor
                   class="output-editor output-editor--schema"
                   aria-label="Output schema"
                   spellcheck="false"
@@ -910,6 +952,7 @@ useHead(() => ({
                 <textarea
                   v-if="editingField === 'prompt'"
                   v-model="promptDraft"
+                  data-loop-editor
                   class="output-editor output-editor--prompt"
                   aria-label="Output prompt"
                   @input="schedulePromptSave"
