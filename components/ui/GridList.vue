@@ -15,7 +15,7 @@ interface GridListItem {
   [key: string]: unknown
 }
 
-type GridListVariant = 'plain' | 'surface'
+type GridListVariant = 'plain' | 'surface' | 'key-value'
 type GridListAction = 'text' | 'button' | 'toggle'
 
 const props = withDefaults(defineProps<{
@@ -131,6 +131,7 @@ function actionLabel(item: GridListItem) {
   display: grid;
   width: 100%;
   min-width: 0;
+  box-sizing: border-box;
   grid-template-columns: minmax(12rem, 1.1fr) minmax(12rem, 1fr) auto;
   align-items: center;
   gap: var(--ll-space-6);
@@ -185,6 +186,37 @@ function actionLabel(item: GridListItem) {
 .ui-grid-list--plain .ui-grid-list__item {
   min-height: 6rem;
   padding-block: var(--ll-space-6);
+}
+
+.ui-grid-list--key-value {
+  gap: 0;
+}
+
+.ui-grid-list--key-value .ui-grid-list__item {
+  min-height: 3.5rem;
+  grid-template-columns: minmax(9rem, 0.36fr) minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--ll-space-4);
+  padding-block: var(--ll-space-3);
+}
+
+.ui-grid-list--key-value .ui-grid-list__leading,
+.ui-grid-list--key-value .ui-grid-list__trailing {
+  padding-block: 0.375rem;
+}
+
+.ui-grid-list--key-value .ui-grid-list__leading {
+  font-size: var(--ll-text-md);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.ui-grid-list--key-value .ui-grid-list__metadata {
+  display: flex;
+  min-height: 2rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--ll-space-2);
 }
 
 .ui-grid-list__item:hover,
@@ -243,6 +275,11 @@ function actionLabel(item: GridListItem) {
   .ui-grid-list__metadata {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+
+  .ui-grid-list--key-value .ui-grid-list__item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--ll-space-2) var(--ll-space-4);
   }
 }
 
