@@ -10,7 +10,7 @@ import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
-import UiIconPill from '~/components/ui/IconPill.vue'
+import UiPill from '~/components/ui/Pill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
@@ -43,6 +43,7 @@ const automaticRetries = ref(true)
 const humanReview = ref(false)
 const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
+const buttonDropdownSelection = ref('No action selected')
 const copiedCommand = ref<string | null>(null)
 const copyError = ref<string | null>(null)
 let copyResetTimer: ReturnType<typeof setTimeout> | undefined
@@ -88,6 +89,24 @@ const pillLabOptions = [
   { value: 'google', label: 'Google DeepMind' },
 ]
 
+const buttonDropdownOptions = [
+  {
+    value: 'loop',
+    label: 'Create loop',
+    iconPath: 'M253.93,154.63c-1.32-1.46-24.09-26.22-61-40.56-1.72-18.42-8.46-35.17-19.41-47.92C158.87,49,137.58,40,112,40,60.48,40,26.89,86.18,25.49,88.15a8,8,0,0,0,13,9.31C38.8,97.05,68.81,56,112,56c20.77,0,37.86,7.11,49.41,20.57,7.42,8.64,12.44,19.69,14.67,32A140.87,140.87,0,0,0,140.6,104c-26.06,0-47.93,6.81-63.26,19.69C63.78,135.09,56,151,56,167.25A47.59,47.59,0,0,0,69.87,201.3c9.66,9.62,23.06,14.7,38.73,14.7,51.81,0,81.18-42.13,84.49-84.42a161.43,161.43,0,0,1,49,33.79,8,8,0,1,0,11.86-10.74Zm-94.46,21.64C150.64,187.09,134.66,200,108.6,200,83.32,200,72,183.55,72,167.25,72,144.49,93.47,120,140.6,120a124.34,124.34,0,0,1,36.78,5.68C176.93,144.44,170.46,162.78,159.47,176.27Z',
+  },
+  {
+    value: 'agent',
+    label: 'Create agent',
+    iconPath: 'M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z',
+  },
+  {
+    value: 'pipeline',
+    label: 'Create pipeline',
+    iconPath: 'M200,152a31.84,31.84,0,0,0-19.53,6.68l-23.11-18A31.65,31.65,0,0,0,160,128c0-.74,0-1.48-.08-2.21l13.23-4.41A32,32,0,1,0,168,104c0,.74,0,1.48.08,2.21l-13.23,4.41A32,32,0,0,0,128,96a32.59,32.59,0,0,0-5.27.44L115.89,81A32,32,0,1,0,96,88a32.59,32.59,0,0,0,5.27-.44l6.84,15.4a31.92,31.92,0,0,0-8.57,39.64L73.83,165.44a32.06,32.06,0,1,0,10.63,12l25.71-22.84a31.91,31.91,0,0,0,37.36-1.24l23.11,18A31.65,31.65,0,0,0,168,184a32,32,0,1,0,32-32Zm0-64a16,16,0,1,1-16,16A16,16,0,0,1,200,88ZM80,56A16,16,0,1,1,96,72,16,16,0,0,1,80,56ZM56,208a16,16,0,1,1,16-16A16,16,0,0,1,56,208Zm56-80a16,16,0,1,1,16,16A16,16,0,0,1,112,128Zm88,72a16,16,0,1,1,16-16A16,16,0,0,1,200,200Z',
+  },
+]
+
 const designSystemNavItems = [
   { id: 'foundations', label: '01 · Foundations', level: 1 },
   { id: 'colors', label: 'Color', level: 2 },
@@ -95,7 +114,7 @@ const designSystemNavItems = [
   { id: 'actions', label: '02 · Actions', level: 1 },
   { id: 'buttons', label: 'Buttons', level: 2 },
   { id: 'toggle', label: 'Toggle', level: 2 },
-  { id: 'icon-pill', label: 'Icon pill', level: 2 },
+  { id: 'pill', label: 'Pill', level: 2 },
   { id: 'copy-command', label: 'Copyable command', level: 2 },
   { id: 'segmented-control', label: 'Segmented control', level: 2 },
   { id: 'composition', label: '03 · Composition', level: 1 },
@@ -304,6 +323,12 @@ const providerRows = ref([
   { id: 'openai', name: 'OpenAI', categories: 'GPT models and reasoning', checked: true, actionLabel: 'Enable', ariaLabel: 'Enable OpenAI' },
   { id: 'anthropic', name: 'Anthropic', categories: 'Claude models', checked: false, actionLabel: 'Enable', ariaLabel: 'Enable Anthropic' },
 ])
+
+const keyValueRows = [
+  { id: 'status', key: 'Status', actionLabel: 'Edit' },
+  { id: 'agents', key: 'Agents', actionLabel: 'Edit' },
+  { id: 'prompt', key: 'Prompt', actionLabel: 'Edit' },
+]
 
 function updateProviderRow(item: { id: string }, checked: boolean) {
   const provider = providerRows.value.find(row => row.id === item.id)
@@ -576,7 +601,7 @@ onBeforeUnmount(() => {
                     <h3>Button</h3>
                     <code>UiButton</code>
                   </div>
-                  <p>Actions and links across four visual variants.</p>
+                  <p>Actions, links, and connected action menus across five visual variants.</p>
                 </div>
                 <span class="ds-status"><i /> Stable</span>
               </header>
@@ -630,6 +655,76 @@ onBeforeUnmount(() => {
                         </svg>
                       </template>
                     </UiButton>
+                  </div>
+                </div>
+
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Dropdown</span>
+                    <code>dropdown · options · dropdownAlign</code>
+                  </div>
+                  <div class="ds-property__demo">
+                    <UiButton
+                      dropdown
+                      :options="buttonDropdownOptions"
+                      dropdown-label="Create an item"
+                      @select="buttonDropdownSelection = $event.label"
+                    >
+                      Create new
+                      <template #option-icon="{ option }">
+                        <svg v-if="option.value === 'loop'" viewBox="0 0 256 256" fill="currentColor">
+                          <path d="M253.93,154.63c-1.32-1.46-24.09-26.22-61-40.56-1.72-18.42-8.46-35.17-19.41-47.92C158.87,49,137.58,40,112,40,60.48,40,26.89,86.18,25.49,88.15a8,8,0,0,0,13,9.31C38.8,97.05,68.81,56,112,56c20.77,0,37.86,7.11,49.41,20.57,7.42,8.64,12.44,19.69,14.67,32A140.87,140.87,0,0,0,140.6,104c-26.06,0-47.93,6.81-63.26,19.69C63.78,135.09,56,151,56,167.25A47.59,47.59,0,0,0,69.87,201.3c9.66,9.62,23.06,14.7,38.73,14.7,51.81,0,81.18-42.13,84.49-84.42a161.43,161.43,0,0,1,49,33.79,8,8,0,1,0,11.86-10.74Zm-94.46,21.64C150.64,187.09,134.66,200,108.6,200,83.32,200,72,183.55,72,167.25,72,144.49,93.47,120,140.6,120a124.34,124.34,0,0,1,36.78,5.68C176.93,144.44,170.46,162.78,159.47,176.27Z" />
+                        </svg>
+                        <svg v-else-if="option.value === 'agent'" viewBox="0 0 256 256" fill="currentColor">
+                          <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z" />
+                        </svg>
+                        <svg v-else viewBox="0 0 256 256" fill="currentColor">
+                          <path d="M200,152a31.84,31.84,0,0,0-19.53,6.68l-23.11-18A31.65,31.65,0,0,0,160,128c0-.74,0-1.48-.08-2.21l13.23-4.41A32,32,0,1,0,168,104c0,.74,0,1.48.08,2.21l-13.23,4.41A32,32,0,0,0,128,96a32.59,32.59,0,0,0-5.27.44L115.89,81A32,32,0,1,0,96,88a32.59,32.59,0,0,0,5.27-.44l6.84,15.4a31.92,31.92,0,0,0-8.57,39.64L73.83,165.44a32.06,32.06,0,1,0,10.63,12l25.71-22.84a31.91,31.91,0,0,0,37.36-1.24l23.11,18A31.65,31.65,0,0,0,168,184a32,32,0,1,0,32-32Zm0-64a16,16,0,1,1-16,16A16,16,0,0,1,200,88ZM80,56A16,16,0,1,1,96,72,16,16,0,0,1,80,56ZM56,208a16,16,0,1,1,16-16A16,16,0,0,1,56,208Zm56-80a16,16,0,1,1,16,16A16,16,0,0,1,112,128Zm88,72a16,16,0,1,1,16-16A16,16,0,0,1,200,200Z" />
+                        </svg>
+                      </template>
+                    </UiButton>
+
+                    <UiButton
+                      variant="secondary"
+                      dropdown
+                      dropdown-align="right"
+                      :options="buttonDropdownOptions"
+                      dropdown-label="Quick create"
+                      @select="buttonDropdownSelection = $event.label"
+                    >
+                      Open to left
+                      <template #option-icon="{ option }">
+                        <svg v-if="option.value === 'loop'" viewBox="0 0 256 256" fill="currentColor">
+                          <path d="M253.93,154.63c-1.32-1.46-24.09-26.22-61-40.56-1.72-18.42-8.46-35.17-19.41-47.92C158.87,49,137.58,40,112,40,60.48,40,26.89,86.18,25.49,88.15a8,8,0,0,0,13,9.31C38.8,97.05,68.81,56,112,56c20.77,0,37.86,7.11,49.41,20.57,7.42,8.64,12.44,19.69,14.67,32A140.87,140.87,0,0,0,140.6,104c-26.06,0-47.93,6.81-63.26,19.69C63.78,135.09,56,151,56,167.25A47.59,47.59,0,0,0,69.87,201.3c9.66,9.62,23.06,14.7,38.73,14.7,51.81,0,81.18-42.13,84.49-84.42a161.43,161.43,0,0,1,49,33.79,8,8,0,1,0,11.86-10.74Zm-94.46,21.64C150.64,187.09,134.66,200,108.6,200,83.32,200,72,183.55,72,167.25,72,144.49,93.47,120,140.6,120a124.34,124.34,0,0,1,36.78,5.68C176.93,144.44,170.46,162.78,159.47,176.27Z" />
+                        </svg>
+                        <svg v-else-if="option.value === 'agent'" viewBox="0 0 256 256" fill="currentColor">
+                          <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z" />
+                        </svg>
+                        <svg v-else viewBox="0 0 256 256" fill="currentColor">
+                          <path d="M200,152a31.84,31.84,0,0,0-19.53,6.68l-23.11-18A31.65,31.65,0,0,0,160,128c0-.74,0-1.48-.08-2.21l13.23-4.41A32,32,0,1,0,168,104c0,.74,0,1.48.08,2.21l-13.23,4.41A32,32,0,0,0,128,96a32.59,32.59,0,0,0-5.27.44L115.89,81A32,32,0,1,0,96,88a32.59,32.59,0,0,0,5.27-.44l6.84,15.4a31.92,31.92,0,0,0-8.57,39.64L73.83,165.44a32.06,32.06,0,1,0,10.63,12l25.71-22.84a31.91,31.91,0,0,0,37.36-1.24l23.11,18A31.65,31.65,0,0,0,168,184a32,32,0,1,0,32-32Zm0-64a16,16,0,1,1-16,16A16,16,0,0,1,200,88ZM80,56A16,16,0,1,1,96,72,16,16,0,0,1,80,56ZM56,208a16,16,0,1,1,16-16A16,16,0,0,1,56,208Zm56-80a16,16,0,1,1,16,16A16,16,0,0,1,112,128Zm88,72a16,16,0,1,1,16-16A16,16,0,0,1,200,200Z" />
+                        </svg>
+                      </template>
+                    </UiButton>
+
+                    <UiButton
+                      variant="metal"
+                      dropdown
+                      dropdown-align="right"
+                      icon-only
+                      aria-label="More creation actions"
+                      :options="buttonDropdownOptions"
+                      dropdown-label="More creation actions"
+                      @select="buttonDropdownSelection = $event.label"
+                    >
+                      <template #leading>
+                        <svg viewBox="0 0 256 256" fill="currentColor">
+                          <circle cx="128" cy="56" r="12" />
+                          <circle cx="128" cy="128" r="12" />
+                          <circle cx="128" cy="200" r="12" />
+                        </svg>
+                      </template>
+                    </UiButton>
+                    <code>{{ buttonDropdownSelection }}</code>
                   </div>
                 </div>
               </div>
@@ -693,34 +788,69 @@ onBeforeUnmount(() => {
               </footer>
             </article>
 
-            <article id="icon-pill" class="ds-component">
+            <article id="pill" class="ds-component">
               <header class="ds-component__header">
                 <div>
                   <div class="ds-component__title-row">
-                    <h3>Icon pill</h3>
-                    <code>UiIconPill</code>
+                    <h3>Pill</h3>
+                    <code>UiPill</code>
                   </div>
-                  <p>Compact icon-and-label metadata, optionally upgraded into a connected dropdown trigger.</p>
+                  <p>Compact metadata with text, icons, or circular media, optionally upgraded into a connected dropdown trigger.</p>
                 </div>
                 <span class="ds-status"><i /> Interactive</span>
               </header>
 
               <div class="ds-stage ds-stage--icon-pills">
                 <div class="ds-icon-pill-example">
-                  <span class="ds-stage__caption">Non-clickable</span>
-                  <UiIconPill aria-label="Time range: Last 24 hours">
+                  <span class="ds-stage__caption">Text only</span>
+                  <UiPill>Generator</UiPill>
+                </div>
+
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Icon + text</span>
+                  <UiPill aria-label="Time range: Last 24 hours">
                     <template #icon>
                       <svg viewBox="0 0 256 256" fill="currentColor">
                         <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V88H208ZM48,72V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V72Z" />
                       </svg>
                     </template>
                     Last 24 hours
-                  </UiIconPill>
+                  </UiPill>
                 </div>
 
                 <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Icon only</span>
+                  <UiPill aria-label="Search">
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M229.66,218.34l-50.07-50.06a88.1,88.1,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z" />
+                      </svg>
+                    </template>
+                  </UiPill>
+                </div>
+
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Circular icon + text</span>
+                  <UiPill icon-style="circle">
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
+                        <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Zm4,28H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Z" />
+                      </svg>
+                    </template>
+                    product_manager
+                  </UiPill>
+                </div>
+
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Circular image + text</span>
+                  <UiPill src="/images/models/deepseek.webp" alt="">deepseek-v4-pro</UiPill>
+                </div>
+              </div>
+
+              <div class="ds-stage ds-stage--icon-pills">
+                <div class="ds-icon-pill-example">
                   <span class="ds-stage__caption">Radio · opens left</span>
-                  <UiIconPill
+                  <UiPill
                     v-model="pillStatus"
                     clickable
                     selection-type="radio"
@@ -734,12 +864,12 @@ onBeforeUnmount(() => {
                       </svg>
                     </template>
                     Status
-                  </UiIconPill>
+                  </UiPill>
                 </div>
 
                 <div class="ds-icon-pill-example ds-icon-pill-example--right">
                   <span class="ds-stage__caption">Checkbox · opens right</span>
-                  <UiIconPill
+                  <UiPill
                     v-model="pillLabs"
                     clickable
                     dropdown-align="right"
@@ -754,14 +884,18 @@ onBeforeUnmount(() => {
                       </svg>
                     </template>
                     Labs
-                  </UiIconPill>
+                  </UiPill>
                 </div>
               </div>
 
               <div class="ds-properties">
                 <div class="ds-property">
-                  <div class="ds-property__label"><span>Variants</span><code>clickable · selectionType</code></div>
-                  <p class="ds-property__copy">The default pill is presentational. Dropdown pills support built-in <strong>radio</strong> and <strong>checkbox</strong> options through options and v-model, or arbitrary content through the dropdown slot.</p>
+                  <div class="ds-property__label"><span>Content</span><code>src · alt · iconStyle · #icon</code></div>
+                  <p class="ds-property__copy">Omit media for text-only, use the icon slot for a normal icon, set <strong>iconStyle="circle"</strong> for framed artwork, or pass <strong>src</strong> for a circular image. An icon without default content becomes icon-only automatically.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Dropdown</span><code>clickable · selectionType · options · v-model</code></div>
+                  <p class="ds-property__copy">Every content variant can become a dropdown. Built-in options support <strong>radio</strong> and <strong>checkbox</strong> selection, while the dropdown slot accepts custom content.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Alignment</span><code>dropdownAlign</code></div>
@@ -771,7 +905,7 @@ onBeforeUnmount(() => {
 
               <footer class="ds-component__footnote">
                 <span>Icons</span>
-                <p>Use <a href="https://phosphoricons.com/" target="_blank" rel="noreferrer">Phosphor Icons</a> as inline SVG through the icon slot. The component standardises sizing, not the icon artwork.</p>
+                <p>Use <a href="https://phosphoricons.com/" target="_blank" rel="noreferrer">Phosphor Icons</a> as inline SVG through the icon slot. Keep <strong>alt</strong> empty when a visible label already names an image.</p>
               </footer>
             </article>
 
@@ -964,7 +1098,7 @@ onBeforeUnmount(() => {
                   :items="[
                     { label: 'Agents', to: '/app/personas' },
                     { label: 'Engineering', to: '/app/skills' },
-                    { label: 'Code review' },
+                    { label: 'Code review', to: '/app/skills?category=code-review' },
                   ]"
                 />
               </div>
@@ -972,7 +1106,7 @@ onBeforeUnmount(() => {
               <div class="ds-properties">
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Items</span><code>label · to · href</code></div>
-                  <p class="ds-property__copy">Internal and external destinations can be mixed. The final item is rendered as the current page rather than as a link.</p>
+                  <p class="ds-property__copy">Internal and external destinations can be mixed. Any item with a destination is linked; omit it when the final item represents the current page.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Typography</span><code>Centered · Hero eyebrow</code></div>
@@ -1673,9 +1807,49 @@ onBeforeUnmount(() => {
                 </UiSection>
               </div>
 
+              <div class="ds-collection-example ds-collection-example--directory">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Loop details</span>
+                    <code>Stage inverse="both" · GridList key-value</code>
+                  </div>
+                  <UiSectionStage inverse="both" class="ds-collection-stage">
+                    <UiGridList
+                      :items="keyValueRows"
+                      variant="key-value"
+                      aria-label="Loop details"
+                    >
+                      <template #leading="{ item }"><strong>{{ item.key }}</strong></template>
+                      <template #metadata="{ item }">
+                        <UiPill v-if="item.id === 'status'" aria-label="Status: active">
+                          <template #icon>
+                            <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
+                              <path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
+                            </svg>
+                          </template>
+                          active
+                        </UiPill>
+                        <template v-else-if="item.id === 'agents'">
+                          <UiPill icon-style="circle">
+                            <template #icon>
+                              <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
+                                <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A24,24,0,0,0,32,72V192a24,24,0,0,0,24,24H200a24,24,0,0,0,24-24V72A24,24,0,0,0,200,48Zm8,144a8,8,0,0,1-8,8H56a8,8,0,0,1-8-8V72a8,8,0,0,1,8-8H200a8,8,0,0,1,8,8ZM80,112a12,12,0,1,1,12,12A12,12,0,0,1,80,112Zm72,12a12,12,0,1,1,12,12A12,12,0,0,1,152,124Zm8.68,48a48.35,48.35,0,0,1-65.36,0,8,8,0,0,1,10.68-11.92,32.35,32.35,0,0,0,44,0A8,8,0,1,1,160.68,172Z" />
+                              </svg>
+                            </template>
+                            tech_lead
+                          </UiPill>
+                          <UiPill src="/images/models/deepseek.webp" alt="">deepseek-v4-pro</UiPill>
+                        </template>
+                        <p v-else class="ds-key-value-copy">Produce a concise implementation plan with independently executable steps.</p>
+                      </template>
+                    </UiGridList>
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
               <footer class="ds-component__footnote">
-                <span>Surface ownership</span>
-                <p>GridList remains transparent and responsive. Its optional SectionStage owns the Metal 025 Section surface and any inverse edge; Section stays on Canvas.</p>
+                <span>Variants</span>
+                <p><strong>plain</strong> and <strong>surface</strong> serve directory rows. <strong>key-value</strong> compresses inspection views while allowing pills to wrap or a text block to occupy the value column. Its optional SectionStage owns the Metal 025 surface and inverse edge.</p>
               </footer>
             </article>
 
@@ -2961,6 +3135,14 @@ onBeforeUnmount(() => {
 .ds-collection-stage :deep(.ui-section-stage__content) {
   display: grid;
   gap: var(--ll-space-6);
+}
+
+.ds-key-value-copy {
+  max-width: 42rem;
+  margin: 0.375rem 0;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-sm);
+  line-height: 1.6;
 }
 
 .ds-grouped-collection {
