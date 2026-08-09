@@ -37,17 +37,7 @@ const skillTaskOptions = [
   { value: 'writing', label: 'Writing' },
 ]
 
-const skillDateFormatter = new Intl.DateTimeFormat('en-US', {
-  day: 'numeric',
-  month: 'short',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
-
-function formatSkillDate(value: string) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : skillDateFormatter.format(date)
-}
+const { formatDate } = useDateTime()
 
 definePageMeta({
   layout: 'app',
@@ -105,7 +95,7 @@ useHead({
             <p>{{ skill.description }}</p>
           </template>
           <template #meta>
-            <time :datetime="skill.updated_at">{{ formatSkillDate(skill.updated_at) }}</time>
+            <time :datetime="skill.updated_at">{{ formatDate(skill.updated_at) }}</time>
           </template>
           <template #trailing>
             <UiStatusText

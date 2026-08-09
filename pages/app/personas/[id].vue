@@ -3,6 +3,7 @@ import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiContainer from '~/components/ui/Container.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import { entityActionMenuOptions } from '~/utils/entityActionMenu'
 
 interface PersonaDetail {
   id: string
@@ -74,8 +75,24 @@ useHead(() => ({
         <template #aside>
           <div class="persona-actions">
             <UiButton type="button">Edit</UiButton>
-            <UiButton type="button" variant="stroke">Duplicate</UiButton>
-            <UiButton type="button" variant="metal">Delete</UiButton>
+            <UiButton
+              type="button"
+              variant="secondary"
+              dropdown
+              dropdown-align="right"
+              icon-only
+              aria-label="More agent actions"
+              dropdown-label="Agent actions"
+              :options="entityActionMenuOptions"
+            >
+              <template #leading>
+                <svg viewBox="0 0 256 256" fill="currentColor">
+                  <circle cx="128" cy="56" r="12" />
+                  <circle cx="128" cy="128" r="12" />
+                  <circle cx="128" cy="200" r="12" />
+                </svg>
+              </template>
+            </UiButton>
           </div>
         </template>
       </UiHeadingBlock>
