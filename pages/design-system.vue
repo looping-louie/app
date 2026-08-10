@@ -12,6 +12,7 @@ import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
+import UiModal from '~/components/ui/Modal.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
@@ -41,6 +42,7 @@ const headingDeployment = ref('platform')
 const interfaceView = ref('agents')
 const automaticRetries = ref(true)
 const humanReview = ref(false)
+const sampleModalOpen = ref(false)
 const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
 const buttonDropdownSelection = ref('No action selected')
@@ -114,6 +116,8 @@ const designSystemNavItems = [
   { id: 'actions', label: '02 · Actions', level: 1 },
   { id: 'buttons', label: 'Buttons', level: 2 },
   { id: 'toggle', label: 'Toggle', level: 2 },
+  { id: 'form-flow', label: 'Form flow', level: 2 },
+  { id: 'modal', label: 'Modal', level: 2 },
   { id: 'pill', label: 'Pill', level: 2 },
   { id: 'copy-command', label: 'Copyable command', level: 2 },
   { id: 'segmented-control', label: 'Segmented control', level: 2 },
@@ -343,6 +347,11 @@ const teamMembers = [
   { id: 'nora', initials: 'NK', name: 'Nora Kim', role: 'AI Engineer' },
   { id: 'leo', initials: 'LM', name: 'Leo Martin', role: 'Developer Relations' },
 ]
+
+const directorySelection = ref<string[]>(['maya'])
+const formProgressStep = ref(1)
+const formProgressSteps = ['Brief', 'Team', 'Review']
+const samplePrompt = ref('Review a launch plan and surface the risks that could prevent a successful release.')
 
 const faqItems = [
   {
@@ -788,6 +797,110 @@ onBeforeUnmount(() => {
               </footer>
             </article>
 
+            <article id="form-flow" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Form flow</h3>
+                    <code>UiFormProgress · UiTextField · UiDirectoryOption</code>
+                  </div>
+                  <p>Focused primitives for autosaved, keyboard-friendly multi-step forms.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-stage ds-flow-primitives">
+                <UiFormProgress
+                  :steps="formProgressSteps"
+                  :current="formProgressStep"
+                  saved-label="Draft saved"
+                />
+                <UiTextField
+                  v-model="samplePrompt"
+                  label="Prompt"
+                  multiline
+                  hint="Press Ctrl or Cmd + Enter to continue."
+                />
+                <UiGrid :columns="2" gap="sm">
+                  <UiDirectoryOption
+                    v-model="directorySelection"
+                    value="maya"
+                    title="Product Manager"
+                    description="What problem does this solve?"
+                    selection-type="checkbox"
+                    external-href="/app/personas/builtin%3Apersona%3Aproduct_manager"
+                  >
+                    <template #media>
+                      <svg viewBox="0 0 256 256" fill="currentColor"><path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A24,24,0,0,0,32,72V192a24,24,0,0,0,24,24H200a24,24,0,0,0,24-24V72A24,24,0,0,0,200,48Zm8,144a8,8,0,0,1-8,8H56a8,8,0,0,1-8-8V72a8,8,0,0,1,8-8H200a8,8,0,0,1,8,8ZM80,112a12,12,0,1,1,12,12A12,12,0,0,1,80,112Zm72,12a12,12,0,1,1,12,12A12,12,0,0,1,152,124Zm8.68,48a48.35,48.35,0,0,1-65.36,0,8,8,0,0,1,10.68-11.92,32.35,32.35,0,0,0,44,0A8,8,0,1,1,160.68,172Z" /></svg>
+                    </template>
+                  </UiDirectoryOption>
+                  <UiDirectoryOption
+                    model-value="deepseek-v4-pro"
+                    value="deepseek-v4-pro"
+                    title="DeepSeek V4 Pro"
+                    description="DeepSeek"
+                    external-href="/app/settings/models?model=deepseek-v4-pro"
+                  >
+                    <template #media><img src="/images/models/deepseek.webp" alt=""></template>
+                  </UiDirectoryOption>
+                </UiGrid>
+                <div class="ds-flow-primitives__actions">
+                  <UiButton variant="secondary" :disabled="formProgressStep === 0" @click="formProgressStep--">Back</UiButton>
+                  <UiButton :disabled="formProgressStep === formProgressSteps.length - 1" @click="formProgressStep++">Continue</UiButton>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Boundary</span>
+                <p>The design system owns progress, fields, and selectable directory options. Domain-specific wizard orchestration stays in the application.</p>
+              </footer>
+            </article>
+
+            <article id="modal" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Modal</h3>
+                    <code>UiModal</code>
+                  </div>
+                  <p>Focused confirmation and decision dialogs with managed focus, keyboard escape, and a responsive action footer.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage">
+                <div class="ds-stage__row">
+                  <UiButton variant="stroke" @click="sampleModalOpen = true">Open draft modal</UiButton>
+                </div>
+              </div>
+
+              <UiModal
+                v-model:open="sampleModalOpen"
+                show-close
+                title="Leave this loop unfinished?"
+                description="Save your progress as a draft so you can continue later, or discard it permanently."
+              >
+                <template #icon>
+                  <svg viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
+                  </svg>
+                </template>
+                <template #actions>
+                  <UiButton variant="coral" @click="sampleModalOpen = false">
+                    Discard draft
+                  </UiButton>
+                  <UiButton data-autofocus @click="sampleModalOpen = false">
+                    Save draft
+                  </UiButton>
+                </template>
+              </UiModal>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Traps focus while open, restores it on close, supports Escape, locks page scroll, and exposes native dialog semantics.</p>
+              </footer>
+            </article>
+
             <article id="pill" class="ds-component">
               <header class="ds-component__header">
                 <div>
@@ -845,6 +958,15 @@ onBeforeUnmount(() => {
                   <span class="ds-stage__caption">Circular image + text</span>
                   <UiPill src="/images/models/deepseek.webp" alt="">deepseek-v4-pro</UiPill>
                 </div>
+
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Circular image only + tooltip</span>
+                  <UiPill
+                    src="/images/models/deepseek.webp"
+                    alt=""
+                    tooltip="deepseek-v4-pro"
+                  />
+                </div>
               </div>
 
               <div class="ds-stage ds-stage--icon-pills">
@@ -890,8 +1012,8 @@ onBeforeUnmount(() => {
 
               <div class="ds-properties">
                 <div class="ds-property">
-                  <div class="ds-property__label"><span>Content</span><code>src · alt · iconStyle · #icon</code></div>
-                  <p class="ds-property__copy">Omit media for text-only, use the icon slot for a normal icon, set <strong>iconStyle="circle"</strong> for framed artwork, or pass <strong>src</strong> for a circular image. An icon without default content becomes icon-only automatically.</p>
+                  <div class="ds-property__label"><span>Content</span><code>src · alt · iconStyle · tooltip · focusable · #icon</code></div>
+                  <p class="ds-property__copy">Omit media for text-only, use the icon slot for a normal icon, set <strong>iconStyle="circle"</strong> for framed artwork, or pass <strong>src</strong> for a circular image. Omit default content for icon-only or image-only, and use <strong>tooltip</strong> when that compact media needs a visible label. Set <strong>focusable=false</strong> only when another interactive parent owns keyboard focus.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Dropdown</span><code>clickable · selectionType · options · v-model</code></div>
@@ -3327,6 +3449,17 @@ onBeforeUnmount(() => {
 
 .ds-team-grid {
   margin-top: 0;
+}
+
+.ds-flow-primitives {
+  display: grid;
+  max-width: 52rem;
+  gap: var(--ll-space-6);
+}
+
+.ds-flow-primitives__actions {
+  display: flex;
+  justify-content: space-between;
 }
 
 .ds-team-member {

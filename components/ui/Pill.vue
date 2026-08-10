@@ -14,7 +14,9 @@ const props = withDefaults(defineProps<{
   alt?: string
   iconStyle?: IconStyle
   clickable?: boolean
+  focusable?: boolean
   ariaLabel?: string
+  tooltip?: string
   dropdownLabel?: string
   dropdownAlign?: DropdownAlign
   selectionType?: SelectionType
@@ -25,7 +27,9 @@ const props = withDefaults(defineProps<{
   alt: '',
   iconStyle: 'plain',
   clickable: false,
+  focusable: true,
   ariaLabel: undefined,
+  tooltip: undefined,
   dropdownLabel: 'Options',
   dropdownAlign: 'left',
   selectionType: 'radio',
@@ -50,6 +54,7 @@ const confirmingValue = ref<string | null>(null)
 const restoreFocusAfterClose = ref(false)
 let confirmationTimer: ReturnType<typeof setTimeout> | undefined
 const dropdownId = `ui-pill-${useId().replaceAll(':', '')}`
+const tooltipId = `ui-pill-tooltip-${useId().replaceAll(':', '')}`
 const connected = computed(() => open.value || closing.value)
 
 function toggleDropdown() {
@@ -144,6 +149,7 @@ onBeforeUnmount(() => {
         'ui-icon-pill--icon-only': hasMedia && !hasLabel,
         'ui-icon-pill--circular-media': circularMedia,
         'ui-icon-pill--image': Boolean(src),
+        'ui-icon-pill--has-tooltip': Boolean(tooltip),
         'ui-icon-pill--clickable': clickable,
         'ui-icon-pill--open': connected,
         'ui-icon-pill--closing': closing,
@@ -155,7 +161,8 @@ onBeforeUnmount(() => {
       ref="trigger"
       type="button"
       class="ui-icon-pill__trigger"
-      :aria-label="ariaLabel"
+      :aria-label="ariaLabel || (!hasLabel ? tooltip : undefined)"
+      :aria-describedby="tooltip ? tooltipId : undefined"
       :aria-expanded="open"
       :aria-controls="dropdownId"
       @click="toggleDropdown"
@@ -173,7 +180,13 @@ onBeforeUnmount(() => {
       <span v-if="hasLabel" class="ui-icon-pill__label"><slot /></span>
     </button>
 
-    <span v-else class="ui-icon-pill__trigger" :aria-label="ariaLabel">
+    <span
+      v-else
+      class="ui-icon-pill__trigger"
+      :tabindex="tooltip && focusable ? 0 : undefined"
+      :aria-label="ariaLabel || (!hasLabel ? tooltip : undefined)"
+      :aria-describedby="tooltip ? tooltipId : undefined"
+    >
       <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
         <img :src="src" :alt="alt" width="28" height="28" loading="lazy">
       </span>
@@ -185,6 +198,10 @@ onBeforeUnmount(() => {
         <slot name="icon" />
       </span>
       <span v-if="hasLabel" class="ui-icon-pill__label"><slot /></span>
+    </span>
+
+    <span v-if="tooltip" :id="tooltipId" class="ui-icon-pill__tooltip" role="tooltip">
+      {{ tooltip }}
     </span>
 
     <svg
@@ -368,6 +385,36 @@ button.ui-icon-pill__trigger:focus-visible {
   white-space: nowrap;
 }
 
+.ui-icon-pill__tooltip {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + var(--ll-space-2));
+  left: 50%;
+  width: max-content;
+  max-width: 15rem;
+  padding: var(--ll-space-2) var(--ll-space-3);
+  pointer-events: none;
+  color: var(--ll-color-metal-025);
+  background: var(--ll-color-metal-950);
+  border-radius: var(--ll-radius-pill);
+  box-shadow: var(--ll-shadow-raised);
+  font: 550 var(--ll-text-xs) / 1.2 var(--ll-font-control);
+  opacity: 0;
+  transform: translate(-50%, 0.25rem);
+  transition:
+    opacity var(--ll-duration-fast) var(--ll-ease-out),
+    transform var(--ll-duration-fast) var(--ll-ease-out);
+}
+
+.ui-icon-pill--has-tooltip:is(:hover, :focus-within) {
+  z-index: 21;
+}
+
+.ui-icon-pill--has-tooltip:is(:hover, :focus-within) .ui-icon-pill__tooltip {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .ui-icon-pill__shoulder {
   position: absolute;
   z-index: 4;
@@ -482,5 +529,6 @@ button.ui-icon-pill__trigger:focus-visible {
   .ui-icon-pill-dropdown-leave-active { transition: none; }
 
   .ui-icon-pill__option.is-confirming { animation: none; }
+  .ui-icon-pill__tooltip { transition: none; }
 }
 </style>
