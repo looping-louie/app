@@ -1,29 +1,34 @@
 <template>
   <div class="app-shell">
-    <aside class="sidebar" :class="{ open: mobileOpen }">
+    <aside ref="sidebarRef" class="sidebar" :class="{ open: mobileOpen }">
       <div class="sidebar-header">
-        <NuxtLink to="/app" class="sidebar-logo" @click="closeMobile">
-          <span class="logo-icon">⟳</span>
+        <NuxtLink to="/app" class="sidebar-logo" aria-label="Looping Louie home" @click="closeMobile">
+          <img class="logo-icon" src="/brand/twemoji-small-airplane.svg" alt="" width="30" height="30">
         </NuxtLink>
         <button class="sidebar-close" aria-label="Cerrar menú" @click="closeMobile">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
         </button>
       </div>
 
-      <nav class="sidebar-nav" aria-label="Navegación principal">
-        <NuxtLink
-          v-for="item in navItems"
-          :key="item.to"
-          :to="item.to"
-          class="nav-item"
-          :class="{ active: isActive(item.to) }"
-          :aria-label="item.label"
-          :title="item.label"
-          @click="closeMobile"
-        >
-          <span class="nav-icon" v-html="item.icon" />
-          <span class="nav-tooltip">{{ item.label }}</span>
-        </NuxtLink>
+      <nav class="sidebar-nav" aria-label="Navegación principal" @scroll="hideNavTooltip">
+        <template v-for="(group, groupIndex) in navGroups" :key="groupIndex">
+          <div v-if="groupIndex > 0" class="nav-divider" />
+          <NuxtLink
+            v-for="item in group"
+            :key="item.to"
+            :to="item.to"
+            class="nav-item"
+            :class="{ active: isActive(item.to) }"
+            :aria-label="item.label"
+            @mouseenter="showNavTooltip(item.label, $event)"
+            @mouseleave="hideNavTooltip"
+            @focus="showNavTooltip(item.label, $event)"
+            @blur="hideNavTooltip"
+            @click="closeMobile"
+          >
+            <span class="nav-icon" v-html="item.icon" />
+          </NuxtLink>
+        </template>
       </nav>
 
       <div class="sidebar-footer">
@@ -32,6 +37,20 @@
     </aside>
 
     <div class="sidebar-backdrop" :class="{ visible: mobileOpen }" @click="closeMobile" />
+
+    <Teleport to="body">
+      <Transition name="nav-tooltip">
+        <div
+          v-if="navTooltip.visible"
+          class="nav-tooltip"
+          :class="{ 'nav-tooltip--active': navTooltip.active }"
+          :style="navTooltipStyle"
+          role="tooltip"
+        >
+          {{ navTooltip.label }}
+        </div>
+      </Transition>
+    </Teleport>
 
     <div class="app-body">
       <header class="app-topbar">
@@ -48,45 +67,87 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 const route = useRoute()
 
 const mobileOpen = ref(false)
+const sidebarRef = ref<HTMLElement | null>(null)
+const navTooltip = reactive({
+  visible: false,
+  active: false,
+  label: '',
+  top: 0,
+  left: 0,
+  height: 0,
+})
+const navTooltipStyle = computed(() => ({
+  top: `${navTooltip.top}px`,
+  left: `${navTooltip.left}px`,
+  height: `${navTooltip.height}px`,
+}))
 
-const navItems = [
-  {
-    to: '/app',
-    label: 'Dashboard',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg>'
-  },
-  {
-    to: '/app/proyectos',
-    label: 'Proyectos',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.068.157 2.148.279 3.238.354.77.054 1.543.082 2.32.082s1.55-.028 2.32-.082a41.2 41.2 0 0 0 3.238-.354c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3.164c-.78 0-1.552.028-2.32.082a41.2 41.2 0 0 0-3.238.354C4.873 3.746 3.75 5.14 3.75 6.74v6.02Z"/><path d="M6 6.75h.008v.008H6V6.75ZM18 6.75h.008v.008H18V6.75ZM8.25 3.164V4.5c0 .414.336.75.75.75h6a.75.75 0 0 0 .75-.75V3.164a48.394 48.394 0 0 0-7.5 0Z"/></svg>'
-  },
-  {
-    to: '/app/ideas',
-    label: 'Ideas',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 18v-5.25m0 5.25a3 3 0 0 1-3-3h6a3 3 0 0 1-3 3Zm0-5.25V6.75m0 6.75c-2.485 0-4.5-2.515-4.5-5.625S9.515 3.75 12 3.75s4.5 2.515 4.5 5.625S14.485 12.75 12 12.75Z"/></svg>'
-  },
-  {
-    to: '/app/tareas',
-    label: 'Tareas',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08-1.131.094-1.976 1.057-1.976 2.192v9.75A2.25 2.25 0 0 0 7.5 18.75H18A2.25 2.25 0 0 0 20.25 16.5v-9.75A2.25 2.25 0 0 0 18 4.5H15a2.25 2.25 0 0 1-2.15-1.586Z"/></svg>'
-  },
-  {
-    to: '/app/loops',
-    label: 'Loops',
-    icon: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c.014.221.029.443.046.662a4.006 4.006 0 0 0 3.7 3.7 48.55 48.55 0 0 0 7.308 0 4.006 4.006 0 0 0 3.7-3.7c.033-.254.046-.508.046-.762m-15 0-3 3m3-3 3 3"/></svg>'
-  }
+function showNavTooltip(label: string, event: MouseEvent | FocusEvent) {
+  const item = event.currentTarget
+  const sidebar = sidebarRef.value
+  if (!(item instanceof HTMLElement) || !sidebar) return
+
+  const itemBounds = item.getBoundingClientRect()
+  const sidebarBounds = sidebar.getBoundingClientRect()
+  const mirroredGap = Math.max(0, sidebarBounds.right - itemBounds.right)
+
+  navTooltip.label = label
+  navTooltip.active = item.classList.contains('active')
+  navTooltip.top = itemBounds.top
+  navTooltip.left = sidebarBounds.right + mirroredGap
+  navTooltip.height = itemBounds.height
+  navTooltip.visible = true
+}
+
+function hideNavTooltip() {
+  navTooltip.visible = false
+}
+
+function phosphorIcon(path: string) {
+  return `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false"><path d="${path}"/></svg>`
+}
+
+// Phosphor Icons · regular weight
+const iconRuns = phosphorIcon('M104,40H56A16,16,0,0,0,40,56v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,104,40Zm0,64H56V56h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,64H152V56h48v48Zm-96,32H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm0,64H56V152h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,200,136Zm0,64H152V152h48v48Z')
+const iconObservability = phosphorIcon('M240,128a8,8,0,0,1-8,8H204.94l-37.78,75.58A8,8,0,0,1,160,216h-.4a8,8,0,0,1-7.08-5.14L95.35,60.76,63.28,131.31A8,8,0,0,1,56,136H24a8,8,0,0,1,0-16H50.85L88.72,36.69a8,8,0,0,1,14.76.46l57.51,151,31.85-63.71A8,8,0,0,1,200,120h32A8,8,0,0,1,240,128Z')
+const iconHumanGates = phosphorIcon('M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm0,72c0,37.07-13.66,67.16-40.6,89.42A129.3,129.3,0,0,1,128,223.62a128.25,128.25,0,0,1-38.92-21.81C61.82,179.51,48,149.3,48,112l0-56,160,0ZM82.34,141.66a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32l-56,56a8,8,0,0,1-11.32,0Z')
+const iconPipelines = phosphorIcon('M200,152a31.84,31.84,0,0,0-19.53,6.68l-23.11-18A31.65,31.65,0,0,0,160,128c0-.74,0-1.48-.08-2.21l13.23-4.41A32,32,0,1,0,168,104c0,.74,0,1.48.08,2.21l-13.23,4.41A32,32,0,0,0,128,96a32.59,32.59,0,0,0-5.27.44L115.89,81A32,32,0,1,0,96,88a32.59,32.59,0,0,0,5.27-.44l6.84,15.4a31.92,31.92,0,0,0-8.57,39.64L73.83,165.44a32.06,32.06,0,1,0,10.63,12l25.71-22.84a31.91,31.91,0,0,0,37.36-1.24l23.11,18A31.65,31.65,0,0,0,168,184a32,32,0,1,0,32-32Zm0-64a16,16,0,1,1-16,16A16,16,0,0,1,200,88ZM80,56A16,16,0,1,1,96,72,16,16,0,0,1,80,56ZM56,208a16,16,0,1,1,16-16A16,16,0,0,1,56,208Zm56-80a16,16,0,1,1,16,16A16,16,0,0,1,112,128Zm88,72a16,16,0,1,1,16-16A16,16,0,0,1,200,200Z')
+const iconLoops = phosphorIcon('M253.93,154.63c-1.32-1.46-24.09-26.22-61-40.56-1.72-18.42-8.46-35.17-19.41-47.92C158.87,49,137.58,40,112,40,60.48,40,26.89,86.18,25.49,88.15a8,8,0,0,0,13,9.31C38.8,97.05,68.81,56,112,56c20.77,0,37.86,7.11,49.41,20.57,7.42,8.64,12.44,19.69,14.67,32A140.87,140.87,0,0,0,140.6,104c-26.06,0-47.93,6.81-63.26,19.69C63.78,135.09,56,151,56,167.25A47.59,47.59,0,0,0,69.87,201.3c9.66,9.62,23.06,14.7,38.73,14.7,51.81,0,81.18-42.13,84.49-84.42a161.43,161.43,0,0,1,49,33.79,8,8,0,1,0,11.86-10.74Zm-94.46,21.64C150.64,187.09,134.66,200,108.6,200,83.32,200,72,183.55,72,167.25,72,144.49,93.47,120,140.6,120a124.34,124.34,0,0,1,36.78,5.68C176.93,144.44,170.46,162.78,159.47,176.27Z')
+const iconAgents = phosphorIcon('M100,124a12,12,0,1,1,12-12A12,12,0,0,1,100,124Zm56-24a12,12,0,1,0,12,12A12,12,0,0,0,156,100Zm-4.27,45.23a45,45,0,0,1-47.46,0,8,8,0,0,0-8.54,13.54,61,61,0,0,0,64.54,0,8,8,0,0,0-8.54-13.54ZM216,80v96a32.06,32.06,0,0,1-24,31v17a16,16,0,0,1-16,16H80a16,16,0,0,1-16-16V207a32.06,32.06,0,0,1-24-31V80A32,32,0,0,1,72,48H88V32a16,16,0,0,1,16-16h48a16,16,0,0,1,16,16V48h16A32,32,0,0,1,216,80ZM104,48h48V32H104Zm72,176V208H80v16ZM200,80a16,16,0,0,0-16-16H72A16,16,0,0,0,56,80v96a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16Z')
+const iconSkills = phosphorIcon('M243.58,72.84,197.29,49.7C191.54,39.24,177.21,32,160,32c-22.43,0-40,12.3-40,28a20.77,20.77,0,0,0,1.06,6.53l-19.52,9.76A53.69,53.69,0,0,0,80,72c-22.43,0-40,12.3-40,28a20.77,20.77,0,0,0,1.06,6.53L12.42,120.84A8,8,0,0,0,8,128v64a8,8,0,0,0,4.42,7.16l64,32a8,8,0,0,0,7.16,0l160-80A8,8,0,0,0,248,144V80A8,8,0,0,0,243.58,72.84ZM80,151.06,33.89,128,51,119.45c7.24,5.29,17.48,8.55,29,8.55,22.43,0,40-12.3,40-28a21.77,21.77,0,0,0-4.35-12.88L131,79.45c7.24,5.29,17.48,8.55,29,8.55,18.38,0,33.49-8.26,38.35-19.88L222.11,80ZM160,48c13.74,0,24,6.34,24,12s-10.26,12-24,12-24-6.34-24-12S146.26,48,160,48ZM80,88c13.74,0,24,6.34,24,12s-10.26,12-24,12c-9.67,0-17.61-3.14-21.47-7a8.29,8.29,0,0,0-.84-.93A6.62,6.62,0,0,1,56,100C56,94.34,66.26,88,80,88ZM24,140.94l48,24v46.12l-48-24Zm64,70.12V164.94l144-72v46.12Z')
+const iconSettings = phosphorIcon('M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z')
+
+const navGroups = [
+  [
+    { to: '/app/runs', label: 'Runs', icon: iconRuns }
+  ],
+  [
+    { to: '/app/observability', label: 'Observability', icon: iconObservability },
+    { to: '/app/human-intervention', label: 'Human gates', icon: iconHumanGates }
+  ],
+  [
+    { to: '/app/pipelines', label: 'Pipelines', icon: iconPipelines },
+    { to: '/app/loops', label: 'Loops', icon: iconLoops },
+    { to: '/app/personas', label: 'Agents', icon: iconAgents },
+    { to: '/app/skills', label: 'Skills', icon: iconSkills }
+  ],
+  [
+    { to: '/app/settings', label: 'Settings', icon: iconSettings }
+  ]
 ]
 
+const navItems = computed(() => navGroups.flat())
+
 const currentLabel = computed(() => {
-  const match = navItems.find((item) => isActive(item.to))
+  const match = navItems.value.find((item) => isActive(item.to))
   return match ? match.label : 'Dashboard'
 })
 
-function isActive(to) {
+function isActive(to: string) {
   if (to === '/app') {
     return route.path === '/app'
   }
@@ -98,6 +159,7 @@ function openMobile() {
 }
 
 function closeMobile() {
+  hideNavTooltip()
   mobileOpen.value = false
 }
 </script>
@@ -106,14 +168,15 @@ function closeMobile() {
 .app-shell {
   display: flex;
   min-height: 100vh;
-  background: var(--bg-deep);
+  color: var(--ll-color-text);
+  background: var(--ll-color-canvas);
 }
 
 .sidebar {
   width: 64px;
   flex-shrink: 0;
-  background: #08080d;
-  border-right: 1px solid var(--border);
+  background: var(--ll-color-surface-raised);
+  border-right: 1px solid var(--ll-color-divider);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -142,16 +205,16 @@ function closeMobile() {
   width: 40px;
   height: 40px;
   border-radius: 0.75rem;
-  background: var(--gradient-1);
-  color: white;
+  background: transparent;
   text-decoration: none;
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(124, 58, 237, 0.3);
+  box-shadow: none;
 }
 
 .logo-icon {
-  font-size: 1.5rem;
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.3));
+  width: 1.875rem;
+  height: 1.875rem;
+  object-fit: contain;
 }
 
 .sidebar-close {
@@ -161,7 +224,7 @@ function closeMobile() {
   right: 0.5rem;
   background: transparent;
   border: none;
-  color: var(--text-secondary);
+  color: var(--ll-color-text-muted);
   cursor: pointer;
   padding: 0.25rem;
   border-radius: 0.375rem;
@@ -170,8 +233,8 @@ function closeMobile() {
 }
 
 .sidebar-close:hover {
-  color: var(--text-primary);
-  background: var(--bg-card-hover);
+  color: var(--ll-color-ink);
+  background: var(--ll-color-highlight);
 }
 
 .sidebar-nav {
@@ -179,8 +242,24 @@ function closeMobile() {
   flex-direction: column;
   gap: 0.25rem;
   width: 100%;
+  box-sizing: border-box;
   padding: 0 0.5rem;
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-divider {
+  height: 1px;
+  width: 60%;
+  margin: 0.5rem auto;
+  background: var(--ll-color-divider);
+  flex-shrink: 0;
 }
 
 .nav-item {
@@ -190,33 +269,26 @@ function closeMobile() {
   width: 100%;
   height: 44px;
   border-radius: 0.625rem;
-  color: var(--text-muted);
+  color: var(--ll-color-text-muted);
   text-decoration: none;
   transition: color 0.2s, background 0.2s;
   position: relative;
+  flex-shrink: 0;
 }
 
 .nav-item:hover {
-  color: var(--text-primary);
-  background: var(--bg-card-hover);
+  color: var(--ll-color-ink);
+  background: var(--ll-color-highlight);
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--ll-color-primary);
+  outline-offset: 2px;
 }
 
 .nav-item.active {
-  color: white;
-  background: var(--gradient-card);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: -0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 24px;
-  border-radius: 0 3px 3px 0;
-  background: var(--accent-glow);
+  color: var(--ll-color-primary-depth);
+  background: var(--ll-color-blue-100);
 }
 
 .nav-icon {
@@ -231,33 +303,44 @@ function closeMobile() {
 }
 
 .nav-tooltip {
-  position: absolute;
-  left: calc(100% + 0.75rem);
-  top: 50%;
-  transform: translateY(-50%) translateX(-8px);
-  background: #1a1a28;
-  border: 1px solid var(--border-glow);
-  color: var(--text-primary);
-  padding: 0.35rem 0.75rem;
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 500;
+  position: fixed;
+  z-index: 310;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding-inline: var(--ll-space-4);
+  color: var(--ll-color-ink);
+  background: var(--ll-color-highlight);
+  border-radius: 0.625rem;
+  font: 600 var(--ll-text-xs) / 1 var(--ll-font-control);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   white-space: nowrap;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s, transform 0.2s;
-  z-index: 300;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--ll-shadow-raised);
 }
 
-.nav-item:hover .nav-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
+.nav-tooltip--active {
+  color: var(--ll-color-primary-depth);
+  background: var(--ll-color-blue-100);
+}
+
+.nav-tooltip-enter-active,
+.nav-tooltip-leave-active {
+  transition:
+    opacity var(--ll-duration-normal) var(--ll-ease-out),
+    transform var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.nav-tooltip-enter-from,
+.nav-tooltip-leave-to {
+  opacity: 0;
+  transform: translateX(-0.25rem);
 }
 
 .sidebar-footer {
   padding-top: 0.75rem;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--ll-color-divider);
   width: 100%;
   display: flex;
   justify-content: center;
@@ -267,28 +350,28 @@ function closeMobile() {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--surface);
-  border: 1px solid var(--border-glow);
+  background: var(--ll-color-surface-muted);
+  border: 1px solid var(--ll-color-border-strong);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--ll-color-text-muted);
   cursor: pointer;
   transition: border-color 0.2s, color 0.2s;
 }
 
 .user-avatar:hover {
-  border-color: var(--accent);
-  color: var(--text-primary);
+  border-color: var(--ll-color-primary);
+  color: var(--ll-color-ink);
 }
 
 .sidebar-backdrop {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(41, 47, 51, 0.34);
   z-index: 150;
   opacity: 0;
   transition: opacity 0.25s;
@@ -313,10 +396,10 @@ function closeMobile() {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1.25rem;
-  background: rgba(10, 10, 15, 0.9);
+  background: rgba(250, 251, 252, 0.9);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--ll-color-divider);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -327,28 +410,28 @@ function closeMobile() {
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid var(--ll-color-divider);
   border-radius: 0.5rem;
-  color: var(--text-primary);
+  color: var(--ll-color-ink);
   cursor: pointer;
   padding: 0.4rem;
   transition: border-color 0.2s, background 0.2s;
 }
 
 .menu-toggle:hover {
-  border-color: var(--accent);
-  background: var(--bg-card-hover);
+  border-color: var(--ll-color-primary);
+  background: var(--ll-color-highlight);
 }
 
 .topbar-title {
   font-weight: 600;
   font-size: 1rem;
-  color: var(--text-primary);
+  color: var(--ll-color-ink);
 }
 
 .app-content {
   flex: 1;
-  padding: 2rem;
+  padding: 0;
   position: relative;
   z-index: 2;
 }
@@ -374,8 +457,5 @@ function closeMobile() {
     display: flex;
   }
 
-  .app-content {
-    padding: 1.25rem 1rem;
-  }
 }
 </style>

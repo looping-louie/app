@@ -1,0 +1,114 @@
+:root {
+  /* Looping Louie — light design-system foundations */
+  /* Small Airplane · Twitter / X Twemoji 2.0 */
+  --ll-color-metal-025: #fdfefe;
+  --ll-color-metal-050: #fafbfc;
+  --ll-color-metal-100: #f5f7f8;
+  --ll-color-metal-200: #eef2f4;
+  --ll-color-metal-400: #dce3e7;
+  --ll-color-metal-500: #ccd6dd;
+  --ll-color-metal-700: #66757f;
+  --ll-color-metal-950: #292f33;
+  --ll-color-blue-800: #0b2d46;
+  --ll-color-blue-700: #226699;
+  --ll-color-blue-600: #2b75aa;
+  --ll-color-blue-300: #9bc7e3;
+  --ll-color-blue-200: #c0dff0;
+  --ll-color-blue-100: #e8f1f7;
+  --ll-color-red-800: #861122;
+  --ll-color-red-700: #be1931;
+  --ll-color-red-500: #ea596e;
+  --ll-color-red-100: #fbe9ec;
+
+  /* Neutral surface and text hierarchy */
+  --ll-color-section: var(--ll-color-metal-025);
+  --ll-color-card: var(--ll-color-metal-100);
+  --ll-color-highlight: var(--ll-color-metal-200);
+  --ll-color-divider: var(--ll-color-metal-400);
+
+  /* Semantic color roles */
+  --ll-color-canvas: var(--ll-color-metal-050);
+  --ll-color-surface-raised: var(--ll-color-metal-025);
+  --ll-color-surface-muted: var(--ll-color-metal-200);
+  --ll-color-ink: var(--ll-color-metal-950);
+  --ll-color-text: var(--ll-color-metal-950);
+  --ll-color-text-muted: var(--ll-color-metal-700);
+  --ll-color-text-faint: var(--ll-color-metal-700);
+  --ll-color-border: var(--ll-color-divider);
+  --ll-color-border-strong: var(--ll-color-metal-500);
+  --ll-color-primary: var(--ll-color-blue-700);
+  --ll-color-primary-hover: var(--ll-color-blue-600);
+  --ll-color-primary-highlight: var(--ll-color-blue-300);
+  --ll-color-primary-highlight-hover: var(--ll-color-blue-200);
+  --ll-color-primary-depth: var(--ll-color-blue-800);
+  --ll-color-primary-depth-hover: #103a57;
+  --ll-color-brand: var(--ll-color-red-700);
+  --ll-color-brand-bright: var(--ll-color-red-500);
+  --ll-color-brand-ink: var(--ll-color-red-800);
+  --ll-color-status-enabled: var(--ll-color-blue-700);
+  --ll-color-status-disabled: var(--ll-color-red-500);
+  --ll-color-signal: var(--ll-color-blue-700);
+  --ll-color-signal-ink: var(--ll-color-blue-800);
+
+  /* Mastra-inspired, free and self-hosted */
+  --ll-font-sans: "Instrument Sans Variable", "Segoe UI", sans-serif;
+  --ll-font-display: var(--ll-font-sans);
+  --ll-font-control: var(--ll-font-sans);
+  --ll-font-mono: "Commit Mono", "SFMono-Regular", Consolas, monospace;
+  --font-mono: var(--ll-font-mono);
+
+  --ll-text-xs: 0.75rem;
+  --ll-text-sm: 0.875rem;
+  --ll-text-md: 1rem;
+  --ll-text-lg: 1.125rem;
+  --ll-text-xl: clamp(2.35rem, 5vw, 4.75rem);
+
+  --ll-space-1: 0.25rem;
+  --ll-space-2: 0.5rem;
+  --ll-space-3: 0.75rem;
+  --ll-space-4: 1rem;
+  --ll-space-5: 1.25rem;
+  --ll-space-6: 1.5rem;
+  --ll-space-8: 2rem;
+  --ll-space-10: 2.5rem;
+  --ll-space-12: 3rem;
+  --ll-space-16: 4rem;
+  --ll-space-20: 5rem;
+
+  --ll-radius-sm: 0.625rem;
+  --ll-radius-md: 0.875rem;
+  --ll-radius-lg: 1.5rem;
+  --ll-radius-structural: 1.875rem;
+  --ll-radius-pill: 999px;
+
+  --ll-shadow-focus: 0 0 0 3px rgba(34, 102, 153, 0.2);
+  --ll-shadow-raised: 0 16px 45px rgba(41, 47, 51, 0.09);
+
+  --ll-duration-normal: 180ms;
+  --ll-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 40rem) {
+  :root {
+    --ll-radius-structural: 2.5rem;
+  }
+}
+
+html {
+  font-family: var(--ll-font-sans);
+  font-synthesis: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--ll-font-mono);
+}

@@ -1,10 +1,10 @@
 <template>
-  <div class="ideas-page">
-    <h1>Ideas</h1>
-    <p class="page-description">Refina tus ideas de desarrollo con un modelo y convierte el resultado en especificaciones Markdown.</p>
+  <div class="observability-page">
+    <h1>Observability</h1>
+    <p class="page-description">Métricas, trazas y estado de los loops en ejecución.</p>
     <div class="empty-state">
-      <span class="empty-icon">💡</span>
-      <p>No hay ideas registradas.</p>
+      <span class="empty-icon">📈</span>
+      <p>No hay datos de observabilidad disponibles.</p>
     </div>
   </div>
 </template>
@@ -15,16 +15,16 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Ideas · Looping Louie'
+  title: 'Observability · Looping Louie'
 })
 </script>
 
 <style scoped>
-.ideas-page {
+.observability-page {
   max-width: 900px;
 }
 
-.ideas-page h1 {
+.observability-page h1 {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);

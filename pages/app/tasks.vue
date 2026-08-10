@@ -1,10 +1,10 @@
 <template>
-  <div class="loops-page">
-    <h1>Loops</h1>
-    <p class="page-description">Combina un proyecto, una tarea y las habilidades de los revisores para configurar y ejecutar un flujo de desarrollo iterativo.</p>
+  <div class="tasks-page">
+    <h1>Tasks</h1>
+    <p class="page-description">Una idea existente se discute con varios agentes y se convierte en un plan estructurado en tasks.json.</p>
     <div class="empty-state">
-      <span class="empty-icon">⟳</span>
-      <p>No hay loops ejecutándose.</p>
+      <span class="empty-icon">✅</span>
+      <p>No hay tareas pendientes.</p>
     </div>
   </div>
 </template>
@@ -15,16 +15,16 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Loops · Looping Louie'
+  title: 'Tasks · Looping Louie'
 })
 </script>
 
 <style scoped>
-.loops-page {
+.tasks-page {
   max-width: 900px;
 }
 
-.loops-page h1 {
+.tasks-page h1 {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);

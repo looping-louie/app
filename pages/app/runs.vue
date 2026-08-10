@@ -1,10 +1,10 @@
 <template>
-  <div class="proyectos-page">
-    <h1>Proyectos</h1>
-    <p class="page-description">Conecta Looping Louie con tus repositorios de GitHub o Bitbucket y sus equipos para orquestar loops directamente sobre tu código.</p>
+  <div class="runs-page">
+    <h1>Runs</h1>
+    <p class="page-description">Vista general de las ejecuciones de Looping Louie.</p>
     <div class="empty-state">
-      <span class="empty-icon">📁</span>
-      <p>No hay proyectos todavía.</p>
+      <span class="empty-icon">▶</span>
+      <p>No hay ejecuciones recientes.</p>
     </div>
   </div>
 </template>
@@ -15,16 +15,16 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Proyectos · Looping Louie'
+  title: 'Runs · Looping Louie'
 })
 </script>
 
 <style scoped>
-.proyectos-page {
+.runs-page {
   max-width: 900px;
 }
 
-.proyectos-page h1 {
+.runs-page h1 {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);

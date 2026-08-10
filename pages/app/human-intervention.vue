@@ -1,10 +1,10 @@
 <template>
-  <div class="tareas-page">
-    <h1>Tareas</h1>
-    <p class="page-description">Una idea existente se discute con varios agentes y se convierte en un plan estructurado en tasks.json.</p>
+  <div class="human-review-page">
+    <h1>Human review</h1>
+    <p class="page-description">Revisa y aprueba los resultados que requieren intervención manual.</p>
     <div class="empty-state">
-      <span class="empty-icon">✅</span>
-      <p>No hay tareas pendientes.</p>
+      <span class="empty-icon">👤</span>
+      <p>No hay resultados pendientes de revisión humana.</p>
     </div>
   </div>
 </template>
@@ -15,16 +15,16 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Tareas · Looping Louie'
+  title: 'Human review · Looping Louie'
 })
 </script>
 
 <style scoped>
-.tareas-page {
+.human-review-page {
   max-width: 900px;
 }
 
-.tareas-page h1 {
+.human-review-page h1 {
   font-size: 2rem;
   font-weight: 700;
   color: var(--text-primary);
