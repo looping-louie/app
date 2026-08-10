@@ -146,7 +146,7 @@ onBeforeUnmount(() => {
 }
 
 .ui-modal__panel {
-  --ui-modal-radius: calc(var(--ll-radius-structural) + 0.5rem);
+  --ui-modal-radius: var(--ll-radius-modal);
   --ui-modal-close-size: 2rem;
   --ui-modal-close-radius: 1rem;
   --ui-modal-close-inset: calc(var(--ui-modal-radius) - var(--ui-modal-close-radius) - 1px);
