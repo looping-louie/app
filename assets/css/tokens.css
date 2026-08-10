@@ -79,6 +79,7 @@
   --ll-radius-md: 0.875rem;
   --ll-radius-lg: 1.5rem;
   --ll-radius-structural: 1.875rem;
+  --ll-radius-modal: calc(var(--ll-radius-structural) + 0.5rem);
   --ll-radius-pill: 999px;
 
   --ll-shadow-focus: 0 0 0 3px rgba(34, 102, 153, 0.2);

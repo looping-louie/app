@@ -6,6 +6,7 @@ import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
+import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiGridList from '~/components/ui/GridList.vue'
@@ -43,6 +44,8 @@ const interfaceView = ref('agents')
 const automaticRetries = ref(true)
 const humanReview = ref(false)
 const sampleModalOpen = ref(false)
+const sampleCommandPaletteOpen = ref(false)
+const sampleCommandPaletteSelection = ref('No command selected')
 const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
 const buttonDropdownSelection = ref('No action selected')
@@ -109,6 +112,52 @@ const buttonDropdownOptions = [
   },
 ]
 
+const commandPaletteItems = [
+  {
+    id: 'browse-loops',
+    label: 'Browse loops',
+    description: 'Open the catalog of iterative agent workflows.',
+    group: 'Navigate',
+    keywords: ['workflows', 'automation'],
+    iconPath: buttonDropdownOptions[0]!.iconPath,
+    shortcut: 'G L',
+  },
+  {
+    id: 'browse-agents',
+    label: 'Browse agents',
+    description: 'Review the personas available to your teams.',
+    group: 'Navigate',
+    keywords: ['personas', 'team'],
+    iconPath: buttonDropdownOptions[1]!.iconPath,
+    shortcut: 'G A',
+  },
+  {
+    id: 'browse-pipelines',
+    label: 'Browse pipelines',
+    description: 'Inspect ordered workflows and human checkpoints.',
+    group: 'Navigate',
+    keywords: ['steps', 'gates'],
+    iconPath: buttonDropdownOptions[2]!.iconPath,
+    shortcut: 'G P',
+  },
+  {
+    id: 'create-loop',
+    label: 'Create new loop',
+    description: 'Start a guided setup for a new agent workflow.',
+    group: 'Create',
+    keywords: ['new', 'wizard'],
+    iconPath: buttonDropdownOptions[0]!.iconPath,
+  },
+  {
+    id: 'create-pipeline',
+    label: 'Create new pipeline',
+    description: 'Compose loops and gates into an ordered pipeline.',
+    group: 'Create',
+    keywords: ['new', 'workflow'],
+    iconPath: buttonDropdownOptions[2]!.iconPath,
+  },
+]
+
 const designSystemNavItems = [
   { id: 'foundations', label: '01 · Foundations', level: 1 },
   { id: 'colors', label: 'Color', level: 2 },
@@ -118,6 +167,7 @@ const designSystemNavItems = [
   { id: 'toggle', label: 'Toggle', level: 2 },
   { id: 'form-flow', label: 'Form flow', level: 2 },
   { id: 'modal', label: 'Modal', level: 2 },
+  { id: 'command-palette', label: 'Command palette', level: 2 },
   { id: 'pill', label: 'Pill', level: 2 },
   { id: 'copy-command', label: 'Copyable command', level: 2 },
   { id: 'segmented-control', label: 'Segmented control', level: 2 },
@@ -898,6 +948,58 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>Accessibility</span>
                 <p>Traps focus while open, restores it on close, supports Escape, locks page scroll, and exposes native dialog semantics.</p>
+              </footer>
+            </article>
+
+            <article id="command-palette" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Command palette</h3>
+                    <code>UiCommandPalette</code>
+                  </div>
+                  <p>Fast keyboard navigation and command discovery with rich, grouped results.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage">
+                <div class="ds-stage__row">
+                  <UiButton variant="stroke" @click="sampleCommandPaletteOpen = true">
+                    Open command palette
+                    <span class="ds-command-shortcut">Ctrl/⌘ K</span>
+                  </UiButton>
+                  <code>{{ sampleCommandPaletteSelection }}</code>
+                </div>
+              </div>
+
+              <UiCommandPalette
+                v-model:open="sampleCommandPaletteOpen"
+                :items="commandPaletteItems"
+                placeholder="Search Looping Louie…"
+                @select="sampleCommandPaletteSelection = $event.label"
+              />
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Content</span>
+                    <code>items · group · description · iconPath · imageSrc</code>
+                  </div>
+                  <p class="ds-property__copy">Results can combine Phosphor icons or circular imagery with descriptions, groups, keywords, and optional shortcuts.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Interaction</span>
+                    <code>v-model:open · v-model:query · @select</code>
+                  </div>
+                  <p class="ds-property__copy">Supports Ctrl/⌘ K, arrow navigation, Enter selection, Escape, pointer selection, focus restoration, and an accessible empty state.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Geometry</span>
+                <p>Uses the shared modal radius token so both overlays keep the same responsive silhouette.</p>
               </footer>
             </article>
 
@@ -3931,6 +4033,12 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--ll-color-ink);
   font-weight: 650;
+}
+
+.ds-command-shortcut {
+  margin-left: var(--ll-space-2);
+  font: 600 0.6875rem / 1 var(--ll-font-mono);
+  opacity: 0.62;
 }
 
 @media (min-width: 40rem) {
