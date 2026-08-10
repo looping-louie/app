@@ -1,1250 +1,982 @@
-<template>
-  <div class="pipeline-new-page">
-    <div class="page-header">
-      <NuxtLink to="/app/pipelines" class="back-link">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M12.78 5.22a.75.75 0 0 0-1.06 0L6.47 10.47a.75.75 0 0 0 0 1.06l5.25 5.25a.75.75 0 1 0 1.06-1.06L8.06 11l4.72-4.72a.75.75 0 0 0 0-1.06Z"/></svg>
-        Volver a Pipelines
-      </NuxtLink>
-      <h1>Nuevo pipeline</h1>
-      <p class="page-description">Describe tu pipeline y configura un equipo de agentes para refinarlo antes de convertirlo en una especificación.</p>
-    </div>
+<script setup lang="ts">
+import PipelineLoopSummary from '~/components/pipelines/PipelineLoopSummary.vue'
+import PipelineLoopCard from '~/components/pipelines/PipelineLoopCard.vue'
+import PipelineHumanGateCard from '~/components/pipelines/PipelineHumanGateCard.vue'
+import PipelineConnector from '~/components/pipelines/PipelineConnector.vue'
+import PipelineOutcomeRoute from '~/components/pipelines/PipelineOutcomeRoute.vue'
+import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
+import UiButton from '~/components/ui/Button.vue'
+import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
+import UiCommandPalette from '~/components/ui/CommandPalette.vue'
+import UiContainer from '~/components/ui/Container.vue'
+import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import UiModal from '~/components/ui/Modal.vue'
+import UiSectionStage from '~/components/ui/SectionStage.vue'
 
-    <div class="wizard-shell">
-      <div
-        class="progress-indicator"
-        role="group"
-        aria-label="Progreso del asistente"
-      >
-        <div class="progress-track">
-          <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
-        </div>
-        <div class="progress-meta">
-          <span class="progress-label">Paso {{ currentStep + 1 }} de {{ steps.length }}</span>
-          <span class="progress-status">{{ progressStatus }}</span>
-        </div>
-      </div>
+interface LoopAgent {
+  persona_id: string
+  model_id: string
+  role: string
+}
 
-      <form class="wizard-form" @submit.prevent="handleSubmit">
-        <!-- Step 0: Title -->
-        <section
-          v-show="currentStep === 0"
-          class="form-section"
-          aria-labelledby="step-0-title"
-        >
-          <div class="section-header">
-            <h2 id="step-0-title" class="section-title">Your prompt</h2>
-            <p class="section-helper">Describe el pipeline que quieres discutir. Cuanto más contexto aportes —objetivos, restricciones y público objetivo— mejor podrán los agentes entenderlo y refinarlo.</p>
-          </div>
+interface LoopStopConditions {
+  max_iterations?: number | null
+  max_tokens?: number | null
+  timeout_seconds?: number | null
+}
 
-          <div class="form-group">
-            <label for="pipeline-title" class="form-label">Título</label>
-            <input
-              id="pipeline-title"
-              ref="titleInput"
-              v-model="title"
-              type="text"
-              class="form-input"
-              :class="{ 'input-error': errors.title }"
-              :aria-invalid="errors.title ? 'true' : null"
-              :aria-describedby="errors.title ? 'pipeline-title-error' : null"
-              placeholder="Ej: Sistema de feedback para revisiones de código"
-              @input="clearError('title')"
-            />
-            <p
-              v-if="errors.title"
-              id="pipeline-title-error"
-              class="field-error"
-              role="alert"
-            >
-              {{ errors.title }}
-            </p>
-          </div>
+interface LoopSummary {
+  id: string
+  title: string
+  description: string
+  flow: string | null
+  status: string
+  agents: LoopAgent[]
+  stop_conditions: LoopStopConditions | null
+}
 
-          <div class="form-group">
-            <label for="pipeline-prompt" class="form-label">Prompt</label>
-            <textarea
-              id="pipeline-prompt"
-              ref="promptInput"
-              v-model="prompt"
-              class="form-textarea"
-              :class="{ 'input-error': errors.prompt }"
-              :aria-invalid="errors.prompt ? 'true' : null"
-              :aria-describedby="errors.prompt ? 'pipeline-prompt-error' : null"
-              rows="8"
-              placeholder="Describe tu pipeline en detalle: qué problema resuelve, qué debe incluir, qué restricciones tienes..."
-              @keydown.meta.enter.prevent="goNext"
-              @keydown.ctrl.enter.prevent="goNext"
-              @input="clearError('prompt')"
-            ></textarea>
-            <p
-              v-if="errors.prompt"
-              id="pipeline-prompt-error"
-              class="field-error"
-              role="alert"
-            >
-              {{ errors.prompt }}
-            </p>
-            <p v-else class="field-hint">Pulsa <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> para continuar.</p>
-          </div>
-        </section>
+interface LoopListResponse {
+  items: LoopSummary[]
+  total: number
+}
 
-        <!-- Step 1: Agent team -->
-        <section
-          v-show="currentStep === 1"
-          class="form-section"
-          aria-labelledby="step-1-title"
-        >
-          <div class="section-header">
-            <h2 id="step-1-title" class="section-title">Build your agent team</h2>
-            <p class="section-helper">Selecciona los agentes que discutirán el pipeline. Cada uno aportará una perspectiva distinta — crítica, técnica, de producto — y juntos refinarán el resultado antes de convertirlo en una especificación.</p>
-          </div>
+interface CommandPaletteItem {
+  id: string
+  label: string
+  group?: string
+  keywords?: string[]
+  description?: string
+  iconPath?: string
+}
 
-          <div class="agent-team-summary" aria-live="polite">
-            <span class="agent-team-count">{{ selectedAgents.length }} seleccionado{{ selectedAgents.length === 1 ? '' : 's' }}</span>
-            <button
-              v-if="selectedAgents.length > 0"
-              type="button"
-              class="agent-team-clear"
-              @click="clearAgents"
-            >
-              Limpiar selección
-            </button>
-          </div>
+type HumanGateKind = 'human-review' | 'four-eye-review' | 'multiple-choice-quiz'
 
-          <fieldset class="agent-team-fieldset">
-            <legend class="agent-team-legend">Agentes disponibles</legend>
-            <div class="agent-team-grid">
-              <label
-                v-for="agent in availableAgents"
-                :key="agent.name"
-                class="agent-team-card"
-                :class="{ selected: selectedAgents.includes(agent.name) }"
-              >
-                <input
-                  type="checkbox"
-                  class="agent-team-checkbox"
-                  :checked="selectedAgents.includes(agent.name)"
-                  :aria-label="agent.name"
-                  @change="toggleAgent(agent.name)"
-                />
-                <span class="agent-team-illustration" aria-hidden="true">
-                  <span class="illustration-icon" v-html="agent.icon"></span>
-                </span>
-                <span class="agent-team-body">
-                  <span class="agent-team-name">{{ agent.name }}</span>
-                  <span class="agent-team-question">{{ agent.question }}</span>
-                </span>
-                <span class="agent-team-check" aria-hidden="true">
-                  <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor"><path d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.5 7.6a1 1 0 0 1-1.42.006l-3.5-3.5a1 1 0 1 1 1.414-1.414l2.793 2.793 6.793-6.893a1 1 0 0 1 1.414-.006Z"/></svg>
-                </span>
-              </label>
-            </div>
-          </fieldset>
+interface PipelineLoopActivity {
+  instanceId: string
+  type: 'loop'
+  loopId: string
+}
 
-          <p
-            v-if="errors.agents"
-            class="field-error"
-            role="alert"
-          >
-            {{ errors.agents }}
-          </p>
-        </section>
+interface PipelineHumanGateActivity {
+  instanceId: string
+  type: 'human-gate'
+  gate: HumanGateKind
+  teamMembers?: Array<'any-person' | null>
+  passingScore?: number | null
+}
 
-        <!-- Step 2: Max iterations -->
-        <section
-          v-show="currentStep === 2"
-          class="form-section"
-          aria-labelledby="step-2-title"
-        >
-          <div class="section-header">
-            <h2 id="step-2-title" class="section-title">Maximum iterations</h2>
-            <p class="section-helper">Define cuántas veces puede el equipo refinar el pipeline antes de entregar el resultado. Más iteraciones permiten mayor calidad, pero consumen más tokens.</p>
-          </div>
+type PipelineActivity = PipelineLoopActivity | PipelineHumanGateActivity
 
-          <div
-            ref="keypadRef"
-            class="keypad"
-            role="radiogroup"
-            aria-labelledby="step-2-title"
-            tabindex="0"
-            @keydown="onKeypadKeydown"
-          >
-            <button
-              v-for="value in keypadValues"
-              :key="value"
-              type="button"
-              class="keypad-key"
-              :class="{ selected: maxIterations === value }"
-              role="radio"
-              :aria-checked="maxIterations === value ? 'true' : 'false'"
-              :aria-label="`${value} iteraciones`"
-              @click="selectIterations(value)"
-            >
-              <span class="keypad-number">{{ value }}</span>
-            </button>
-          </div>
+const humanGates: Array<{
+  id: HumanGateKind
+  title: string
+  description: string
+  iconPath: string
+}> = [
+  {
+    id: 'human-review',
+    title: 'Human review',
+    description: 'Pause for one person to inspect and approve the result.',
+    iconPath: 'M144,157.68a68,68,0,1,0-71.9,0c-20.65,6.76-39.23,19.39-54.17,37.17a8,8,0,0,0,12.25,10.3C50.25,181.19,77.91,168,108,168s57.75,13.19,77.87,37.15a8,8,0,0,0,12.25-10.3C183.18,177.07,164.6,164.44,144,157.68ZM56,100a52,52,0,1,1,52,52A52.06,52.06,0,0,1,56,100Zm197.66,33.66-32,32a8,8,0,0,1-11.32,0l-16-16a8,8,0,0,1,11.32-11.32L216,148.69l26.34-26.35a8,8,0,0,1,11.32,11.32Z',
+  },
+  {
+    id: 'four-eye-review',
+    title: '4-eye review',
+    description: 'Require a second pair of eyes before the pipeline continues.',
+    iconPath: 'M176,32c-20.61,0-38.28,18.16-48,45.85C118.28,50.16,100.61,32,80,32c-31.4,0-56,42.17-56,96s24.6,96,56,96c20.61,0,38.28-18.16,48-45.85,9.72,27.69,27.39,45.85,48,45.85,31.4,0,56-42.17,56-96S207.4,32,176,32ZM106.92,186.39C99.43,200.12,89.62,208,80,208s-19.43-7.88-26.92-21.61a104.81,104.81,0,0,1-10.24-29.23,32,32,0,1,0,0-58.32A104.81,104.81,0,0,1,53.08,69.61C60.57,55.88,70.38,48,80,48s19.43,7.88,26.92,21.61C115.35,85.07,120,105.81,120,128S115.35,170.93,106.92,186.39ZM40,128a16,16,0,1,1,16,16A16,16,0,0,1,40,128Zm162.92,58.39C195.43,200.12,185.62,208,176,208s-19.43-7.88-26.92-21.61a104.81,104.81,0,0,1-10.24-29.23,32,32,0,1,0,0-58.32,104.81,104.81,0,0,1,10.24-29.23C156.57,55.88,166.38,48,176,48s19.43,7.88,26.92,21.61C211.35,85.07,216,105.81,216,128S211.35,170.93,202.92,186.39ZM136,128a16,16,0,1,1,16,16A16,16,0,0,1,136,128Z',
+  },
+  {
+    id: 'multiple-choice-quiz',
+    title: 'Multiple-choice quiz',
+    description: 'Ask a structured question and continue with the chosen answer.',
+    iconPath: 'M216,40H40A16,16,0,0,0,24,56V216a8,8,0,0,0,11.58,7.16L64,208.94l28.42,14.22a8,8,0,0,0,7.16,0L128,208.94l28.42,14.22a8,8,0,0,0,7.16,0L192,208.94l28.42,14.22A8,8,0,0,0,232,216V56A16,16,0,0,0,216,40Zm0,163.06-20.42-10.22a8,8,0,0,0-7.16,0L160,207.06l-28.42-14.22a8,8,0,0,0-7.16,0L96,207.06,67.58,192.84a8,8,0,0,0-7.16,0L40,203.06V56H216ZM60.42,167.16a8,8,0,0,0,10.74-3.58L76.94,152h38.12l5.78,11.58a8,8,0,1,0,14.32-7.16l-32-64a8,8,0,0,0-14.32,0l-32,64A8,8,0,0,0,60.42,167.16ZM96,113.89,107.06,136H84.94ZM136,128a8,8,0,0,1,8-8h16V104a8,8,0,0,1,16,0v16h16a8,8,0,0,1,0,16H176v16a8,8,0,0,1-16,0V136H144A8,8,0,0,1,136,128Z',
+  },
+]
 
-          <p class="field-hint">Usa las teclas <kbd>1</kbd>–<kbd>9</kbd>, las flechas o el ratón para elegir. El valor por defecto es 3.</p>
-        </section>
-
-        <!-- Step 3: Model -->
-        <section
-          v-show="currentStep === 3"
-          class="form-section"
-          aria-labelledby="step-3-title"
-        >
-          <div class="section-header">
-            <h2 id="step-3-title" class="section-title">Choose your model</h2>
-            <p class="section-helper">Selecciona el modelo generador que producirá la primera versión de la especificación. Los revisores evaluarán su salida en cada iteración.</p>
-          </div>
-
-          <div class="model-list" role="radiogroup" aria-label="Selecciona un modelo">
-            <button
-              v-for="model in availableModels"
-              :key="model.name"
-              type="button"
-              class="model-option"
-              :class="{ selected: selectedModel === model.name }"
-              role="radio"
-              :aria-checked="selectedModel === model.name"
-              @click="selectedModel = model.name"
-              @keydown.enter.prevent="selectedModel = model.name"
-            >
-              <div class="model-option-radio" aria-hidden="true">
-                <span class="radio-dot" :class="{ checked: selectedModel === model.name }"></span>
-              </div>
-              <div class="model-option-body">
-                <div class="model-option-header">
-                  <span class="model-option-name">{{ model.name }}</span>
-                  <span class="model-option-price">${{ model.input.toFixed(2) }}/1M in</span>
-                </div>
-                <p class="model-option-detail">Salida: ${{ model.output.toFixed(2) }}/1M tokens</p>
-              </div>
-            </button>
-          </div>
-        </section>
-
-        <!-- Step 4: Summary -->
-        <section
-          v-show="currentStep === 4"
-          class="form-section"
-          aria-labelledby="step-4-title"
-        >
-          <div class="section-header">
-            <h2 id="step-4-title" class="section-title">Review and run</h2>
-            <p class="section-helper">Revisa la configuración del equipo antes de ejecutarlo. Puedes volver atrás para ajustar cualquier respuesta.</p>
-          </div>
-
-          <dl class="summary-list">
-            <div class="summary-row">
-              <dt class="summary-label">Título</dt>
-              <dd class="summary-value">{{ title || '—' }}</dd>
-            </div>
-            <div class="summary-row">
-              <dt class="summary-label">Prompt</dt>
-              <dd class="summary-value summary-prompt">{{ prompt || '—' }}</dd>
-            </div>
-            <div class="summary-row">
-              <dt class="summary-label">Equipo</dt>
-              <dd class="summary-value">
-                <span v-if="selectedAgents.length" class="summary-chips">
-                  <span v-for="agent in selectedAgents" :key="agent" class="summary-chip">{{ agent }}</span>
-                </span>
-                <span v-else>—</span>
-              </dd>
-            </div>
-            <div class="summary-row">
-              <dt class="summary-label">Iteraciones máximas</dt>
-              <dd class="summary-value">{{ maxIterations }}</dd>
-            </div>
-            <div class="summary-row">
-              <dt class="summary-label">Modelo</dt>
-              <dd class="summary-value">{{ selectedModel || '—' }}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <div class="form-actions">
-          <button
-            v-if="currentStep > 0"
-            type="button"
-            class="btn-secondary"
-            @click="goBack"
-          >
-            Atrás
-          </button>
-
-          <span class="actions-spacer"></span>
-
-          <NuxtLink to="/app/pipelines" class="btn-secondary">Cancelar</NuxtLink>
-
-          <button
-            v-if="currentStep < steps.length - 1"
-            type="button"
-            class="btn-primary"
-            :disabled="!canAdvance"
-            @click="goNext"
-          >
-            Guardar y continuar
-          </button>
-          <button
-            v-else
-            type="submit"
-            class="btn-primary"
-            :disabled="!canSubmit"
-          >
-            Run pipeline
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</template>
-
-<script setup>
-definePageMeta({
-  layout: 'app'
-})
-
-useHead({
-  title: 'Nuevo pipeline · Looping Louie'
-})
-
+const route = useRoute()
 const router = useRouter()
+const stageRoot = ref<HTMLElement | null>(null)
+const paletteOpen = ref(false)
+const paletteQuery = ref('')
+const paletteKind = ref<'loops' | 'human-gates' | 'users'>('loops')
+const activities = ref<PipelineActivity[]>([])
+const memberSelectionTarget = ref<{ instanceId: string, slotIndex: number } | null>(null)
+const addMenuOpen = ref(false)
+const draggingActivityId = ref<string | null>(null)
+const dropTargetActivityId = ref<string | null>(null)
+const highlightedOutcome = ref<'success' | 'failure' | null>(null)
+const exitModalOpen = ref(false)
+const exitActionPending = ref(false)
+const allowRouteLeave = ref(false)
+const pendingDestination = ref('/app/pipelines')
+const localKey = 'looping-louie:pipeline-builder-draft:v1'
+let stageResizeObserver: ResizeObserver | undefined
+let touchHoldTimer: ReturnType<typeof setTimeout> | undefined
+let touchPointerId: number | null = null
 
-const steps = [
-  { key: 'prompt', label: 'Prompt' },
-  { key: 'agent-team', label: 'Equipo' },
-  { key: 'iterations', label: 'Iteraciones' },
-  { key: 'model', label: 'Modelo' },
-  { key: 'summary', label: 'Resumen' }
-]
-
-const currentStep = ref(0)
-
-const title = ref('')
-const prompt = ref('')
-const selectedAgents = ref([])
-const maxIterations = ref(3)
-const selectedModel = ref('')
-
-const errors = reactive({
-  title: '',
-  prompt: '',
-  agents: ''
-})
-
-const titleInput = ref(null)
-const promptInput = ref(null)
-const iterationsInput = ref(null)
-const keypadRef = ref(null)
-
-const keypadValues = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-
-const availableAgents = [
-  {
-    name: 'Product Manager',
-    question: '¿Qué problema resuelve?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="9" width="36" height="30" rx="3"/><path d="M14 9v30M34 9v30M6 18h36M6 30h36"/></svg>'
-  },
-  {
-    name: 'Founder',
-    question: '¿Hace crecer la empresa?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 40h32M14 40V20M24 40V12M34 40V24M14 20l10-8 10 16"/></svg>'
-  },
-  {
-    name: 'UX Designer',
-    question: '¿Cómo sería la experiencia?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="36" height="26" rx="3"/><path d="M18 40h12M24 34v6M6 26h36"/></svg>'
-  },
-  {
-    name: 'Tech Lead',
-    question: '¿Cómo se implementaría?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 14L8 24l10 10M30 14l10 10-10 10M26 10l-4 28"/></svg>'
-  },
-  {
-    name: 'Enterprise Customer',
-    question: '¿Lo pagaría?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="14" width="32" height="22" rx="2"/><path d="M8 20h32M14 30h6"/></svg>'
-  },
-  {
-    name: 'Growth',
-    question: '¿Ayuda a vender?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 40V26M18 40V18M28 40V10M38 40V22M8 26l10-8 10 6 10-12"/><path d="M34 12h4v4"/></svg>'
-  },
-  {
-    name: "Devil's Advocate",
-    question: '¿Por qué es un mal pipeline?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="16"/><path d="M16 20h.01M32 20h.01M16 32s3-4 8-4 8 4 8 4"/></svg>'
-  },
-  {
-    name: 'Finance',
-    question: '¿Cuál es el ROI?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="16"/><path d="M24 14v20M18 20h9a3 3 0 0 1 0 6h-6a3 3 0 0 0 0 6h9"/></svg>'
-  },
-  {
-    name: 'Platform Architect',
-    question: '¿Encaja con la visión?',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 8L8 16l16 8 16-8-16-8Z"/><path d="M8 24l16 8 16-8M8 32l16 8 16-8"/></svg>'
-  },
-  {
-    name: 'Editor',
-    question: 'Convierte todo en un markdown limpio.',
-    icon: '<svg width="32" height="32" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h32M8 20h32M8 28h20M8 36h24"/></svg>'
-  }
-]
-
-const availableModels = [
-  { name: 'DeepSeek V4 Pro', input: 1.74, output: 3.48 },
-  { name: 'MiniMax M3', input: 0.30, output: 1.20 },
-  { name: 'Kimi K2.7 Code', input: 0.95, output: 4.00 },
-  { name: 'GLM-5.2', input: 1.40, output: 4.40 },
-  { name: 'LFM2 24B A2B', input: 0.03, output: 0.12 },
-  { name: 'Gemma 4 31B', input: 0.39, output: 0.97 },
-  { name: 'NVIDIA Nemotron 3 Ultra', input: 0.60, output: 3.60 },
-  { name: 'Qwen3.7-Plus', input: 0.32, output: 1.28 },
-  { name: 'Kimi K2.6', input: 1.20, output: 4.50 },
-  { name: 'Qwen3.7-Max', input: 1.25, output: 3.75 },
-  { name: 'gpt-oss-120B', input: 0.15, output: 0.60 },
-  { name: 'Qwen3.5-397B-A17B', input: 0.60, output: 3.60 },
-  { name: 'Qwen3.5 9B', input: 0.17, output: 0.25 },
-  { name: 'Gemma-4-31B-it-Pearl', input: 0.28, output: 0.86 },
-  { name: 'Cogito v2.1 671B', input: 1.25, output: 1.25 },
-  { name: 'RnJ-1 Instruct', input: 0.15, output: 0.15 },
-  { name: 'Llama 3.3 70B', input: 1.04, output: 1.04 },
-  { name: 'Gemma 3n E4B Instruct', input: 0.06, output: 0.12 },
-  { name: 'gpt-oss-20B', input: 0.05, output: 0.20 },
-  { name: 'Qwen3 235B A22B FP8 Throughput', input: 0.20, output: 0.60 },
-  { name: 'MiniMax M2.5', input: 0.30, output: 1.20 },
-  { name: 'GLM-5.1', input: 1.40, output: 4.40 },
-  { name: 'MiniMax M2.7', input: 0.30, output: 1.20 },
-  { name: 'Qwen3.6-Plus', input: 0.50, output: 3.00 },
-  { name: 'Qwen2.5 7B Instruct Turbo', input: 0.30, output: 0.30 },
-  { name: 'Llama 3 8B Instruct Lite', input: 0.14, output: 0.14 },
-  { name: 'Qwen3 235B A22B Instruct 2507 FP8 Throughput', input: 0.20, output: 0.60 }
-]
-
-const progressPercent = computed(() => {
-  return (currentStep.value / (steps.length - 1)) * 100
-})
-
-const progressStatus = computed(() => {
-  if (currentStep.value === steps.length - 1) {
-    return 'Completado'
-  }
-  return `${steps[currentStep.value].label}`
-})
-
-const canAdvance = computed(() => {
-  switch (currentStep.value) {
-    case 0:
-      return title.value.trim() !== '' && prompt.value.trim() !== ''
-    case 1:
-      return selectedAgents.value.length > 0
-    case 2:
-      return maxIterations.value >= 1 && maxIterations.value <= 9
-    case 3:
-      return selectedModel.value !== ''
-    default:
-      return true
-  }
-})
-
-const canSubmit = computed(() =>
-  title.value.trim() !== '' &&
-  prompt.value.trim() !== '' &&
-  selectedAgents.value.length > 0 &&
-  maxIterations.value >= 1 &&
-  maxIterations.value <= 9 &&
-  selectedModel.value !== ''
+const { data, status, error, refresh } = await useAsyncData(
+  'pipeline-builder-loops',
+  () => $fetch<LoopListResponse>('/api/v1/loops?offset=0'),
 )
 
-function clearError(field) {
-  if (errors[field]) {
-    errors[field] = ''
+const loops = computed(() => data.value?.items ?? [])
+const loopById = computed(() => new Map(loops.value.map(loop => [loop.id, loop])))
+const gateById = new Map(humanGates.map(gate => [gate.id, gate]))
+const hasProgress = computed(() => activities.value.length > 0)
+
+const paletteItems = computed<CommandPaletteItem[]>(() => {
+  if (paletteKind.value === 'users') {
+    return [{
+      id: 'any-person',
+      label: 'Any person',
+      description: 'Let any available person complete this review.',
+      group: 'People',
+      keywords: ['anyone', 'reviewer', 'member'],
+      iconPath: 'M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216ZM80,108a12,12,0,1,1,12,12A12,12,0,0,1,80,108Zm96,0a12,12,0,1,1-12-12A12,12,0,0,1,176,108Zm-1.07,48c-10.29,17.79-27.4,28-46.93,28s-36.63-10.2-46.92-28a8,8,0,1,1,13.84-8c7.47,12.91,19.21,20,33.08,20s25.61-7.1,33.07-20a8,8,0,0,1,13.86,8Z',
+    }]
   }
+
+  if (paletteKind.value === 'human-gates') {
+    return humanGates.map(gate => ({
+      id: gate.id,
+      label: gate.title,
+      description: gate.description,
+      group: 'Human gates',
+      iconPath: gate.iconPath,
+      keywords: ['gate', 'approval', 'review'],
+    }))
+  }
+
+  return loops.value.map(loop => ({
+      id: loop.id,
+      label: loop.title,
+      group: 'Available loops',
+      keywords: [
+        loop.flow ?? '',
+        loop.status,
+        ...loop.agents.flatMap(agent => [agent.persona_id, agent.model_id, agent.role]),
+      ],
+  }))
+})
+
+const palettePresentation = computed(() => {
+  if (paletteKind.value === 'users') {
+    return {
+      size: 'default' as const,
+      placeholder: 'Search people…',
+      ariaLabel: 'Choose a team member',
+      emptyTitle: 'No people found',
+      emptyDescription: 'There are no matching people.',
+    }
+  }
+  if (paletteKind.value === 'human-gates') {
+    return {
+      size: 'default' as const,
+      placeholder: 'Choose a human gate…',
+      ariaLabel: 'Add a human gate to your pipeline',
+      emptyTitle: 'No human gates found',
+      emptyDescription: 'There are no matching options.',
+    }
+  }
+  return {
+    size: 'wide' as const,
+    placeholder: 'Search loops…',
+    ariaLabel: 'Add a loop to your pipeline',
+    emptyTitle: 'No loops found',
+    emptyDescription: loops.value.length ? 'Try another title, flow, agent, or model.' : 'There are no matching options.',
+  }
+})
+
+function createInstanceId() {
+  if (import.meta.client && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return `activity-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-function toggleAgent(name) {
-  errors.agents = ''
-  const index = selectedAgents.value.indexOf(name)
-  if (index === -1) {
-    selectedAgents.value.push(name)
+function openLoopPalette() {
+  addMenuOpen.value = false
+  memberSelectionTarget.value = null
+  paletteKind.value = 'loops'
+  paletteQuery.value = ''
+  paletteOpen.value = true
+}
+
+function openHumanGatePalette() {
+  addMenuOpen.value = false
+  memberSelectionTarget.value = null
+  paletteKind.value = 'human-gates'
+  paletteQuery.value = ''
+  paletteOpen.value = true
+}
+
+function openMemberPalette(instanceId: string, slotIndex: number) {
+  memberSelectionTarget.value = { instanceId, slotIndex }
+  paletteKind.value = 'users'
+  paletteQuery.value = ''
+  paletteOpen.value = true
+}
+
+function selectPaletteItem(item: CommandPaletteItem) {
+  if (paletteKind.value === 'users') {
+    const target = memberSelectionTarget.value
+    const activity = target
+      ? activities.value.find(candidate => candidate.instanceId === target.instanceId)
+      : undefined
+    if (!target || item.id !== 'any-person' || activity?.type !== 'human-gate' || activity.gate === 'multiple-choice-quiz') return
+
+    const slotCount = activity.gate === 'four-eye-review' ? 2 : 1
+    const members = Array.from({ length: slotCount }, (_, index) => activity.teamMembers?.[index] ?? null)
+    members[target.slotIndex] = 'any-person'
+    activity.teamMembers = members
+    memberSelectionTarget.value = null
+  } else if (paletteKind.value === 'human-gates') {
+    if (!gateById.has(item.id as HumanGateKind)) return
+    const gate = item.id as HumanGateKind
+    activities.value.push({
+      instanceId: createInstanceId(),
+      type: 'human-gate',
+      gate,
+      ...(gate === 'human-review' ? { teamMembers: [null] } : {}),
+      ...(gate === 'four-eye-review' ? { teamMembers: [null, null] } : {}),
+      ...(gate === 'multiple-choice-quiz' ? { passingScore: null } : {}),
+    })
   } else {
-    selectedAgents.value.splice(index, 1)
+    if (!loopById.value.has(item.id)) return
+    activities.value.push({
+      instanceId: createInstanceId(),
+      type: 'loop',
+      loopId: item.id,
+    })
   }
+  nextTick(measureStage)
 }
 
-function clearAgents() {
-  selectedAgents.value = []
-  errors.agents = ''
+function updatePassingScore(instanceId: string, value: number | null) {
+  const activity = activities.value.find(candidate => candidate.instanceId === instanceId)
+  if (activity?.type !== 'human-gate' || activity.gate !== 'multiple-choice-quiz') return
+  activity.passingScore = value
 }
 
-function selectIterations(value) {
-  maxIterations.value = value
+function removeActivity(instanceId: string) {
+  activities.value = activities.value.filter(activity => activity.instanceId !== instanceId)
+  addMenuOpen.value = false
+  nextTick(measureStage)
 }
 
-function validateStep(step) {
-  if (step === 0) {
-    let valid = true
-    if (title.value.trim() === '') {
-      errors.title = 'El título es obligatorio.'
-      valid = false
-    } else {
-      errors.title = ''
+function previousLoopDepth(index: number) {
+  for (let candidate = index - 1; candidate >= 0; candidate -= 1) {
+    if (activities.value[candidate]?.type === 'loop') return index - candidate
+  }
+  return 0
+}
+
+function failureModeFor(activity: PipelineActivity, index: number) {
+  if (activity.type === 'loop') return 'stop' as const
+  if (activity.gate === 'multiple-choice-quiz') return 'retry' as const
+  return previousLoopDepth(index) ? 'previous' as const : 'stop' as const
+}
+
+function swapActivities(sourceId: string, targetId: string) {
+  if (sourceId === targetId) return
+  const sourceIndex = activities.value.findIndex(activity => activity.instanceId === sourceId)
+  const targetIndex = activities.value.findIndex(activity => activity.instanceId === targetId)
+  if (sourceIndex < 0 || targetIndex < 0) return
+  const reordered = [...activities.value]
+  const source = reordered[sourceIndex]!
+  reordered[sourceIndex] = reordered[targetIndex]!
+  reordered[targetIndex] = source
+  activities.value = reordered
+}
+
+function resetDragState() {
+  if (touchHoldTimer) clearTimeout(touchHoldTimer)
+  touchHoldTimer = undefined
+  touchPointerId = null
+  draggingActivityId.value = null
+  dropTargetActivityId.value = null
+}
+
+function onDragStart(event: DragEvent, instanceId: string) {
+  draggingActivityId.value = instanceId
+  event.dataTransfer?.setData('text/plain', instanceId)
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move'
+}
+
+function onDragOver(event: DragEvent, instanceId: string) {
+  if (!draggingActivityId.value || draggingActivityId.value === instanceId) return
+  event.preventDefault()
+  dropTargetActivityId.value = instanceId
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+}
+
+function onDrop(event: DragEvent, instanceId: string) {
+  event.preventDefault()
+  const sourceId = draggingActivityId.value || event.dataTransfer?.getData('text/plain')
+  if (sourceId) swapActivities(sourceId, instanceId)
+  resetDragState()
+}
+
+function onActivityKeydown(event: KeyboardEvent, instanceId: string) {
+  if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return
+  event.preventDefault()
+  const index = activities.value.findIndex(activity => activity.instanceId === instanceId)
+  const target = event.key === 'ArrowUp' ? index - 1 : index + 1
+  const targetActivity = activities.value[target]
+  if (!targetActivity) return
+  swapActivities(instanceId, targetActivity.instanceId)
+  nextTick(() => document.querySelector<HTMLElement>(`[data-activity-id="${instanceId}"]`)?.focus())
+}
+
+function onActivityPointerDown(event: PointerEvent, instanceId: string) {
+  if (event.pointerType !== 'touch' || (event.target as HTMLElement).closest('button, a, input, textarea, select, [role="button"]')) return
+  touchPointerId = event.pointerId
+  touchHoldTimer = setTimeout(() => {
+    draggingActivityId.value = instanceId
+    navigator.vibrate?.(20)
+  }, 320)
+}
+
+function onActivityPointerMove(event: PointerEvent) {
+  if (touchPointerId !== event.pointerId || !draggingActivityId.value) return
+  event.preventDefault()
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>('[data-activity-id]')
+  const targetId = target?.dataset.activityId
+  dropTargetActivityId.value = targetId && targetId !== draggingActivityId.value ? targetId : null
+}
+
+function onActivityPointerEnd(event: PointerEvent) {
+  if (touchPointerId !== event.pointerId) return
+  if (draggingActivityId.value && dropTargetActivityId.value) {
+    swapActivities(draggingActivityId.value, dropTargetActivityId.value)
+  }
+  resetDragState()
+}
+
+function measureStage() {
+  if (!import.meta.client || !stageRoot.value) return
+  const shell = stageRoot.value.querySelector<HTMLElement>('.ui-section-stage__shell')
+  if (!shell) return
+  const remainingHeight = Math.max(400, window.innerHeight - shell.getBoundingClientRect().top)
+  stageRoot.value.style.setProperty('--pipeline-stage-min-height', `${remainingHeight}px`)
+}
+
+function restoreLocalDraft() {
+  if (!import.meta.client) return
+  const raw = localStorage.getItem(localKey)
+  if (!raw) return
+  try {
+    const draft = JSON.parse(raw) as { activities?: unknown, loopIds?: unknown }
+    if (Array.isArray(draft.activities)) {
+      activities.value = draft.activities.flatMap((candidate): PipelineActivity[] => {
+        if (!candidate || typeof candidate !== 'object') return []
+        const value = candidate as Record<string, unknown>
+        const instanceId = typeof value.instanceId === 'string' ? value.instanceId : createInstanceId()
+        if (value.type === 'loop' && typeof value.loopId === 'string') {
+          return [{ instanceId, type: 'loop', loopId: value.loopId }]
+        }
+        if (value.type === 'human-gate' && typeof value.gate === 'string' && gateById.has(value.gate as HumanGateKind)) {
+          const gate = value.gate as HumanGateKind
+          if (gate === 'multiple-choice-quiz') {
+            const rawScore = typeof value.passingScore === 'number' && Number.isFinite(value.passingScore)
+              ? Math.trunc(value.passingScore)
+              : null
+            return [{
+              instanceId,
+              type: 'human-gate',
+              gate,
+              passingScore: rawScore === null ? null : Math.min(10, Math.max(1, rawScore)),
+            }]
+          }
+
+          const slotCount = gate === 'four-eye-review' ? 2 : 1
+          const savedMembers = Array.isArray(value.teamMembers) ? value.teamMembers : []
+          return [{
+            instanceId,
+            type: 'human-gate',
+            gate,
+            teamMembers: Array.from(
+              { length: slotCount },
+              (_, index) => savedMembers[index] === 'any-person' ? 'any-person' as const : null,
+            ),
+          }]
+        }
+        return []
+      })
+    } else if (Array.isArray(draft.loopIds)) {
+      activities.value = draft.loopIds
+        .filter((id): id is string => typeof id === 'string')
+        .map(loopId => ({ instanceId: createInstanceId(), type: 'loop', loopId }))
     }
-    if (prompt.value.trim() === '') {
-      errors.prompt = 'El prompt es obligatorio.'
-      valid = false
-    } else {
-      errors.prompt = ''
-    }
-    return valid
-  }
-  if (step === 1) {
-    if (selectedAgents.value.length === 0) {
-      errors.agents = 'Selecciona al menos un agente para el equipo.'
-      return false
-    }
-    errors.agents = ''
-  }
-  return true
-}
-
-function focusStepInput() {
-  nextTick(() => {
-    if (currentStep.value === 0 && titleInput.value) {
-      titleInput.value.focus()
-    } else if (currentStep.value === 2 && keypadRef.value) {
-      keypadRef.value.focus()
-    }
-  })
-}
-
-function onKeypadKeydown(event) {
-  const key = event.key
-
-  if (key >= '1' && key <= '9') {
-    event.preventDefault()
-    maxIterations.value = Number(key)
-    return
-  }
-
-  const currentIndex = keypadValues.indexOf(maxIterations.value)
-  let nextIndex = currentIndex
-
-  if (key === 'ArrowRight') {
-    event.preventDefault()
-    nextIndex = currentIndex + 1
-    if (nextIndex > 8) nextIndex = 0
-  } else if (key === 'ArrowLeft') {
-    event.preventDefault()
-    nextIndex = currentIndex - 1
-    if (nextIndex < 0) nextIndex = 8
-  } else if (key === 'ArrowDown') {
-    event.preventDefault()
-    nextIndex = currentIndex + 3
-    if (nextIndex > 8) nextIndex = nextIndex - 9
-  } else if (key === 'ArrowUp') {
-    event.preventDefault()
-    nextIndex = currentIndex - 3
-    if (nextIndex < 0) nextIndex = nextIndex + 9
-  } else if (key === 'Home') {
-    event.preventDefault()
-    nextIndex = 0
-  } else if (key === 'End') {
-    event.preventDefault()
-    nextIndex = 8
-  } else {
-    return
-  }
-
-  maxIterations.value = keypadValues[nextIndex]
-}
-
-function onWindowKeydown(event) {
-  if (currentStep.value !== 2) return
-
-  const target = event.target
-  const tag = target && target.tagName
-  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable) {
-    return
-  }
-
-  const key = event.key
-  if (key >= '1' && key <= '9') {
-    event.preventDefault()
-    maxIterations.value = Number(key)
+  } catch {
+    localStorage.removeItem(localKey)
   }
 }
+
+async function leaveBuilder() {
+  allowRouteLeave.value = true
+  exitModalOpen.value = false
+  await router.push(pendingDestination.value)
+}
+
+async function saveDraftAndLeave() {
+  if (exitActionPending.value) return
+  exitActionPending.value = true
+  try {
+    localStorage.setItem(localKey, JSON.stringify({
+      activities: activities.value,
+      updatedAt: new Date().toISOString(),
+    }))
+    await leaveBuilder()
+  } finally {
+    exitActionPending.value = false
+  }
+}
+
+async function discardDraftAndLeave() {
+  if (exitActionPending.value) return
+  exitActionPending.value = true
+  try {
+    localStorage.removeItem(localKey)
+    await leaveBuilder()
+  } finally {
+    exitActionPending.value = false
+  }
+}
+
+function onBeforeUnload(event: BeforeUnloadEvent) {
+  if (!hasProgress.value || allowRouteLeave.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+onBeforeRouteLeave((to) => {
+  if (allowRouteLeave.value || to.path === route.path || !hasProgress.value) return true
+  pendingDestination.value = to.fullPath
+  exitModalOpen.value = true
+  return false
+})
 
 onMounted(() => {
-  window.addEventListener('keydown', onWindowKeydown)
+  restoreLocalDraft()
+  window.addEventListener('beforeunload', onBeforeUnload)
+  window.addEventListener('resize', measureStage)
+  stageResizeObserver = new ResizeObserver(measureStage)
+  if (stageRoot.value) stageResizeObserver.observe(stageRoot.value)
+  nextTick(measureStage)
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onWindowKeydown)
+  if (touchHoldTimer) clearTimeout(touchHoldTimer)
+  stageResizeObserver?.disconnect()
+  window.removeEventListener('beforeunload', onBeforeUnload)
+  window.removeEventListener('resize', measureStage)
 })
 
-function goNext() {
-  if (!validateStep(currentStep.value)) return
-  if (currentStep.value < steps.length - 1) {
-    currentStep.value++
-    focusStepInput()
-  }
-}
-
-function goBack() {
-  if (currentStep.value > 0) {
-    currentStep.value--
-    focusStepInput()
-  }
-}
-
-function handleSubmit() {
-  if (!canSubmit.value) return
-
-  const pipeline = {
-    id: crypto.randomUUID(),
-    title: title.value.trim(),
-    prompt: prompt.value.trim(),
-    user: 'Tú',
-    agents: [...selectedAgents.value],
-    status: 'pending',
-    messageCount: 0,
-    maxIterations: maxIterations.value,
-    model: selectedModel.value,
-    createdAt: new Date().toISOString()
-  }
-
-  const stored = JSON.parse(
-    localStorage.getItem('looping-louie:pipelines')
-      || localStorage.getItem('looping-louie:ideas')
-      || '[]'
-  )
-  stored.unshift(pipeline)
-  localStorage.setItem('looping-louie:pipelines', JSON.stringify(stored))
-
-  router.push('/app/pipelines')
-}
+definePageMeta({ layout: 'app' })
+useHead({ title: 'Create a pipeline · Looping Louie' })
 </script>
 
+<template>
+  <UiContainer size="wide" class="pipeline-builder">
+    <UiBreadcrumb
+      :items="[
+        { label: 'Pipelines', to: '/app/pipelines' },
+        { label: 'Create new pipeline' },
+      ]"
+      class="pipeline-builder__breadcrumb"
+    />
+
+    <UiHeadingBlock layout="split" size="section" align="start" class="pipeline-builder__heading">
+      <template #title>
+        <h1>Build a new pipeline</h1>
+      </template>
+      <template #description>
+        <p>Connect existing loops into one clear, repeatable workflow.</p>
+      </template>
+    </UiHeadingBlock>
+
+    <div ref="stageRoot" class="pipeline-builder__stage">
+      <UiCollectionGroupTitle title="Your pipeline" heading-as="h2" />
+      <UiSectionStage inverse="bottom">
+        <div v-if="activities.length === 0" class="pipeline-builder__empty">
+          <UiButton :loading="status === 'pending'" @click="openLoopPalette">
+            Add a loop to your new pipeline
+          </UiButton>
+          <div v-if="error" class="pipeline-builder__load-error" role="alert">
+            <span>Loops could not be loaded.</span>
+            <button type="button" @click="refresh">Retry</button>
+          </div>
+        </div>
+
+        <div v-else class="pipeline-builder__content">
+          <ol class="pipeline-builder__loops" aria-label="Activities in this pipeline">
+            <li
+              v-for="(activity, index) in activities"
+              :key="activity.instanceId"
+              class="pipeline-builder__step"
+              :class="{
+                'is-dragging': draggingActivityId === activity.instanceId,
+                'is-drop-target': dropTargetActivityId === activity.instanceId,
+              }"
+              :data-activity-id="activity.instanceId"
+              draggable="true"
+              tabindex="0"
+              :aria-label="`Pipeline activity ${index + 1} of ${activities.length}. Hold and drag to exchange its position, or use Alt plus an arrow key.`"
+              @dragstart="onDragStart($event, activity.instanceId)"
+              @dragover="onDragOver($event, activity.instanceId)"
+              @dragleave.self="dropTargetActivityId = null"
+              @drop="onDrop($event, activity.instanceId)"
+              @dragend="resetDragState"
+              @keydown="onActivityKeydown($event, activity.instanceId)"
+              @pointerdown="onActivityPointerDown($event, activity.instanceId)"
+              @pointermove="onActivityPointerMove"
+              @pointerup="onActivityPointerEnd"
+              @pointercancel="onActivityPointerEnd"
+            >
+              <PipelineLoopCard
+                v-if="activity.type === 'loop' && loopById.get(activity.loopId)"
+                :loop="loopById.get(activity.loopId)!"
+                :instance-id="activity.instanceId"
+                @remove="removeActivity"
+              />
+              <PipelineHumanGateCard
+                v-else-if="activity.type === 'human-gate' && gateById.get(activity.gate)"
+                :title="gateById.get(activity.gate)!.title"
+                :instance-id="activity.instanceId"
+                :gate="activity.gate"
+                :team-members="activity.teamMembers"
+                :passing-score="activity.passingScore"
+                @remove="removeActivity"
+                @choose-member="openMemberPalette"
+                @update-passing-score="updatePassingScore"
+              />
+
+              <div class="pipeline-builder__drop-cue" aria-hidden="true">
+                <span>
+                  <svg viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M117.66,170.34a8,8,0,0,1,0,11.32l-32,32a8,8,0,0,1-11.32,0l-32-32a8,8,0,0,1,11.32-11.32L72,188.69V48a8,8,0,0,1,16,0V188.69l18.34-18.35A8,8,0,0,1,117.66,170.34Zm96-96-32-32a8,8,0,0,0-11.32,0l-32,32a8,8,0,0,0,11.32,11.32L168,67.31V208a8,8,0,0,0,16,0V67.31l18.34,18.35a8,8,0,0,0,11.32-11.32Z" />
+                  </svg>
+                  Swap position
+                </span>
+              </div>
+
+              <PipelineOutcomeRoute
+                :failure-mode="failureModeFor(activity, index)"
+                :return-depth="previousLoopDepth(index) || 1"
+                :highlighted="highlightedOutcome"
+                @highlight="highlightedOutcome = $event"
+              />
+            </li>
+          </ol>
+
+          <div class="pipeline-builder__insertion">
+            <UiButton
+              variant="secondary"
+              icon-only
+              :aria-label="addMenuOpen ? 'Close step menu' : 'Add a pipeline step'"
+              :aria-expanded="addMenuOpen"
+              aria-controls="pipeline-step-actions"
+              @click="addMenuOpen = !addMenuOpen"
+            >
+              <template #leading>
+                <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                  <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm48-88a8,8,0,0,1-8,8H136v32a8,8,0,0,1-16,0V136H88a8,8,0,0,1,0-16h32V88a8,8,0,0,1,16,0v32h32A8,8,0,0,1,176,128Z" />
+                </svg>
+              </template>
+            </UiButton>
+
+            <Transition name="pipeline-step-actions">
+              <div v-if="addMenuOpen" id="pipeline-step-actions" class="pipeline-builder__action-menu">
+                <PipelineConnector variant="branches" class="pipeline-builder__branch-map" />
+                <div class="pipeline-builder__actions">
+                  <div class="pipeline-builder__action-branch">
+                    <PipelineConnector class="pipeline-builder__mobile-branch" />
+                    <UiButton @click="openLoopPalette">
+                      <template #leading>
+                        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                          <path d="M253.93,154.63c-1.32-1.46-24.09-26.22-61-40.56-1.72-18.42-8.46-35.17-19.41-47.92C158.87,49,137.58,40,112,40,60.48,40,26.89,86.18,25.49,88.15a8,8,0,0,0,13,9.31C38.8,97.05,68.81,56,112,56c20.77,0,37.86,7.11,49.41,20.57,7.42,8.64,12.44,19.69,14.67,32A140.87,140.87,0,0,0,140.6,104c-26.06,0-47.93,6.81-63.26,19.69C63.78,135.09,56,151,56,167.25A47.59,47.59,0,0,0,69.87,201.3c9.66,9.62,23.06,14.7,38.73,14.7,51.81,0,81.18-42.13,84.49-84.42a161.43,161.43,0,0,1,49,33.79,8,8,0,1,0,11.86-10.74Zm-94.46,21.64C150.64,187.09,134.66,200,108.6,200,83.32,200,72,183.55,72,167.25,72,144.49,93.47,120,140.6,120a124.34,124.34,0,0,1,36.78,5.68C176.93,144.44,170.46,162.78,159.47,176.27Z" />
+                        </svg>
+                      </template>
+                      Add loop
+                    </UiButton>
+                  </div>
+                  <div class="pipeline-builder__action-branch">
+                    <PipelineConnector class="pipeline-builder__mobile-branch" />
+                    <UiButton variant="stroke" @click="openHumanGatePalette">
+                      <template #leading>
+                        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                          <path d="M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm0,72c0,37.07-13.66,67.16-40.6,89.42A129.3,129.3,0,0,1,128,223.62a128.25,128.25,0,0,1-38.92-21.81C61.82,179.51,48,149.3,48,112l0-56,160,0ZM82.34,141.66a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32l-56,56a8,8,0,0,1-11.32,0Z" />
+                        </svg>
+                      </template>
+                      Add human gate
+                    </UiButton>
+                  </div>
+                  <div class="pipeline-builder__action-branch">
+                    <PipelineConnector class="pipeline-builder__mobile-branch" />
+                    <UiButton variant="metal">
+                      <template #leading>
+                        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                          <path d="M178.16,176H111.32A48,48,0,1,1,25.6,139.19a8,8,0,0,1,12.8,9.61A31.69,31.69,0,0,0,32,168a32,32,0,0,0,64,0,8,8,0,0,1,8-8h74.16a16,16,0,1,1,0,16ZM64,184a16,16,0,0,0,14.08-23.61l35.77-58.14a8,8,0,0,0-2.62-11,32,32,0,1,1,46.1-40.06A8,8,0,1,0,172,44.79a48,48,0,1,0-75.62,55.33L64.44,152c-.15,0-.29,0-.44,0a16,16,0,0,0,0,32Zm128-64a48.18,48.18,0,0,0-18,3.49L142.08,71.6A16,16,0,1,0,128,80l.44,0,35.78,58.15a8,8,0,0,0,11,2.61A32,32,0,1,1,192,200a8,8,0,0,0,0,16,48,48,0,0,0,0-96Z" />
+                        </svg>
+                      </template>
+                      Add hook
+                    </UiButton>
+                  </div>
+                </div>
+              </div>
+            </Transition>
+          </div>
+        </div>
+      </UiSectionStage>
+    </div>
+
+    <UiCommandPalette
+      v-model:open="paletteOpen"
+      v-model:query="paletteQuery"
+      :items="paletteItems"
+      :size="palettePresentation.size"
+      option-style="card"
+      :placeholder="palettePresentation.placeholder"
+      :aria-label="palettePresentation.ariaLabel"
+      :empty-title="palettePresentation.emptyTitle"
+      :empty-description="palettePresentation.emptyDescription"
+      @select="selectPaletteItem"
+    >
+      <template #item="{ item }">
+        <PipelineLoopSummary v-if="paletteKind === 'loops' && loopById.get(item.id)" :loop="loopById.get(item.id)!" />
+        <span v-else-if="paletteKind === 'human-gates'" class="pipeline-builder__gate-option">
+          <span class="pipeline-builder__gate-option-icon" aria-hidden="true">
+            <svg viewBox="0 0 256 256" fill="currentColor"><path :d="item.iconPath" /></svg>
+          </span>
+          <span>
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.description }}</small>
+          </span>
+        </span>
+        <span v-else class="pipeline-builder__gate-option">
+          <span class="pipeline-builder__gate-option-icon" aria-hidden="true">
+            <svg viewBox="0 0 256 256" fill="currentColor"><path :d="item.iconPath" /></svg>
+          </span>
+          <span>
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.description }}</small>
+          </span>
+        </span>
+      </template>
+    </UiCommandPalette>
+
+    <UiModal
+      v-model:open="exitModalOpen"
+      title="Leave this pipeline unfinished?"
+      description="Save your progress as a draft so you can continue later, or discard it permanently."
+      :close-on-backdrop="!exitActionPending"
+      :show-close="!exitActionPending"
+    >
+      <template #icon>
+        <svg viewBox="0 0 256 256" fill="currentColor">
+          <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
+        </svg>
+      </template>
+      <template #actions>
+        <UiButton variant="coral" :disabled="exitActionPending" @click="discardDraftAndLeave">
+          Discard draft
+        </UiButton>
+        <UiButton data-autofocus :loading="exitActionPending" @click="saveDraftAndLeave">
+          Save draft
+        </UiButton>
+      </template>
+    </UiModal>
+  </UiContainer>
+</template>
+
 <style scoped>
-.pipeline-new-page {
-  max-width: 720px;
+.pipeline-builder {
+  padding-block: var(--ll-space-6) 0;
 }
 
-.page-header {
-  margin-bottom: 2.5rem;
+.pipeline-builder__breadcrumb {
+  margin-bottom: var(--ll-space-5);
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 1.25rem;
-  transition: color 0.2s;
+.pipeline-builder__heading {
+  margin-bottom: var(--ll-space-10);
 }
 
-.back-link:hover {
-  color: var(--text-primary);
+.pipeline-builder__stage {
+  --pipeline-stage-min-height: 28rem;
 }
 
-.pipeline-new-page h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
+.pipeline-builder__stage :deep(.ui-section-stage__shell) {
+  width: 100%;
+  min-height: var(--pipeline-stage-min-height);
+  margin-inline: 0;
 }
 
-.page-description {
-  color: var(--text-secondary);
-}
-
-.wizard-shell {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-}
-
-.progress-indicator {
-  margin-bottom: 2rem;
-}
-
-.progress-track {
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--gradient-1);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-.progress-meta {
+.pipeline-builder__stage :deep(.ui-section-stage__content) {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 0.6rem;
+  min-height: var(--pipeline-stage-min-height);
+  box-sizing: border-box;
+  align-items: stretch;
 }
 
-.progress-label {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.progress-status {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.wizard-form {
+.pipeline-builder__empty {
   display: flex;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: flex-start;
   flex-direction: column;
+  gap: var(--ll-space-4);
+  padding-top: var(--ll-space-4);
 }
 
-.form-section {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.section-header {
-  margin-bottom: 0.5rem;
-}
-
-.section-title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 0.4rem;
-}
-
-.section-helper {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.form-input,
-.form-textarea {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.75rem 1rem;
-  color: var(--text-primary);
-  font-size: 0.95rem;
-  font-family: inherit;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.form-input:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
-}
-
-.form-input.input-error,
-.form-textarea.input-error {
-  border-color: #ef4444;
-}
-
-.form-textarea {
-  resize: vertical;
-  min-height: 120px;
-}
-
-.field-error {
-  font-size: 0.8rem;
-  color: #ef4444;
-  font-weight: 500;
-}
-
-.field-hint {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-.field-hint kbd {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  padding: 0.1rem 0.35rem;
-  font-size: 0.75rem;
-  font-family: var(--font-mono, monospace);
-}
-
-/* Keypad */
-.keypad {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
-  max-width: 320px;
-  padding: 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  outline: none;
-}
-
-.keypad:focus-visible {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
-}
-
-.keypad-key {
+.pipeline-builder__load-error {
   display: flex;
   align-items: center;
-  justify-content: center;
-  height: 64px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  color: var(--text-primary);
-  font-size: 1.5rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
+  gap: var(--ll-space-3);
+  color: var(--ll-color-brand-ink);
+  font-size: var(--ll-text-sm);
 }
 
-.keypad-key:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--border-glow);
-}
-
-.keypad-key:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
-}
-
-.keypad-key:active {
-  transform: scale(0.96);
-}
-
-.keypad-key.selected {
-  background: var(--gradient-1);
-  border-color: var(--accent);
-  color: white;
-  box-shadow: 0 0 12px rgba(124, 58, 237, 0.3);
-}
-
-.keypad-number {
-  line-height: 1;
-}
-
-@media (max-width: 480px) {
-  .keypad {
-    max-width: 100%;
-  }
-
-  .keypad-key {
-    height: 56px;
-    font-size: 1.35rem;
-  }
-}
-
-/* Agent team */
-.agent-team-summary {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.agent-team-count {
-  font-weight: 600;
-}
-
-.agent-team-clear {
-  background: transparent;
-  border: none;
-  color: var(--accent-soft);
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
+.pipeline-builder__load-error button {
   padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: 650 inherit;
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-underline-offset: 0.2em;
 }
 
-.agent-team-clear:hover {
-  color: var(--accent-glow);
+.pipeline-builder__content {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: stretch;
+  padding-bottom: clamp(7rem, 12vh, 10rem);
 }
 
-.agent-team-fieldset {
-  border: none;
+.pipeline-builder__loops {
+  width: 100%;
+  min-width: 0;
   padding: 0;
   margin: 0;
+  list-style: none;
 }
 
-.agent-team-legend {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.75rem;
-  padding: 0;
-}
-
-.agent-team-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.75rem;
-}
-
-.agent-team-card {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+.pipeline-builder__step {
   position: relative;
+  width: 100%;
+  border-radius: var(--ll-radius-structural);
+  cursor: grab;
+  outline: none;
+  transition: opacity var(--ll-duration-fast) var(--ll-ease-out);
 }
 
-.agent-team-card:hover {
-  border-color: var(--border-glow);
-  background: var(--bg-card-hover);
+.pipeline-builder__step:active {
+  cursor: grabbing;
 }
 
-.agent-team-card.selected {
-  border-color: var(--accent);
-  background: var(--gradient-card);
+.pipeline-builder__step.is-dragging {
+  opacity: 0.38;
 }
 
-.agent-team-checkbox {
+.pipeline-builder__step:focus-visible :deep(.pipeline-loop-card__main),
+.pipeline-builder__step:focus-visible :deep(.pipeline-human-gate-card__main) {
+  outline: 2px solid var(--ll-color-primary);
+  outline-offset: 3px;
+}
+
+.pipeline-builder__drop-cue {
   position: absolute;
+  z-index: 6;
+  top: 0;
+  left: 50%;
+  display: grid;
+  width: min(100%, 26rem);
+  height: 7.5rem;
+  box-sizing: border-box;
+  place-items: center;
+  color: var(--ll-color-primary-depth);
+  background: color-mix(in srgb, var(--ll-color-metal-025) 92%, transparent);
+  border: 2px solid var(--ll-color-primary);
+  border-radius: var(--ll-radius-structural);
+  box-shadow: var(--ll-shadow-raised), 0 0 0 0.35rem var(--ll-color-primary-highlight);
   opacity: 0;
-  width: 1px;
-  height: 1px;
   pointer-events: none;
+  transform: translateX(-50%) scale(0.985);
+  transition:
+    opacity var(--ll-duration-fast) var(--ll-ease-out),
+    transform var(--ll-duration-fast) var(--ll-ease-out);
 }
 
-.agent-team-card:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
-}
-
-.agent-team-illustration {
-  display: flex;
+.pipeline-builder__drop-cue span {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  flex-shrink: 0;
-  color: var(--accent-soft);
+  gap: var(--ll-space-2);
+  padding: var(--ll-space-2) var(--ll-space-3);
+  background: var(--ll-color-metal-025);
+  border: 1px solid var(--ll-color-divider);
+  border-radius: 999px;
+  font: 650 var(--ll-text-xs) / 1 var(--ll-font-control);
+  box-shadow: var(--ll-shadow-raised);
 }
 
-.agent-team-body {
+.pipeline-builder__drop-cue svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.pipeline-builder__step.is-drop-target .pipeline-builder__drop-cue {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.pipeline-builder__gate-option {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  width: 100%;
   min-width: 0;
+  align-items: center;
+  gap: var(--ll-space-3);
 }
 
-.agent-team-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
+.pipeline-builder__gate-option-icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  box-sizing: border-box;
+  place-items: center;
+  color: var(--ll-color-ink);
+  background: var(--ll-color-metal-025);
+  border: 1px solid var(--ll-color-divider);
+  border-radius: 50%;
 }
 
-.agent-team-question {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.pipeline-builder__gate-option-icon svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.pipeline-builder__gate-option > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.pipeline-builder__gate-option strong {
+  color: var(--ll-color-ink);
+  font: 600 var(--ll-text-sm) / 1.25 var(--ll-font-control);
+}
+
+.pipeline-builder__gate-option small {
   overflow: hidden;
+  color: var(--ll-color-text-muted);
+  font: 400 var(--ll-text-xs) / 1.35 var(--ll-font-control);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.agent-team-check {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--accent);
+.pipeline-builder__insertion {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.agent-team-card.selected .agent-team-check {
-  opacity: 1;
-}
-
-/* Model list */
-.model-list {
-  display: flex;
+  width: 100%;
   flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
 }
 
-.model-option {
+.pipeline-builder__action-menu {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  cursor: pointer;
-  text-align: left;
-  transition: border-color 0.2s, background 0.2s;
+  width: min(100%, 48rem);
+  flex-direction: column;
+}
+
+.pipeline-builder__branch-map {
   width: 100%;
 }
 
-.model-option:hover {
-  border-color: var(--border-glow);
-  background: var(--bg-card-hover);
+.pipeline-builder__actions {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--ll-space-4);
 }
 
-.model-option.selected {
-  border-color: var(--accent);
-  background: var(--gradient-card);
-}
-
-.model-option:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
-}
-
-.model-option-radio {
-  width: 20px;
-  height: 20px;
-  border: 2px solid var(--border-glow);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.model-option.selected .model-option-radio {
-  border-color: var(--accent);
-}
-
-.radio-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: transparent;
-  transition: background 0.2s;
-}
-
-.radio-dot.checked {
-  background: var(--accent);
-}
-
-.model-option-body {
-  flex: 1;
+.pipeline-builder__action-branch {
+  display: grid;
   min-width: 0;
+  justify-items: center;
+  gap: var(--ll-space-3);
+  color: var(--ll-color-divider);
 }
 
-.model-option-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.25rem;
+.pipeline-builder__mobile-branch {
+  display: none;
 }
 
-.model-option-name {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary);
+.pipeline-builder__action-branch :deep(.ui-button) {
+  max-width: 100%;
 }
 
-.model-option-price {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  white-space: nowrap;
+.pipeline-step-actions-enter-active,
+.pipeline-step-actions-leave-active {
+  transition:
+    opacity var(--ll-duration-normal) var(--ll-ease-out),
+    transform var(--ll-duration-normal) var(--ll-ease-out);
 }
 
-.model-option-detail {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+.pipeline-step-actions-enter-from,
+.pipeline-step-actions-leave-to {
+  opacity: 0;
+  transform: translateY(-0.5rem);
 }
 
-/* Summary */
-.summary-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  margin: 0;
-}
-
-.summary-row {
-  display: flex;
-  gap: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.summary-row:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.summary-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  width: 140px;
-  flex-shrink: 0;
-}
-
-.summary-value {
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  margin: 0;
-  flex: 1;
-  min-width: 0;
-  word-break: break-word;
-}
-
-.summary-prompt {
-  white-space: pre-wrap;
-}
-
-.summary-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.summary-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.6rem;
-  border-radius: 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-/* Form actions */
-.form-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
-}
-
-.actions-spacer {
-  flex: 1;
-}
-
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: var(--gradient-1);
-  border: none;
-  color: white;
-  padding: 0.65rem 1.5rem;
-  border-radius: 0.625rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  text-decoration: none;
-  transition: box-shadow 0.25s, transform 0.25s, opacity 0.2s;
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
-}
-
-.btn-primary:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.55);
-  transform: translateY(-1px);
-}
-
-.btn-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  padding: 0.65rem 1.25rem;
-  border-radius: 0.625rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  text-decoration: none;
-  transition: border-color 0.2s, color 0.2s, background 0.2s;
-}
-
-.btn-secondary:hover {
-  border-color: var(--border-glow);
-  color: var(--text-primary);
-  background: var(--bg-card-hover);
-}
-
-@media (max-width: 640px) {
-  .wizard-shell {
-    padding: 1.25rem;
+@media (max-width: 48rem) {
+  .pipeline-builder__heading {
+    margin-bottom: var(--ll-space-8);
   }
 
-  .form-actions {
-    flex-wrap: wrap;
+  .pipeline-builder__actions {
+    grid-template-columns: 1fr;
   }
 
-  .actions-spacer {
+  .pipeline-builder__branch-map {
     display: none;
   }
 
-  .summary-row {
-    flex-direction: column;
-    gap: 0.25rem;
+  .pipeline-builder__action-branch {
+    grid-template-columns: 3rem minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
   }
 
-  .summary-label {
-    width: auto;
+  .pipeline-builder__mobile-branch {
+    display: block;
+    width: 3rem;
+    height: 2.25rem;
+    transform: rotate(-90deg);
+  }
+
+  .pipeline-builder__action-branch :deep(.ui-button) {
+    width: 100%;
+  }
+
+  .pipeline-builder__drop-cue {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-step-actions-enter-active,
+  .pipeline-step-actions-leave-active {
+    transition: none;
+  }
+
+  .pipeline-builder__step,
+  .pipeline-builder__drop-cue {
+    transition: none;
   }
 }
 </style>
