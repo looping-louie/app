@@ -22,6 +22,7 @@ const { data, status, error, refresh } = await useAsyncData(
 )
 
 const models = computed(() => data.value?.items ?? [])
+const route = useRoute()
 const { providerLogo } = useModelLogo()
 const modelStatus = ref('all')
 const modelLabs = ref<string[]>([])
@@ -52,6 +53,20 @@ function vendorInitials(vendor: string) {
     .slice(0, 2)
     .toUpperCase()
 }
+
+function focusedModelId() {
+  const value = Array.isArray(route.query.model) ? route.query.model[0] : route.query.model
+  return typeof value === 'string' ? value : ''
+}
+
+async function revealFocusedModel() {
+  const modelId = focusedModelId()
+  if (!modelId) return
+  await nextTick()
+  document.getElementById(`model-${modelId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+watch([models, () => route.query.model], () => void revealFocusedModel(), { immediate: true })
 
 definePageMeta({
   pageTransition: false,
@@ -85,7 +100,13 @@ useHead({
     </div>
     <UiSectionStage v-else inverse="bottom">
       <UiGrid :columns="3" gap="lg">
-        <div v-for="model in models" :key="model.id" class="model-item">
+        <div
+          v-for="model in models"
+          :id="`model-${model.id}`"
+          :key="model.id"
+          class="model-item"
+          :class="{ 'model-item--focused': focusedModelId() === model.id }"
+        >
           <img
             v-if="providerLogo(model.vendor, model.family)"
             class="model-item__logo"
@@ -148,6 +169,12 @@ useHead({
   background: var(--ll-color-card);
   border-color: var(--ll-color-divider);
   box-shadow: var(--ll-shadow-raised);
+}
+
+.model-item--focused {
+  background: var(--ll-color-primary-highlight);
+  border-color: var(--ll-color-primary);
+  box-shadow: 0 0 0 3px var(--ll-color-primary-highlight);
 }
 
 .model-item__logo,
