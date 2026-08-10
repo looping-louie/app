@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import UiPill from '~/components/ui/Pill.vue'
+
 interface LoopAgent {
   model_id: string
   persona_id: string
@@ -43,12 +45,11 @@ function personaLabel(personaId: string) {
         <NuxtLink
           v-for="modelId in uniqueModels"
           :key="modelId"
-          :to="`/app/settings/models/${encodeURIComponent(modelId)}`"
-          class="loop-card-details__avatar loop-card-details__avatar--model"
+          :to="`/app/settings/models?model=${encodeURIComponent(modelId)}`"
+          class="loop-card-details__model-pill"
           :aria-label="modelId"
         >
-          <img :src="modelLogo(modelId)" alt="" aria-hidden="true">
-          <span class="loop-card-details__tooltip" role="tooltip">{{ modelId }}</span>
+          <UiPill :src="modelLogo(modelId)" alt="" :tooltip="modelId" />
         </NuxtLink>
       </div>
     </div>
@@ -114,9 +115,27 @@ function personaLabel(personaId: string) {
 
 .loop-card-details__avatars {
   display: flex;
-  min-height: 1.75rem;
+  min-height: 2rem;
   align-items: center;
   padding-left: 0.0625rem;
+}
+
+.loop-card-details__model-pill {
+  display: block;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  border-radius: 50%;
+  text-decoration: none;
+}
+
+.loop-card-details__model-pill + .loop-card-details__model-pill {
+  margin-left: -0.375rem;
+}
+
+.loop-card-details__model-pill:focus-visible {
+  outline: 2px solid var(--ll-color-primary);
+  outline-offset: 2px;
 }
 
 .loop-card-details__avatar {
@@ -136,13 +155,6 @@ function personaLabel(personaId: string) {
 
 .loop-card-details__avatar + .loop-card-details__avatar {
   margin-left: -0.375rem;
-}
-
-.loop-card-details__avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
 }
 
 .loop-card-details__avatar svg {

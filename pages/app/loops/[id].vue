@@ -27,11 +27,12 @@ interface LoopDetail {
   id: string
   title: string
   description: string
-  flow: string
+  prompt: string
+  flow: string | null
   status: string
   stop_conditions: LoopStopConditions | null
   agents: LoopAgent[]
-  output_contract: LoopOutputContract
+  output_contract: LoopOutputContract | null
   created_at: string
   created_by: string
 }
@@ -78,7 +79,7 @@ interface AgentDraft {
 
 type EditableField = 'status' | 'flow' | 'stop-condition' | 'agents' | 'prompt' | 'type' | 'files' | 'schema'
 type StopConditionKey = 'max_iterations' | 'max_tokens' | 'timeout_seconds'
-type LoopPatch = Partial<Pick<LoopDetail, 'status' | 'flow' | 'stop_conditions' | 'agents' | 'output_contract'>>
+type LoopPatch = Partial<Pick<LoopDetail, 'status' | 'prompt' | 'flow' | 'stop_conditions' | 'agents' | 'output_contract'>>
 
 interface ApiErrorEnvelope {
   error?: {
@@ -123,7 +124,7 @@ const statusOptions = [
 
 const flowOptions = [
   { value: 'direct', label: 'direct' },
-  { value: 'eval', label: 'eval' },
+  { value: 'refinement', label: 'refinement' },
   { value: 'roundtable', label: 'roundtable' },
 ]
 
@@ -187,19 +188,20 @@ const basicsItems = computed<DetailRow[]>(() => loop.value ? [
   },
 ] : [])
 
-const formattedPrompt = computed(() => formatMarkdown(loop.value?.output_contract.description))
+const formattedPrompt = computed(() => formatMarkdown(loop.value?.prompt))
 
 const outputItems = computed<DetailRow[]>(() => {
-  const contract = loop.value?.output_contract
-  if (!contract) return []
-
   const rows: DetailRow[] = [
     {
       id: 'prompt',
-      title: 'Output prompt',
+      title: 'Prompt',
       detail: formattedPrompt.value,
       kind: 'prompt',
     },
+  ]
+  const contract = loop.value?.output_contract
+  if (!contract) return rows
+  rows.push(
     { id: 'type', title: 'Output type', description: contract.type, kind: 'standard' },
     {
       id: 'files',
@@ -208,7 +210,7 @@ const outputItems = computed<DetailRow[]>(() => {
       values: contract.files.length ? contract.files : ['None'],
       kind: 'standard',
     },
-  ]
+  )
 
   if (contract.schema != null) {
     rows.push({
@@ -282,12 +284,13 @@ function statusToApi(value: string): string {
   }[value] ?? value
 }
 
-function flowFromApi(value: string): string {
-  return value === 'refinement' ? 'eval' : value
+function flowFromApi(value: string | null): string {
+  if (!value) return 'draft'
+  return value
 }
 
 function flowToApi(value: string): string {
-  return value === 'eval' ? 'refinement' : value
+  return value
 }
 
 function isEditableField(value: unknown): value is EditableField {
@@ -361,10 +364,10 @@ function beginEdit(field: EditableField) {
     max_tokens: loop.value.stop_conditions?.max_tokens?.toString() ?? '',
     timeout_seconds: loop.value.stop_conditions?.timeout_seconds?.toString() ?? '',
   }
-  outputTypeDraft.value = loop.value.output_contract.type
-  outputFilesDraft.value = loop.value.output_contract.files[0] ?? 'tasks.json'
-  promptDraft.value = loop.value.output_contract.description
-  schemaDraft.value = loop.value.output_contract.schema == null
+  outputTypeDraft.value = loop.value.output_contract?.type ?? 'text'
+  outputFilesDraft.value = loop.value.output_contract?.files[0] ?? 'tasks.json'
+  promptDraft.value = loop.value.prompt
+  schemaDraft.value = loop.value.output_contract?.schema == null
     ? ''
     : JSON.stringify(loop.value.output_contract.schema, null, 2)
   agentDrafts.value = loop.value.agents.map(agent => newAgentDraft(agent))
@@ -445,7 +448,7 @@ async function selectStopCondition(key: StopConditionKey, value: string | string
 }
 
 function outputContractPayload(overrides: Partial<LoopOutputContract> = {}): LoopOutputContract | null {
-  if (!loop.value) return null
+  if (!loop.value?.output_contract) return null
   return {
     type: loop.value.output_contract.type,
     description: loop.value.output_contract.description,
@@ -456,7 +459,7 @@ function outputContractPayload(overrides: Partial<LoopOutputContract> = {}): Loo
 }
 
 async function selectOutputType(value: string | string[]) {
-  if (!loop.value || savingField.value) return
+  if (!loop.value?.output_contract || savingField.value) return
   const candidate = selectedValue(value)
   const previous = outputTypeDraft.value
   outputTypeDraft.value = candidate
@@ -471,7 +474,7 @@ async function selectOutputType(value: string | string[]) {
 }
 
 async function selectOutputFile(value: string | string[]) {
-  if (!loop.value || savingField.value) return
+  if (!loop.value?.output_contract || savingField.value) return
   const candidate = selectedValue(value)
   const previous = outputFilesDraft.value
   outputFilesDraft.value = candidate
@@ -549,16 +552,15 @@ async function persistPrompt(value = promptDraft.value) {
     return
   }
 
-  const description = value.trim()
-  if (!description) {
-    editError.value = 'Output prompt cannot be empty.'
+  const nextPrompt = value.trim()
+  if (!nextPrompt) {
+    editError.value = 'Prompt cannot be empty.'
     return
   }
-  if (description === loop.value?.output_contract.description) {
+  if (nextPrompt === loop.value?.prompt) {
     return
   }
-  const contract = outputContractPayload({ description })
-  if (contract) await patchLoop({ output_contract: contract }, 'prompt')
+  await patchLoop({ prompt: nextPrompt }, 'prompt')
 }
 
 async function persistSchema(value = schemaDraft.value) {
@@ -954,7 +956,7 @@ useHead(() => ({
                   v-model="promptDraft"
                   data-loop-editor
                   class="output-editor output-editor--prompt"
-                  aria-label="Output prompt"
+                  aria-label="Prompt"
                   @input="schedulePromptSave"
                 />
                 <div

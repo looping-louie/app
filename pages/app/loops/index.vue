@@ -22,7 +22,7 @@ interface LoopStopConditions {
 
 interface LoopSummary {
   id: string
-  flow: string
+  flow: string | null
   title: string
   description: string
   status: string
@@ -49,6 +49,7 @@ const loopSort = ref('alphabetical-asc')
 
 const loopStatusOptions = [
   { value: 'all', label: 'All' },
+  { value: 'draft', label: 'Draft' },
   { value: 'running', label: 'Running' },
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
@@ -58,7 +59,7 @@ const loopStatusOptions = [
 const loopFlowOptions = [
   { value: 'all', label: 'All' },
   { value: 'direct', label: 'Direct' },
-  { value: 'eval', label: 'Eval' },
+  { value: 'refinement', label: 'Refinement' },
   { value: 'roundtable', label: 'Roundtable' },
 ]
 
@@ -73,8 +74,8 @@ function statusForFilter(status: string): string {
   return status.toLowerCase() === 'disabled' ? 'inactive' : status.toLowerCase()
 }
 
-function flowForFilter(flow: string): string {
-  return flow.toLowerCase() === 'refinement' ? 'eval' : flow.toLowerCase()
+function flowForFilter(flow: string | null): string {
+  return flow?.toLowerCase() || 'draft'
 }
 
 const loopFlow = ref(flowFromQuery(route.query.flow))
@@ -107,10 +108,13 @@ const displayedLoops = computed(() => {
   })
 })
 
+const displayedDrafts = computed(() => displayedLoops.value.filter(loop => loop.status === 'draft'))
+const displayedPublished = computed(() => displayedLoops.value.filter(loop => loop.status !== 'draft'))
+
 const { formatDate } = useDateTime()
 
 function loopStatusTone(value: string) {
-  return value.toLowerCase() === 'disabled' ? 'disabled' : 'enabled'
+  return ['disabled', 'draft'].includes(value.toLowerCase()) ? 'disabled' : 'enabled'
 }
 
 definePageMeta({
@@ -133,7 +137,7 @@ useHead({
       </template>
       <template #aside>
         <div class="catalog-heading__actions">
-          <UiButton type="button">Add new loop</UiButton>
+          <UiButton to="/app/loops/new">Add new loop</UiButton>
         </div>
       </template>
     </UiHeadingBlock>
@@ -159,9 +163,34 @@ useHead({
     </div>
     <UiSectionStage v-else inverse="bottom" class="catalog-stage">
       <div v-if="displayedLoops.length === 0" class="catalog-state">No loops match these filters.</div>
-      <UiGrid v-else :columns="3" gap="md">
+      <div v-else class="catalog-groups">
+        <section v-if="displayedDrafts.length" class="catalog-group" aria-labelledby="draft-loops-heading">
+          <div class="catalog-group__heading">
+            <h2 id="draft-loops-heading">Continue where you left off</h2>
+            <span>{{ displayedDrafts.length }} draft{{ displayedDrafts.length === 1 ? '' : 's' }}</span>
+          </div>
+          <UiGrid :columns="3" gap="md">
+            <UiCard
+              v-for="loop in displayedDrafts"
+              :key="loop.id"
+              :to="`/app/loops/new?draft=${encodeURIComponent(loop.id)}`"
+              variant="editorial"
+              accent-on-hover
+              class="catalog-card"
+            >
+              <template #eyebrow>Draft</template>
+              <template #title><h2>{{ loop.title }}</h2></template>
+              <template #description><p>{{ loop.description }}</p></template>
+              <template #meta><time :datetime="loop.updated_at">Updated {{ formatDate(loop.updated_at) }}</time></template>
+              <template #trailing><UiStatusText tone="disabled" activation="card-hover">Continue</UiStatusText></template>
+            </UiCard>
+          </UiGrid>
+        </section>
+
+        <section v-if="displayedPublished.length" class="catalog-group" aria-label="Published loops">
+          <UiGrid :columns="3" gap="md">
         <UiCard
-          v-for="loop in displayedLoops"
+          v-for="loop in displayedPublished"
           :key="loop.id"
           :to="`/app/loops/${encodeURIComponent(loop.id)}`"
           variant="editorial"
@@ -188,7 +217,9 @@ useHead({
             </UiStatusText>
           </template>
         </UiCard>
-      </UiGrid>
+          </UiGrid>
+        </section>
+      </div>
     </UiSectionStage>
   </UiContainer>
 </template>
@@ -252,6 +283,13 @@ useHead({
   position: relative;
   overflow: visible;
 }
+
+.catalog-groups,
+.catalog-group { display: grid; gap: var(--ll-space-6); }
+.catalog-groups { gap: var(--ll-space-10); }
+.catalog-group__heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ll-space-4); }
+.catalog-group__heading h2 { margin: 0; color: var(--ll-color-ink); font: 600 1.1rem / 1.2 var(--ll-font-display); }
+.catalog-group__heading span { color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); }
 
 .catalog-card:hover {
   z-index: 2;
