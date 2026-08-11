@@ -1,0 +1,490 @@
+<script setup lang="ts">
+import UiButton from '~/components/ui/Button.vue'
+import UiCommandPalette from '~/components/ui/CommandPalette.vue'
+import UiDrawer from '~/components/ui/Drawer.vue'
+import UiPill from '~/components/ui/Pill.vue'
+import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
+
+type Flow = 'direct' | 'refinement' | 'roundtable'
+type Role = 'generator' | 'reviewer' | 'aggregator'
+
+interface Persona {
+  id: string
+  name: string
+  description?: string
+  source_instruction_id?: string | null
+}
+
+interface Model {
+  id: string
+  name: string
+  vendor: string
+  family: string
+}
+
+interface Assignment {
+  key: string
+  persona_id: string
+  model_id: string
+  role: Role
+}
+
+interface LoopDraft {
+  id: string
+  title: string
+  description: string
+  flow: Flow
+  status: string
+  agents: Array<Omit<Assignment, 'key'>>
+  stop_conditions: {
+    max_iterations: number | null
+    max_tokens: number | null
+    timeout_seconds: number | null
+  }
+}
+
+interface CommandPaletteItem {
+  id: string
+  label: string
+  description?: string
+  group?: string
+  keywords?: string[]
+  iconPath?: string
+  imageSrc?: string
+  imageAlt?: string
+  disabled?: boolean
+}
+
+const props = withDefaults(defineProps<{
+  open: boolean
+  personas: Persona[]
+  models: Model[]
+  loading?: boolean
+}>(), { loading: false })
+
+const emit = defineEmits<{
+  'update:open': [value: boolean]
+  add: [loop: LoopDraft]
+}>()
+
+const { personaIcon } = usePersonaIcon()
+const { providerLogo } = useModelLogo()
+const name = ref('')
+const flow = ref<Flow>('direct')
+const assignments = ref<Assignment[]>([])
+const maxIterations = ref('3')
+const maxTokens = ref('')
+const timeoutSeconds = ref('')
+const paletteOpen = ref(false)
+const paletteQuery = ref('')
+const paletteMode = ref<'agent' | 'model'>('agent')
+const targetRole = ref<Role>('generator')
+const targetAssignmentKey = ref<string | null>(null)
+
+const flowOptions = [
+  { value: 'direct', label: 'Direct' },
+  { value: 'refinement', label: 'Refinement' },
+  { value: 'roundtable', label: 'Roundtable' },
+]
+
+const iterationLabel = computed(() => flow.value === 'direct' ? 'Max retries' : 'Max iterations')
+
+const roleGroups = computed(() => {
+  if (flow.value === 'direct') return [
+    { role: 'generator' as const, title: 'Executor agent', multiple: false },
+  ]
+  if (flow.value === 'refinement') return [
+    { role: 'generator' as const, title: 'Executor agent', multiple: false },
+    { role: 'reviewer' as const, title: 'Reviewer agent/s', multiple: true },
+  ]
+  return [
+    { role: 'generator' as const, title: 'Participant agents', multiple: true },
+    { role: 'aggregator' as const, title: 'Aggregator agent', multiple: false },
+  ]
+})
+
+const personaById = computed(() => new Map(props.personas.map(persona => [persona.id, persona])))
+const modelById = computed(() => new Map(props.models.map(model => [model.id, model])))
+const thinkingMachinesModel = computed(() => props.models.find((model) => {
+  const identity = `${model.vendor} ${model.family} ${model.name} ${model.id}`.toLocaleLowerCase()
+  return identity.includes('thinking machines') || identity.includes('thinkingmachines') || identity.includes('thinking-machines')
+}) ?? props.models[0])
+
+const paletteItems = computed<CommandPaletteItem[]>(() => {
+  if (paletteMode.value === 'model') {
+    return props.models.map(model => ({
+      id: model.id,
+      label: model.name,
+      description: model.vendor,
+      group: 'Models',
+      keywords: [model.family, model.vendor, model.id],
+      imageSrc: providerLogo(model.vendor, model.family),
+      imageAlt: '',
+    }))
+  }
+
+  const selectedInRole = new Set(assignments.value.filter(item => item.role === targetRole.value).map(item => item.persona_id))
+  return props.personas.map(persona => ({
+    id: persona.id,
+    label: persona.name,
+    description: persona.description,
+    group: 'Agents',
+    keywords: [persona.id],
+    iconPath: personaIcon(persona),
+    disabled: selectedInRole.has(persona.id),
+  }))
+})
+
+const canAdd = computed(() => {
+  if (!name.value.trim() || !positiveInteger(maxIterations.value)) return false
+  return roleGroups.value.every((group) => {
+    const count = assignments.value.filter(item => item.role === group.role).length
+    return flow.value === 'roundtable' && group.role === 'generator' ? count >= 2 : count >= 1
+  })
+})
+
+function createId(prefix: string) {
+  if (import.meta.client && typeof crypto.randomUUID === 'function') return `${prefix}${crypto.randomUUID()}`
+  return `${prefix}${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function positiveInteger(value: string) {
+  if (!value) return null
+  const parsed = Number(value.replaceAll(',', ''))
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
+function formatIntegerInput(value: string | number | null | undefined) {
+  const digits = String(value ?? '').replace(/\D/g, '').replace(/^0+(?=\d)/, '')
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+function updateStopCondition(field: 'maxIterations' | 'maxTokens' | 'timeoutSeconds', event: Event) {
+  const input = event.target
+  if (!(input instanceof HTMLInputElement)) return
+  const formatted = formatIntegerInput(input.value)
+  input.value = formatted
+  if (field === 'maxIterations') maxIterations.value = formatted
+  else if (field === 'maxTokens') maxTokens.value = formatted
+  else timeoutSeconds.value = formatted
+}
+
+function modelInitials(model: Model | undefined) {
+  return (model?.vendor || 'AI')
+    .split(/[\s.]+/)
+    .filter(Boolean)
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+}
+
+function resetForm() {
+  name.value = ''
+  flow.value = 'direct'
+  assignments.value = []
+  maxIterations.value = '3'
+  maxTokens.value = ''
+  timeoutSeconds.value = ''
+  paletteOpen.value = false
+  paletteQuery.value = ''
+  targetAssignmentKey.value = null
+}
+
+function closeDrawer() {
+  emit('update:open', false)
+}
+
+function assignmentsFor(role: Role) {
+  return assignments.value.filter(assignment => assignment.role === role)
+}
+
+function openAgentPalette(role: Role) {
+  targetRole.value = role
+  targetAssignmentKey.value = null
+  paletteMode.value = 'agent'
+  paletteQuery.value = ''
+  paletteOpen.value = true
+}
+
+function openModelPalette(assignment: Assignment) {
+  targetAssignmentKey.value = assignment.key
+  paletteMode.value = 'model'
+  paletteQuery.value = ''
+  paletteOpen.value = true
+}
+
+function selectPaletteItem(item: CommandPaletteItem) {
+  if (paletteMode.value === 'model') {
+    const assignment = assignments.value.find(candidate => candidate.key === targetAssignmentKey.value)
+    if (assignment) assignment.model_id = item.id
+    return
+  }
+
+  const group = roleGroups.value.find(candidate => candidate.role === targetRole.value)
+  if (!group || item.disabled) return
+  if (!group.multiple) assignments.value = assignments.value.filter(candidate => candidate.role !== targetRole.value)
+  assignments.value.push({
+    key: createId('assignment-'),
+    persona_id: item.id,
+    model_id: thinkingMachinesModel.value?.id ?? '',
+    role: targetRole.value,
+  })
+}
+
+function removeAssignment(key: string) {
+  assignments.value = assignments.value.filter(assignment => assignment.key !== key)
+}
+
+function addLoop() {
+  if (!canAdd.value) return
+  emit('add', {
+    id: createId('local-loop-'),
+    title: name.value.trim(),
+    description: 'Configured inside this pipeline draft.',
+    flow: flow.value,
+    status: 'draft',
+    agents: assignments.value.map(({ persona_id, model_id, role }) => ({ persona_id, model_id, role })),
+    stop_conditions: {
+      max_iterations: positiveInteger(maxIterations.value),
+      max_tokens: positiveInteger(maxTokens.value),
+      timeout_seconds: positiveInteger(timeoutSeconds.value),
+    },
+  })
+  closeDrawer()
+}
+
+watch(flow, () => {
+  const allowedRoles = new Set(roleGroups.value.map(group => group.role))
+  assignments.value = assignments.value.filter(assignment => allowedRoles.has(assignment.role))
+  for (const group of roleGroups.value) {
+    if (!group.multiple) {
+      const matching = assignments.value.filter(assignment => assignment.role === group.role)
+      if (matching.length > 1) assignments.value = assignments.value.filter(assignment => assignment.role !== group.role || assignment.key === matching[0]!.key)
+    }
+  }
+})
+
+watch(() => props.open, (open) => {
+  if (open) resetForm()
+})
+</script>
+
+<template>
+  <UiDrawer
+    :open="open"
+    title="Your loop"
+    description="Configure the loop to be used in your pipeline."
+    title-variant="eyebrow"
+    size="default"
+    @update:open="emit('update:open', $event)"
+  >
+    <form class="pipeline-loop-drawer" @submit.prevent="addLoop">
+      <label class="pipeline-loop-drawer__section pipeline-loop-drawer__brief">
+        <span>Loop name</span>
+        <input v-model="name" data-autofocus type="text" placeholder="Untitled loop" required>
+      </label>
+
+      <section class="pipeline-loop-drawer__section pipeline-loop-drawer__flow" aria-labelledby="pipeline-loop-drawer-flow-title">
+        <h3 id="pipeline-loop-drawer-flow-title" class="pipeline-loop-drawer__section-title">Flow</h3>
+        <UiSegmentedControl
+          v-model="flow"
+          :options="flowOptions"
+          aria-label="Choose a loop flow"
+          variant="inline"
+          accent="metal"
+        />
+      </section>
+
+      <div class="pipeline-loop-drawer__route">
+        <template v-for="(group, groupIndex) in roleGroups" :key="group.role">
+          <section class="pipeline-loop-drawer__section pipeline-loop-drawer__agent-group">
+            <div class="pipeline-loop-drawer__group-heading">
+              <h3>{{ group.title }}</h3>
+              <UiButton
+                v-if="group.multiple || assignmentsFor(group.role).length === 0"
+                variant="secondary"
+                size="sm"
+                type="button"
+                :disabled="loading || !personas.length"
+                @click="openAgentPalette(group.role)"
+              >
+                <template #leading>
+                  <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                    <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16ZM92,120a12,12,0,1,1,12-12A12,12,0,0,1,92,120Zm84,0a12,12,0,1,1-12-12A12,12,0,0,1,176,120Zm-12,32H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm0,40H92a12,12,0,0,1,0-24h72a12,12,0,0,1,0,24Z" />
+                  </svg>
+                </template>
+                Add an agent
+              </UiButton>
+            </div>
+
+            <p v-if="!assignmentsFor(group.role).length" class="pipeline-loop-drawer__empty-role">No agent selected yet.</p>
+            <ul v-else class="pipeline-loop-drawer__agents">
+              <li v-for="assignment in assignmentsFor(group.role)" :key="assignment.key">
+                <UiPill icon-style="circle">
+                  <template #icon>
+                    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path :d="personaIcon(personaById.get(assignment.persona_id) ?? { id: assignment.persona_id })" /></svg>
+                  </template>
+                  {{ personaById.get(assignment.persona_id)?.name ?? assignment.persona_id }}
+                </UiPill>
+                <button
+                  type="button"
+                  class="pipeline-loop-drawer__model-target"
+                  :title="modelById.get(assignment.model_id)?.name || 'Choose model'"
+                  :aria-label="`Change model for ${personaById.get(assignment.persona_id)?.name ?? 'agent'}`"
+                  @click="openModelPalette(assignment)"
+                >
+                  <UiPill
+                    v-if="modelById.get(assignment.model_id) && providerLogo(modelById.get(assignment.model_id)!.vendor, modelById.get(assignment.model_id)!.family)"
+                    :src="providerLogo(modelById.get(assignment.model_id)!.vendor, modelById.get(assignment.model_id)!.family)"
+                    alt=""
+                    :tooltip="modelById.get(assignment.model_id)?.name || 'Choose model'"
+                    :focusable="false"
+                  />
+                  <UiPill v-else icon-style="circle" :tooltip="modelById.get(assignment.model_id)?.name || 'Choose model'" :focusable="false">
+                    <template #icon><span class="pipeline-loop-drawer__model-initials">{{ modelInitials(modelById.get(assignment.model_id)) }}</span></template>
+                  </UiPill>
+                </button>
+                <span class="pipeline-loop-drawer__remove-control">
+                  <UiButton
+                    class="pipeline-loop-drawer__remove"
+                    variant="coral"
+                    icon-only
+                    :aria-label="`Delete ${personaById.get(assignment.persona_id)?.name ?? 'agent'}`"
+                    @click="removeAssignment(assignment.key)"
+                  >
+                    <template #leading>
+                      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z" /></svg>
+                    </template>
+                  </UiButton>
+                  <span class="pipeline-loop-drawer__remove-tooltip" role="tooltip">Delete</span>
+                </span>
+              </li>
+            </ul>
+          </section>
+          <i v-if="groupIndex < roleGroups.length - 1" aria-hidden="true">↓</i>
+        </template>
+      </div>
+
+      <i class="pipeline-loop-drawer__connector" aria-hidden="true">↓</i>
+
+      <section class="pipeline-loop-drawer__section pipeline-loop-drawer__stop-conditions" aria-labelledby="pipeline-loop-drawer-stop-title">
+        <h3 id="pipeline-loop-drawer-stop-title" class="pipeline-loop-drawer__section-title">Stop conditions</h3>
+        <label>
+          <span><strong>{{ iterationLabel }}</strong><small>Required</small></span>
+          <span class="pipeline-loop-drawer__condition-value"><input :value="maxIterations" type="text" inputmode="numeric" pattern="[0-9,]*" required @input="updateStopCondition('maxIterations', $event)"><small>{{ flow === 'direct' ? 'retries' : 'loops' }}</small></span>
+        </label>
+        <label>
+          <span><strong>Tokens consumed</strong><small>Optional</small></span>
+          <span class="pipeline-loop-drawer__condition-value"><input :value="maxTokens" type="text" inputmode="numeric" pattern="[0-9,]*" @input="updateStopCondition('maxTokens', $event)"><small>tokens</small></span>
+        </label>
+        <label>
+          <span><strong>Timeout</strong><small>Optional</small></span>
+          <span class="pipeline-loop-drawer__condition-value"><input :value="timeoutSeconds" type="text" inputmode="numeric" pattern="[0-9,]*" @input="updateStopCondition('timeoutSeconds', $event)"><small>seconds</small></span>
+        </label>
+      </section>
+    </form>
+
+    <template #footer>
+      <UiButton block :disabled="!canAdd" @click="addLoop">Add loop</UiButton>
+    </template>
+  </UiDrawer>
+
+  <UiCommandPalette
+    v-model:open="paletteOpen"
+    v-model:query="paletteQuery"
+    :items="paletteItems"
+    :keyboard-shortcut="false"
+    option-style="card"
+    :placeholder="paletteMode === 'agent' ? 'Search agents…' : 'Search models…'"
+    :aria-label="paletteMode === 'agent' ? 'Choose an agent' : 'Choose a model'"
+    :empty-title="paletteMode === 'agent' ? 'No agents found' : 'No models found'"
+    empty-description="Try another name or search term."
+    @select="selectPaletteItem"
+  />
+</template>
+
+<style scoped>
+.pipeline-loop-drawer { --pipeline-loop-card-gap: var(--ll-space-4); display: grid; gap: 0; }
+.pipeline-loop-drawer__brief { display: grid; gap: var(--ll-space-3); padding: var(--ll-space-6) var(--ll-space-8); }
+.pipeline-loop-drawer__brief > span,
+.pipeline-loop-drawer__section-title,
+.pipeline-loop-drawer__group-heading h3 { padding: 0; margin: 0; color: var(--ll-color-ink); font: 600 var(--ll-text-xs) / 1 var(--ll-font-control); text-transform: uppercase; letter-spacing: 0.06em; }
+.pipeline-loop-drawer__brief input { width: 100%; min-width: 0; box-sizing: border-box; padding: 0; color: var(--ll-color-ink); background: transparent; border: 0; border-bottom: 1px solid transparent; border-radius: 0; font: 600 1.2rem / 1.2 var(--ll-font-display); }
+.pipeline-loop-drawer__brief input::placeholder { color: var(--ll-color-text-muted); opacity: 0.7; }
+.pipeline-loop-drawer__brief input:focus { border-bottom-color: var(--ll-color-primary); outline: none; }
+.pipeline-loop-drawer__section { display: grid; min-width: 0; box-sizing: border-box; padding: var(--ll-space-6) var(--ll-space-8); margin: 0; gap: var(--ll-space-3); background: var(--ll-color-canvas); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); }
+.pipeline-loop-drawer > .pipeline-loop-drawer__brief,
+.pipeline-loop-drawer > .pipeline-loop-drawer__flow { margin-bottom: var(--pipeline-loop-card-gap); }
+.pipeline-loop-drawer__flow :deep(.ui-segmented-control) { width: fit-content; }
+.pipeline-loop-drawer__flow { overflow-x: auto; }
+
+.pipeline-loop-drawer__route { display: grid; justify-items: stretch; gap: 0; }
+.pipeline-loop-drawer__route > i,
+.pipeline-loop-drawer__connector { display: grid; height: var(--pipeline-loop-card-gap); place-items: center; color: var(--ll-color-metal-500); font-size: var(--ll-text-xs); font-style: normal; line-height: 1; text-align: center; }
+.pipeline-loop-drawer__group-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-3); }
+.pipeline-loop-drawer__group-heading :deep(svg) { width: 1rem; height: 1rem; }
+.pipeline-loop-drawer__empty-role { margin: 0; color: var(--ll-color-text-muted); font: 400 var(--ll-text-xs) / 1.4 var(--ll-font-control); }
+.pipeline-loop-drawer__agents { display: grid; padding: 0; margin: 0; gap: var(--ll-space-2); list-style: none; }
+.pipeline-loop-drawer__agents li { display: flex; min-width: 0; align-items: center; gap: var(--ll-space-2); }
+.pipeline-loop-drawer__agents :deep(.ui-icon-pill) { min-width: 0; }
+
+.pipeline-loop-drawer__model-target { display: block; width: 2rem; height: 2rem; flex: 0 0 2rem; padding: 0; color: inherit; background: transparent; border: 0; border-radius: var(--ll-radius-pill); cursor: pointer; }
+.pipeline-loop-drawer__model-target:focus-visible { outline: 2px solid var(--ll-color-primary); outline-offset: 2px; }
+.pipeline-loop-drawer__model-target :deep(.ui-icon-pill) { display: block; }
+.pipeline-loop-drawer__model-initials { font: 650 0.625rem / 1 var(--ll-font-mono); }
+.pipeline-loop-drawer__remove-control { position: relative; display: block; width: 1.75rem; height: 1.75rem; flex: 0 0 1.75rem; align-self: center; }
+.pipeline-loop-drawer__remove {
+  --ui-button-height: 1.75rem;
+  --ui-button-coral-fill: var(--ll-color-brand-bright);
+  --ui-button-coral-border-start: var(--ll-color-brand-bright);
+  --ui-button-coral-border-end: var(--ll-color-brand-bright);
+  color: var(--ll-color-metal-025);
+  opacity: 0;
+  transition: opacity var(--ll-duration-fast) var(--ll-ease-out);
+}
+.pipeline-loop-drawer__agents li:hover .pipeline-loop-drawer__remove,
+.pipeline-loop-drawer__remove:focus-visible { opacity: 1; }
+.pipeline-loop-drawer__remove-tooltip {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + var(--ll-space-2));
+  left: 50%;
+  width: max-content;
+  padding: var(--ll-space-2) var(--ll-space-3);
+  pointer-events: none;
+  color: var(--ll-color-metal-025);
+  background: var(--ll-color-metal-950);
+  border-radius: var(--ll-radius-pill);
+  box-shadow: var(--ll-shadow-raised);
+  font: 550 var(--ll-text-xs) / 1.2 var(--ll-font-control);
+  opacity: 0;
+  transform: translate(-50%, 0.25rem);
+  transition: opacity var(--ll-duration-fast) var(--ll-ease-out), transform var(--ll-duration-fast) var(--ll-ease-out);
+}
+.pipeline-loop-drawer__remove:is(:hover, :focus-visible) + .pipeline-loop-drawer__remove-tooltip { opacity: 1; transform: translate(-50%, 0); }
+
+.pipeline-loop-drawer__stop-conditions label { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) 10.5rem; align-items: center; gap: var(--ll-space-4); }
+.pipeline-loop-drawer__stop-conditions label + label { padding-top: var(--ll-space-3); border-top: 1px solid var(--ll-color-divider); }
+.pipeline-loop-drawer__stop-conditions label > span:first-child { display: grid; gap: var(--ll-space-1); }
+.pipeline-loop-drawer__stop-conditions strong { color: var(--ll-color-ink); font: 600 var(--ll-text-xs) / 1.2 var(--ll-font-control); }
+.pipeline-loop-drawer__stop-conditions small { color: var(--ll-color-text-muted); font: 400 var(--ll-text-xs) / 1.2 var(--ll-font-control); }
+.pipeline-loop-drawer__condition-value { display: grid; min-width: 0; grid-template-columns: 7rem minmax(0, 1fr); align-items: center; gap: var(--ll-space-2); }
+.pipeline-loop-drawer__condition-value input { width: 7rem; box-sizing: border-box; padding: var(--ll-space-2) var(--ll-space-3); color: var(--ll-color-ink); background: var(--ll-color-canvas); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-pill); font: 600 var(--ll-text-sm) / 1 var(--ll-font-mono); text-align: right; }
+.pipeline-loop-drawer__condition-value input:focus { border-color: var(--ll-color-primary); outline: 2px solid var(--ll-color-primary); outline-offset: 1px; }
+
+.pipeline-loop-drawer :deep(.ui-button--secondary) { flex: none; }
+
+@media (max-width: 36rem) {
+  .pipeline-loop-drawer__brief,
+  .pipeline-loop-drawer__section { padding-inline: var(--ll-space-6); }
+  .pipeline-loop-drawer__group-heading { align-items: flex-start; flex-direction: column; }
+  .pipeline-loop-drawer__stop-conditions label { grid-template-columns: 1fr; align-items: flex-start; }
+  .pipeline-loop-drawer__condition-value { width: 100%; }
+  .pipeline-loop-drawer__condition-value input { margin-left: auto; }
+}
+
+@media (hover: none) {
+  .pipeline-loop-drawer__remove { opacity: 1; }
+}
+</style>

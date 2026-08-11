@@ -18,20 +18,28 @@ const emit = defineEmits<{
   highlight: [outcome: Outcome | null]
 }>()
 
+const routeTurnY = 32
+const retryTargetY = -144
+const retryCrownY = retryTargetY - routeTurnY
+const retryViewMinY = retryCrownY - 2
+const retryViewHeight = 96 - retryViewMinY
 const previousTargetY = computed(() => -382 - (Math.max(1, props.returnDepth) - 1) * 240)
 const previousTargetX = computed(() => 452 - Math.min(3, Math.max(1, props.returnDepth) - 1) * 24)
-const previousCrownY = computed(() => previousTargetY.value - 18)
-const previousMidY = computed(() => Math.round(previousTargetY.value / 2))
+const previousCrownY = computed(() => previousTargetY.value - 56)
+const previousMidY = computed(() => Math.round((routeTurnY + previousCrownY.value + 24) / 2))
 const previousViewMinY = computed(() => previousCrownY.value - 2)
 const previousViewHeight = computed(() => 96 - previousViewMinY.value)
 
 const routeViewBox = computed(() => {
-  if (props.failureMode === 'retry') return '0 -158 1000 254'
+  if (props.failureMode === 'retry') return `0 ${retryViewMinY} 1000 ${retryViewHeight}`
   if (props.failureMode === 'previous') return `0 ${previousViewMinY.value} 1000 ${previousViewHeight.value}`
   return '0 0 1000 96'
 })
 
 const routeStyle = computed(() => {
+  if (props.failureMode === 'retry') {
+    return { '--pipeline-retry-map-height': `${retryViewHeight * (5 / 6)}px` }
+  }
   if (props.failureMode !== 'previous') return undefined
   return {
     '--pipeline-previous-map-height': `${previousViewHeight.value * (5 / 6)}px`,
@@ -40,16 +48,16 @@ const routeStyle = computed(() => {
 })
 
 const previousLinePath = computed(() => [
-  'M500 2C500 12 490 18 462 20',
-  `C335 24 252-18 252 ${previousMidY.value}`,
-  `C252 ${previousTargetY.value + 52} 310 ${previousCrownY.value} 392 ${previousCrownY.value}`,
-  `C420 ${previousCrownY.value} ${previousTargetX.value - 10} ${previousTargetY.value - 12} ${previousTargetX.value} ${previousTargetY.value}`,
+  `M500 2V12Q500 ${routeTurnY} 484 ${routeTurnY}H276Q252 ${routeTurnY} 252 4`,
+  `V${previousCrownY.value + 24}Q252 ${previousCrownY.value} 276 ${previousCrownY.value}`,
+  `H${previousTargetX.value - 24}Q${previousTargetX.value} ${previousCrownY.value} ${previousTargetX.value} ${previousCrownY.value + 24}`,
+  `V${previousTargetY.value}`,
 ].join(''))
 
 const previousTipPath = computed(() => {
   const target = previousTargetY.value
   const targetX = previousTargetX.value
-  return `M${targetX - 14} ${target - 7}C${targetX - 9} ${target - 5} ${targetX - 4} ${target - 3} ${targetX} ${target}C${targetX - 1} ${target - 5} ${targetX - 3} ${target - 10} ${targetX - 4} ${target - 15}`
+  return `M${targetX - 9} ${target - 12}L${targetX} ${target}L${targetX + 9} ${target - 12}`
 })
 </script>
 
@@ -76,13 +84,13 @@ const previousTipPath = computed(() => {
       fill="none"
       aria-hidden="true"
     >
-      <path class="pipeline-outcome-route__line pipeline-outcome-route__line--success" d="M500 2C500 25 492 38 495 58C497 69 500 75 500 84" />
+      <path class="pipeline-outcome-route__line pipeline-outcome-route__line--success" d="M500 2V84" />
       <path class="pipeline-outcome-route__tip pipeline-outcome-route__tip--success" d="M491 73C494 77 497 81 500 86C503 81 506 77 509 73" />
 
       <template v-if="failureMode === 'stop'">
         <path
           class="pipeline-outcome-route__line pipeline-outcome-route__line--failure"
-          d="M500 2C500 12 506 18 522 20C606 27 659 32 714 38C746 41 772 41 798 40"
+          d="M500 2V16Q500 40 524 40H798"
           @pointerenter="emit('highlight', 'failure')"
           @pointerleave="emit('highlight', null)"
         />
@@ -94,18 +102,18 @@ const previousTipPath = computed(() => {
         />
         <path
           class="pipeline-outcome-route__hit"
-          d="M500 2C500 12 506 18 522 20C606 27 659 32 714 38C746 41 772 41 798 40"
+          d="M500 2V16Q500 40 524 40H798"
           @pointerenter="emit('highlight', 'failure')"
           @pointerleave="emit('highlight', null)"
         />
       </template>
 
       <template v-else-if="failureMode === 'retry'">
-        <path class="pipeline-outcome-route__line pipeline-outcome-route__line--failure" d="M500 2C500 12 510 18 538 20C640 24 714-2 720-70C728-130 685-154 608-156C580-156 558-148 548-136" />
-        <path class="pipeline-outcome-route__tip pipeline-outcome-route__tip--failure" d="M555-151C552-146 550-141 548-136C554-138 559-139 563-139" />
+        <path class="pipeline-outcome-route__line pipeline-outcome-route__line--failure" d="M500 2V12Q500 32 516 32H680Q720 32 720-8V-136Q720-176 680-176H572Q548-176 548-152V-144" />
+        <path class="pipeline-outcome-route__tip pipeline-outcome-route__tip--failure" d="M539-156L548-144L557-156" />
         <path
           class="pipeline-outcome-route__hit"
-          d="M500 2C500 12 510 18 538 20C640 24 714-2 720-70C728-130 685-154 608-156C580-156 558-148 548-136"
+          d="M500 2V12Q500 32 516 32H680Q720 32 720-8V-136Q720-176 680-176H572Q548-176 548-152V-144"
           @mouseenter="emit('highlight', 'failure')"
           @mouseleave="emit('highlight', null)"
         />
@@ -124,7 +132,7 @@ const previousTipPath = computed(() => {
 
       <path
         class="pipeline-outcome-route__hit"
-        d="M500 2C500 25 492 38 495 58C497 69 500 75 500 84"
+        d="M500 2V84"
         @mouseenter="emit('highlight', 'success')"
         @mouseleave="emit('highlight', null)"
       />
@@ -182,7 +190,7 @@ const previousTipPath = computed(() => {
 
 .pipeline-outcome-route--retry .pipeline-outcome-route__map {
   inset: auto 0 0;
-  height: 13.25rem;
+  height: var(--pipeline-retry-map-height);
 }
 
 .pipeline-outcome-route--previous .pipeline-outcome-route__map {
@@ -244,7 +252,7 @@ const previousTipPath = computed(() => {
 }
 
 .pipeline-outcome-route__signal--failure {
-  top: -0.45rem;
+  top: 0.25rem;
   left: 64.5%;
   color: var(--ll-color-brand);
 }

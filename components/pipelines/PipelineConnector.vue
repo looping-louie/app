@@ -32,7 +32,7 @@ withDefaults(defineProps<{
     fill="none"
     aria-hidden="true"
   >
-    <path class="pipeline-connector__line" d="M48 2C48 17 41 25 43 37C44 45 48 48 48 53" />
+    <path class="pipeline-connector__line" d="M48 2V53" />
     <path class="pipeline-connector__tip" d="M39 46C42 50 45 53 48 57C51 53 54 50 57 46" />
   </svg>
 </template>

@@ -25,9 +25,11 @@ const props = withDefaults(defineProps<{
   loop: PipelineLoopSummary
   showTitle?: boolean
   showFlow?: boolean
+  layout?: 'inline' | 'team-stop'
 }>(), {
   showTitle: true,
   showFlow: true,
+  layout: 'inline',
 })
 
 const { personaIcon } = usePersonaIcon()
@@ -107,7 +109,10 @@ function flowLabel(value: string | null) {
 <template>
   <span
     class="pipeline-loop-summary"
-    :class="{ 'pipeline-loop-summary--without-title': !showTitle }"
+    :class="[
+      `pipeline-loop-summary--${layout}`,
+      { 'pipeline-loop-summary--without-title': !showTitle },
+    ]"
   >
     <strong v-if="showTitle" class="pipeline-loop-summary__title" :title="loop.title">{{ loop.title }}</strong>
 
@@ -116,38 +121,40 @@ function flowLabel(value: string | null) {
       <span>{{ flowLabel(loop.flow) }}</span>
     </span>
 
-    <span
-      v-for="group in agentGroups"
-      :key="group.id"
-      class="pipeline-loop-summary__fact pipeline-loop-summary__role"
-      :aria-label="group.label"
-    >
-      <b :title="group.label">{{ group.shortLabel }}</b>
-      <span v-if="group.agents.length === 0" class="pipeline-loop-summary__empty">None</span>
+    <span class="pipeline-loop-summary__agent-groups">
       <span
-        v-for="(agent, index) in group.agents"
-        :key="`${group.id}-${agent.persona_id}-${agent.model_id}-${index}`"
-        class="pipeline-loop-summary__agent-pair"
+        v-for="group in agentGroups"
+        :key="group.id"
+        class="pipeline-loop-summary__fact pipeline-loop-summary__role"
+        :aria-label="group.label"
       >
-        <UiPill
-          icon-style="circle"
-          :tooltip="`${labelFromId(agent.persona_id, 'builtin:persona:')} · ${labelFromId(agent.role, '')}`"
-          :aria-label="`${labelFromId(agent.persona_id, 'builtin:persona:')} · ${labelFromId(agent.role, '')}`"
-          :focusable="false"
+        <b :title="group.label">{{ group.shortLabel }}</b>
+        <span v-if="group.agents.length === 0" class="pipeline-loop-summary__empty">None</span>
+        <span
+          v-for="(agent, index) in group.agents"
+          :key="`${group.id}-${agent.persona_id}-${agent.model_id}-${index}`"
+          class="pipeline-loop-summary__agent-pair"
         >
-          <template #icon>
-            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-              <path :d="personaIcon({ id: agent.persona_id })" />
-            </svg>
-          </template>
-        </UiPill>
-        <UiPill
-          :src="modelLogo(agent.model_id)"
-          alt=""
-          :tooltip="agent.model_id"
-          :aria-label="agent.model_id"
-          :focusable="false"
-        />
+          <UiPill
+            icon-style="circle"
+            :tooltip="`${labelFromId(agent.persona_id, 'builtin:persona:')} · ${labelFromId(agent.role, '')}`"
+            :aria-label="`${labelFromId(agent.persona_id, 'builtin:persona:')} · ${labelFromId(agent.role, '')}`"
+            :focusable="false"
+          >
+            <template #icon>
+              <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path :d="personaIcon({ id: agent.persona_id })" />
+              </svg>
+            </template>
+          </UiPill>
+          <UiPill
+            :src="modelLogo(agent.model_id)"
+            alt=""
+            :tooltip="agent.model_id"
+            :aria-label="agent.model_id"
+            :focusable="false"
+          />
+        </span>
       </span>
     </span>
 
@@ -170,6 +177,29 @@ function flowLabel(value: string | null) {
 
 .pipeline-loop-summary--without-title {
   gap: var(--ll-space-3);
+}
+
+.pipeline-loop-summary__agent-groups {
+  display: contents;
+}
+
+.pipeline-loop-summary--team-stop {
+  display: grid;
+  align-content: center;
+  gap: var(--ll-space-3);
+  white-space: normal;
+}
+
+.pipeline-loop-summary--team-stop .pipeline-loop-summary__agent-groups {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--ll-space-3);
+  white-space: nowrap;
+}
+
+.pipeline-loop-summary--team-stop .pipeline-loop-summary__stop {
+  min-width: 0;
 }
 
 .pipeline-loop-summary__title {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import PipelineLoopSummary from '~/components/pipelines/PipelineLoopSummary.vue'
 import PipelineLoopCard from '~/components/pipelines/PipelineLoopCard.vue'
+import PipelineLoopDrawer from '~/components/pipelines/PipelineLoopDrawer.vue'
 import PipelineHumanGateCard from '~/components/pipelines/PipelineHumanGateCard.vue'
 import PipelineConnector from '~/components/pipelines/PipelineConnector.vue'
 import PipelineOutcomeRoute from '~/components/pipelines/PipelineOutcomeRoute.vue'
@@ -11,6 +11,7 @@ import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiContainer from '~/components/ui/Container.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiModal from '~/components/ui/Modal.vue'
+import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 
 interface LoopAgent {
@@ -37,6 +38,25 @@ interface LoopSummary {
 
 interface LoopListResponse {
   items: LoopSummary[]
+  total: number
+}
+
+interface PersonaSummary {
+  id: string
+  name: string
+  description?: string
+  source_instruction_id?: string | null
+}
+
+interface ModelSummary {
+  id: string
+  name: string
+  vendor: string
+  family: string
+}
+
+interface ListResponse<T> {
+  items: T[]
   total: number
 }
 
@@ -98,7 +118,9 @@ const router = useRouter()
 const stageRoot = ref<HTMLElement | null>(null)
 const paletteOpen = ref(false)
 const paletteQuery = ref('')
-const paletteKind = ref<'loops' | 'human-gates' | 'users'>('loops')
+const paletteKind = ref<'human-gates' | 'users'>('human-gates')
+const loopDrawerOpen = ref(false)
+const localLoops = ref<LoopSummary[]>([])
 const activities = ref<PipelineActivity[]>([])
 const memberSelectionTarget = ref<{ instanceId: string, slotIndex: number } | null>(null)
 const addMenuOpen = ref(false)
@@ -114,15 +136,27 @@ let stageResizeObserver: ResizeObserver | undefined
 let touchHoldTimer: ReturnType<typeof setTimeout> | undefined
 let touchPointerId: number | null = null
 
-const { data, status, error, refresh } = await useAsyncData(
+const { data } = await useAsyncData(
   'pipeline-builder-loops',
   () => $fetch<LoopListResponse>('/api/v1/loops?offset=0'),
 )
 
-const loops = computed(() => data.value?.items ?? [])
+const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
+  'pipeline-builder-loop-options',
+  async () => {
+    const [personas, models] = await Promise.all([
+      $fetch<ListResponse<PersonaSummary>>('/api/v1/personas'),
+      $fetch<ListResponse<ModelSummary>>('/api/v1/models?available=true'),
+    ])
+    return { personas: personas.items, models: models.items }
+  },
+)
+
+const loops = computed(() => [...localLoops.value, ...(data.value?.items ?? [])])
 const loopById = computed(() => new Map(loops.value.map(loop => [loop.id, loop])))
 const gateById = new Map(humanGates.map(gate => [gate.id, gate]))
 const hasProgress = computed(() => activities.value.length > 0)
+const hasLoop = computed(() => activities.value.some(activity => activity.type === 'loop'))
 
 const paletteItems = computed<CommandPaletteItem[]>(() => {
   if (paletteKind.value === 'users') {
@@ -147,16 +181,7 @@ const paletteItems = computed<CommandPaletteItem[]>(() => {
     }))
   }
 
-  return loops.value.map(loop => ({
-      id: loop.id,
-      label: loop.title,
-      group: 'Available loops',
-      keywords: [
-        loop.flow ?? '',
-        loop.status,
-        ...loop.agents.flatMap(agent => [agent.persona_id, agent.model_id, agent.role]),
-      ],
-  }))
+  return []
 })
 
 const palettePresentation = computed(() => {
@@ -179,11 +204,11 @@ const palettePresentation = computed(() => {
     }
   }
   return {
-    size: 'wide' as const,
-    placeholder: 'Search loops…',
-    ariaLabel: 'Add a loop to your pipeline',
-    emptyTitle: 'No loops found',
-    emptyDescription: loops.value.length ? 'Try another title, flow, agent, or model.' : 'There are no matching options.',
+    size: 'default' as const,
+    placeholder: 'Choose a human gate…',
+    ariaLabel: 'Add a human gate to your pipeline',
+    emptyTitle: 'No human gates found',
+    emptyDescription: 'There are no matching options.',
   }
 })
 
@@ -192,12 +217,10 @@ function createInstanceId() {
   return `activity-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
-function openLoopPalette() {
+function openLoopDrawer() {
   addMenuOpen.value = false
   memberSelectionTarget.value = null
-  paletteKind.value = 'loops'
-  paletteQuery.value = ''
-  paletteOpen.value = true
+  loopDrawerOpen.value = true
 }
 
 function openHumanGatePalette() {
@@ -239,14 +262,17 @@ function selectPaletteItem(item: CommandPaletteItem) {
       ...(gate === 'four-eye-review' ? { teamMembers: [null, null] } : {}),
       ...(gate === 'multiple-choice-quiz' ? { passingScore: null } : {}),
     })
-  } else {
-    if (!loopById.value.has(item.id)) return
-    activities.value.push({
-      instanceId: createInstanceId(),
-      type: 'loop',
-      loopId: item.id,
-    })
   }
+  nextTick(measureStage)
+}
+
+function addLocalLoop(loop: LoopSummary) {
+  localLoops.value.push(loop)
+  activities.value.push({
+    instanceId: createInstanceId(),
+    type: 'loop',
+    loopId: loop.id,
+  })
   nextTick(measureStage)
 }
 
@@ -364,7 +390,34 @@ function restoreLocalDraft() {
   const raw = localStorage.getItem(localKey)
   if (!raw) return
   try {
-    const draft = JSON.parse(raw) as { activities?: unknown, loopIds?: unknown }
+    const draft = JSON.parse(raw) as { activities?: unknown, loopIds?: unknown, localLoops?: unknown }
+    if (Array.isArray(draft.localLoops)) {
+      localLoops.value = draft.localLoops.flatMap((candidate): LoopSummary[] => {
+        if (!candidate || typeof candidate !== 'object') return []
+        const value = candidate as Record<string, unknown>
+        if (
+          typeof value.id !== 'string'
+          || typeof value.title !== 'string'
+          || !Array.isArray(value.agents)
+        ) return []
+        return [{
+          id: value.id,
+          title: value.title,
+          description: typeof value.description === 'string' ? value.description : '',
+          flow: typeof value.flow === 'string' ? value.flow : null,
+          status: typeof value.status === 'string' ? value.status : 'draft',
+          agents: value.agents.flatMap((agent): LoopAgent[] => {
+            if (!agent || typeof agent !== 'object') return []
+            const item = agent as Record<string, unknown>
+            if (typeof item.persona_id !== 'string' || typeof item.model_id !== 'string' || typeof item.role !== 'string') return []
+            return [{ persona_id: item.persona_id, model_id: item.model_id, role: item.role }]
+          }),
+          stop_conditions: value.stop_conditions && typeof value.stop_conditions === 'object'
+            ? value.stop_conditions as LoopStopConditions
+            : null,
+        }]
+      })
+    }
     if (Array.isArray(draft.activities)) {
       activities.value = draft.activities.flatMap((candidate): PipelineActivity[] => {
         if (!candidate || typeof candidate !== 'object') return []
@@ -423,6 +476,7 @@ async function saveDraftAndLeave() {
   try {
     localStorage.setItem(localKey, JSON.stringify({
       activities: activities.value,
+      localLoops: localLoops.value,
       updatedAt: new Date().toISOString(),
     }))
     await leaveBuilder()
@@ -492,23 +546,30 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
       <template #description>
         <p>Connect existing loops into one clear, repeatable workflow.</p>
       </template>
+      <template #aside>
+        <UiButton :disabled="!hasLoop">Save pipeline</UiButton>
+      </template>
     </UiHeadingBlock>
 
     <div ref="stageRoot" class="pipeline-builder__stage">
       <UiCollectionGroupTitle title="Your pipeline" heading-as="h2" />
       <UiSectionStage inverse="bottom">
-        <div v-if="activities.length === 0" class="pipeline-builder__empty">
-          <UiButton :loading="status === 'pending'" @click="openLoopPalette">
-            Add a loop to your new pipeline
-          </UiButton>
-          <div v-if="error" class="pipeline-builder__load-error" role="alert">
-            <span>Loops could not be loaded.</span>
-            <button type="button" @click="refresh">Retry</button>
+        <div class="pipeline-builder__canvas">
+          <div class="pipeline-builder__input-node">
+            <UiPill class="pipeline-builder__input-pill" :focusable="false">Input prompt</UiPill>
+            <PipelineConnector />
           </div>
-        </div>
 
-        <div v-else class="pipeline-builder__content">
-          <ol class="pipeline-builder__loops" aria-label="Activities in this pipeline">
+          <div v-if="activities.length === 0" class="pipeline-builder__empty">
+            <UiPill class="pipeline-builder__empty-pill" :focusable="false">
+              <UiButton @click="openLoopDrawer">
+                Add a loop to your new pipeline
+              </UiButton>
+            </UiPill>
+          </div>
+
+          <div v-else class="pipeline-builder__content">
+            <ol class="pipeline-builder__loops" aria-label="Activities in this pipeline">
             <li
               v-for="(activity, index) in activities"
               :key="activity.instanceId"
@@ -566,9 +627,9 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
                 @highlight="highlightedOutcome = $event"
               />
             </li>
-          </ol>
+            </ol>
 
-          <div class="pipeline-builder__insertion">
+            <div class="pipeline-builder__insertion">
             <UiButton
               variant="secondary"
               icon-only
@@ -590,7 +651,7 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
                 <div class="pipeline-builder__actions">
                   <div class="pipeline-builder__action-branch">
                     <PipelineConnector class="pipeline-builder__mobile-branch" />
-                    <UiButton @click="openLoopPalette">
+                    <UiButton @click="openLoopDrawer">
                       <template #leading>
                         <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
                           <path d="M253.93,154.63c-1.32-1.46-24.09-26.22-61-40.56-1.72-18.42-8.46-35.17-19.41-47.92C158.87,49,137.58,40,112,40,60.48,40,26.89,86.18,25.49,88.15a8,8,0,0,0,13,9.31C38.8,97.05,68.81,56,112,56c20.77,0,37.86,7.11,49.41,20.57,7.42,8.64,12.44,19.69,14.67,32A140.87,140.87,0,0,0,140.6,104c-26.06,0-47.93,6.81-63.26,19.69C63.78,135.09,56,151,56,167.25A47.59,47.59,0,0,0,69.87,201.3c9.66,9.62,23.06,14.7,38.73,14.7,51.81,0,81.18-42.13,84.49-84.42a161.43,161.43,0,0,1,49,33.79,8,8,0,1,0,11.86-10.74Zm-94.46,21.64C150.64,187.09,134.66,200,108.6,200,83.32,200,72,183.55,72,167.25,72,144.49,93.47,120,140.6,120a124.34,124.34,0,0,1,36.78,5.68C176.93,144.44,170.46,162.78,159.47,176.27Z" />
@@ -624,10 +685,19 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
                 </div>
               </div>
             </Transition>
+            </div>
           </div>
         </div>
       </UiSectionStage>
     </div>
+
+    <PipelineLoopDrawer
+      v-model:open="loopDrawerOpen"
+      :personas="loopOptionsData?.personas ?? []"
+      :models="loopOptionsData?.models ?? []"
+      :loading="loopOptionsStatus === 'pending'"
+      @add="addLocalLoop"
+    />
 
     <UiCommandPalette
       v-model:open="paletteOpen"
@@ -642,8 +712,7 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
       @select="selectPaletteItem"
     >
       <template #item="{ item }">
-        <PipelineLoopSummary v-if="paletteKind === 'loops' && loopById.get(item.id)" :loop="loopById.get(item.id)!" />
-        <span v-else-if="paletteKind === 'human-gates'" class="pipeline-builder__gate-option">
+        <span v-if="paletteKind === 'human-gates'" class="pipeline-builder__gate-option">
           <span class="pipeline-builder__gate-option-icon" aria-hidden="true">
             <svg viewBox="0 0 256 256" fill="currentColor"><path :d="item.iconPath" /></svg>
           </span>
@@ -718,6 +787,38 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
   align-items: stretch;
 }
 
+.pipeline-builder__canvas {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.pipeline-builder__input-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pipeline-builder__input-pill :deep(.ui-icon-pill__trigger) {
+  background: transparent;
+  border-style: dashed;
+}
+
+.pipeline-builder__empty-pill,
+.pipeline-builder__empty-pill :deep(.ui-icon-pill__trigger) {
+  height: auto;
+}
+
+.pipeline-builder__empty-pill :deep(.ui-icon-pill__trigger) {
+  padding: 0.125rem;
+}
+
+.pipeline-builder__empty-pill :deep(.ui-icon-pill__label) {
+  overflow: visible;
+}
+
 .pipeline-builder__empty {
   display: flex;
   width: 100%;
@@ -727,26 +828,7 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
   justify-content: flex-start;
   flex-direction: column;
   gap: var(--ll-space-4);
-  padding-top: var(--ll-space-4);
-}
-
-.pipeline-builder__load-error {
-  display: flex;
-  align-items: center;
-  gap: var(--ll-space-3);
-  color: var(--ll-color-brand-ink);
-  font-size: var(--ll-text-sm);
-}
-
-.pipeline-builder__load-error button {
-  padding: 0;
-  color: inherit;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  font: 650 inherit;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
+  padding-top: 0;
 }
 
 .pipeline-builder__content {

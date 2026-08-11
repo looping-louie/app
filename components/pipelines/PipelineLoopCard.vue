@@ -59,7 +59,7 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
 
     <UiCard variant="editorial" class="pipeline-loop-card__review">
       <template #description>
-        <PipelineLoopSummary :loop="loop" :show-title="false" :show-flow="false" />
+        <PipelineLoopSummary :loop="loop" :show-title="false" :show-flow="false" layout="team-stop" />
       </template>
     </UiCard>
   </article>
