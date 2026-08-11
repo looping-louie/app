@@ -5,15 +5,18 @@ import UiAccordion from '~/components/ui/Accordion.vue'
 import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
+import UiChartCard from '~/components/ui/ChartCard.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
 import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiContainer from '~/components/ui/Container.vue'
+import UiDrawer from '~/components/ui/Drawer.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiModal from '~/components/ui/Modal.vue'
+import UiMetricCard from '~/components/ui/MetricCard.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
@@ -41,9 +44,11 @@ const catalog = ref('models')
 const settings = ref('api-keys')
 const headingDeployment = ref('platform')
 const interfaceView = ref('agents')
+const chartMetric = ref('tokens')
 const automaticRetries = ref(true)
 const humanReview = ref(false)
 const sampleModalOpen = ref(false)
+const sampleDrawerOpen = ref(false)
 const sampleCommandPaletteOpen = ref(false)
 const sampleCommandPaletteSelection = ref('No command selected')
 const pillStatus = ref('enabled')
@@ -81,6 +86,26 @@ const headingDeploymentOptions = [
   { value: 'platform', label: 'Louie Cloud' },
   { value: 'self-hosted', label: 'Self-hosted' },
 ]
+
+const chartMetricOptions = [
+  { value: 'tokens', label: 'Total tokens' },
+  { value: 'cost', label: 'Total cost' },
+]
+
+const chartMetricDemo = computed(() => ({
+  tokens: {
+    total: '534.0K',
+    label: 'Total tokens',
+    line: 'M0 146 C42 139 55 112 94 118 S151 80 191 91 S247 48 286 62 S337 29 380 38 S431 18 480 25',
+    area: 'M0 146 C42 139 55 112 94 118 S151 80 191 91 S247 48 286 62 S337 29 380 38 S431 18 480 25 V180 H0 Z',
+  },
+  cost: {
+    total: '$128.4',
+    label: 'Total cost',
+    line: 'M0 132 C36 126 62 139 96 108 S154 123 190 92 S245 104 286 72 S343 87 381 51 S436 68 480 39',
+    area: 'M0 132 C36 126 62 139 96 108 S154 123 190 92 S245 104 286 72 S343 87 381 51 S436 68 480 39 V180 H0 Z',
+  },
+})[chartMetric.value]!)
 
 const pillStatusOptions = [
   { value: 'all', label: 'All statuses' },
@@ -167,6 +192,7 @@ const designSystemNavItems = [
   { id: 'toggle', label: 'Toggle', level: 2 },
   { id: 'form-flow', label: 'Form flow', level: 2 },
   { id: 'modal', label: 'Modal', level: 2 },
+  { id: 'drawer', label: 'Drawer', level: 2 },
   { id: 'command-palette', label: 'Command palette', level: 2 },
   { id: 'pill', label: 'Pill', level: 2 },
   { id: 'copy-command', label: 'Copyable command', level: 2 },
@@ -177,12 +203,15 @@ const designSystemNavItems = [
   { id: 'layout', label: '04 · Layout', level: 1 },
   { id: 'container', label: 'Container', level: 2 },
   { id: 'section', label: 'Section', level: 2 },
-  { id: 'collections', label: '05 · Collections', level: 1 },
+  { id: 'metrics', label: '05 · Metrics', level: 1 },
+  { id: 'metric-card', label: 'Metric card', level: 2 },
+  { id: 'chart-card', label: 'Chart card', level: 2 },
+  { id: 'collections', label: '06 · Collections', level: 1 },
   { id: 'grid-card', label: 'Grid & card', level: 2 },
   { id: 'grid-list', label: 'Grid list', level: 2 },
   { id: 'team-grid', label: 'Team grid', level: 2 },
   { id: 'accordion', label: 'Accordion', level: 2 },
-  { id: 'site-chrome', label: '06 · Site chrome', level: 1 },
+  { id: 'site-chrome', label: '07 · Site chrome', level: 1 },
   { id: 'site-navigation', label: 'Main navigation', level: 2 },
   { id: 'interface-showcase', label: 'Interface showcase', level: 2 },
   { id: 'site-footer', label: 'Site footer', level: 2 },
@@ -948,6 +977,48 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>Accessibility</span>
                 <p>Traps focus while open, restores it on close, supports Escape, locks page scroll, and exposes native dialog semantics.</p>
+              </footer>
+            </article>
+
+            <article id="drawer" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Drawer</h3>
+                    <code>UiDrawer</code>
+                  </div>
+                  <p>A focused side panel for contextual forms and workflows that should not replace the current page.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage">
+                <div class="ds-stage__row">
+                  <UiButton variant="stroke" @click="sampleDrawerOpen = true">Open form drawer</UiButton>
+                </div>
+              </div>
+
+              <UiDrawer
+                v-model:open="sampleDrawerOpen"
+                title="Your loop"
+                description="Configure the loop to be used in your pipeline."
+                title-variant="eyebrow"
+              >
+                <div class="ds-drawer-sample">
+                  <label>
+                    <span>Name</span>
+                    <input data-autofocus type="text" placeholder="Untitled item">
+                  </label>
+                  <p>The body scrolls independently while the header and footer remain available.</p>
+                </div>
+                <template #footer>
+                  <UiButton block @click="sampleDrawerOpen = false">Create item</UiButton>
+                </template>
+              </UiDrawer>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Traps and restores focus, supports Escape and backdrop dismissal, locks page scroll, and exposes native dialog semantics.</p>
               </footer>
             </article>
 
@@ -1802,9 +1873,164 @@ onBeforeUnmount(() => {
             </article>
           </section>
 
-          <section id="collections" class="ds-section">
+          <section id="metrics" class="ds-section">
             <div class="ds-section__heading">
               <p class="ds-index">05</p>
+              <div>
+                <h2>Metrics</h2>
+                <p>
+                  From one decisive number to a complete trend line. Metric components establish
+                  hierarchy and framing while pages continue to own data and chart rendering.
+                </p>
+              </div>
+            </div>
+
+            <article id="metric-card" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Metric card</h3>
+                    <code>UiMetricCard</code>
+                  </div>
+                  <p>Compact statistics with a prominent value and semantic change context.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Metric overview</span>
+                    <code>SectionStage · columns="3" · parallel radii</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiGrid :columns="3" gap="md">
+                      <UiMetricCard
+                        label="Completed loops"
+                        value="12.8"
+                        suffix="K"
+                        trend="up"
+                        change="18.6"
+                        previous-value="10.8K"
+                      />
+                      <UiMetricCard
+                        label="Cost per run"
+                        value="0.42"
+                        prefix="$"
+                        trend="down"
+                        change="7.3"
+                        previous-value="$0.45"
+                      />
+                      <UiMetricCard
+                        label="Approval rate"
+                        value="94.2"
+                        suffix="%"
+                        trend="neutral"
+                        change="0.2"
+                        previous-value="94%"
+                      />
+                    </UiGrid>
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Value</span><code>value · prefix · suffix</code></div>
+                  <p class="ds-property__copy">The value owns the visual hierarchy. Optional prefix and suffix props cover currencies, percentages, and compact units without baking formatting rules into the component.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Trend</span><code>up · down · neutral</code></div>
+                  <p class="ds-property__copy"><strong>up</strong> uses Cockpit Blue, <strong>down</strong> uses Louie Red, and <strong>neutral</strong> uses Border Strong. Change accepts a number with or without the percent symbol.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Comparison</span><code>change · previousValue</code></div>
+                  <p class="ds-property__copy">The comparison sentence keeps “vs previous” muted while the previous value returns to Ink, preserving the same hierarchy as the main metric.</p>
+                </div>
+              </div>
+            </article>
+
+            <article id="chart-card" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Chart card</h3>
+                    <code>UiChartCard</code>
+                  </div>
+                  <p>A structured frame for totals, optional perspectives, charts, and legends.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Usage over time</span>
+                    <code>header · controls · chart · legend</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiChartCard
+                      title="Model usage"
+                      description="Tokens and cost across completed production runs."
+                      :total="chartMetricDemo.total"
+                      :total-label="chartMetricDemo.label"
+                    >
+                      <template #controls>
+                        <UiSegmentedControl
+                          v-model="chartMetric"
+                          :options="chartMetricOptions"
+                          variant="inline"
+                          accent="metal"
+                          aria-label="Chart metric"
+                        />
+                      </template>
+
+                      <template #chart>
+                        <div class="ds-chart-demo">
+                          <svg viewBox="0 0 480 180" preserveAspectRatio="none" role="img" :aria-label="`${chartMetricDemo.label} trend over time`">
+                            <defs>
+                              <linearGradient id="ds-chart-area" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stop-color="var(--ll-color-primary-highlight)" stop-opacity="0.52" />
+                                <stop offset="1" stop-color="var(--ll-color-primary-highlight)" stop-opacity="0.04" />
+                              </linearGradient>
+                            </defs>
+                            <g class="ds-chart-demo__grid" aria-hidden="true">
+                              <path d="M0 20H480 M0 60H480 M0 100H480 M0 140H480 M0 180H480" />
+                            </g>
+                            <path :d="chartMetricDemo.area" class="ds-chart-demo__area" />
+                            <path :d="chartMetricDemo.line" class="ds-chart-demo__line" />
+                          </svg>
+                          <div class="ds-chart-demo__axis" aria-hidden="true">
+                            <span>Aug 1</span><span>Aug 8</span><span>Aug 15</span><span>Aug 22</span><span>Aug 29</span>
+                          </div>
+                        </div>
+                      </template>
+
+                      <template #legend>
+                        <span class="ds-chart-legend"><i />{{ chartMetricDemo.label }}</span>
+                        <span>Production runs · daily</span>
+                      </template>
+                    </UiChartCard>
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Header</span><code>title · description · total · totalLabel</code></div>
+                  <p class="ds-property__copy">The card aligns context on the left and the aggregate on the right, then stacks both safely on small screens.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Composition</span><code>#controls · #chart · #legend</code></div>
+                  <p class="ds-property__copy">Controls are optional and accept the inline SegmentedControl. Chart and legend remain slots so SVG, canvas, or a charting library can be selected by the consuming feature.</p>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section id="collections" class="ds-section">
+            <div class="ds-section__heading">
+              <p class="ds-index">06</p>
               <div>
                 <h2>Collections</h2>
                 <p>
@@ -2149,7 +2375,7 @@ onBeforeUnmount(() => {
 
           <section id="site-chrome" class="ds-section">
             <div class="ds-section__heading">
-              <p class="ds-index">06</p>
+              <p class="ds-index">07</p>
               <div>
                 <h2>Site chrome</h2>
                 <p>
@@ -3417,6 +3643,64 @@ onBeforeUnmount(() => {
   grid-template-rows: repeat(2, minmax(0, 1fr));
 }
 
+.ds-chart-demo {
+  display: grid;
+  min-width: 0;
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--ll-space-2);
+  padding-top: var(--ll-space-2);
+}
+
+.ds-chart-demo svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  overflow: visible;
+}
+
+.ds-chart-demo__grid {
+  fill: none;
+  stroke: var(--ll-color-divider);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.ds-chart-demo__area {
+  fill: url(#ds-chart-area);
+}
+
+.ds-chart-demo__line {
+  fill: none;
+  stroke: var(--ll-color-primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.ds-chart-demo__axis {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ll-space-3);
+  color: var(--ll-color-text-faint);
+  font: 500 var(--ll-text-xs) / 1 var(--ll-font-mono);
+}
+
+.ds-chart-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ll-space-2);
+}
+
+.ds-chart-legend i {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--ll-color-primary);
+  border-radius: 50%;
+}
+
 .ds-resource-group :deep(.ui-card--row) {
   min-height: 0;
 }
@@ -4181,6 +4465,12 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 }
+
+.ds-drawer-sample { display: grid; gap: var(--ll-space-5); }
+.ds-drawer-sample label { display: grid; gap: var(--ll-space-2); color: var(--ll-color-ink); font: 600 var(--ll-text-sm) / 1.2 var(--ll-font-control); }
+.ds-drawer-sample input { width: 100%; height: 3rem; box-sizing: border-box; padding: 0 var(--ll-space-5); color: var(--ll-color-ink); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); font: 450 1rem / 1.5 var(--ll-font-control); }
+.ds-drawer-sample input:focus { border-color: var(--ll-color-primary); box-shadow: 0 0 0 3px var(--ll-color-primary-highlight); outline: none; }
+.ds-drawer-sample p { margin: 0; color: var(--ll-color-text-muted); font: 400 var(--ll-text-sm) / 1.55 var(--ll-font-control); }
 
 @media (prefers-reduced-motion: reduce) {
   :global(html) {
