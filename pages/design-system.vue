@@ -21,6 +21,7 @@ import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
+import UiTable from '~/components/ui/Table.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
 
 definePageMeta({
@@ -209,6 +210,7 @@ const designSystemNavItems = [
   { id: 'collections', label: '06 · Collections', level: 1 },
   { id: 'grid-card', label: 'Grid & card', level: 2 },
   { id: 'grid-list', label: 'Grid list', level: 2 },
+  { id: 'table', label: 'Table', level: 2 },
   { id: 'team-grid', label: 'Team grid', level: 2 },
   { id: 'accordion', label: 'Accordion', level: 2 },
   { id: 'site-chrome', label: '07 · Site chrome', level: 1 },
@@ -411,6 +413,20 @@ const keyValueRows = [
   { id: 'status', key: 'Status', actionLabel: 'Edit' },
   { id: 'agents', key: 'Agents', actionLabel: 'Edit' },
   { id: 'prompt', key: 'Prompt', actionLabel: 'Edit' },
+]
+
+const tableColumns = [
+  { key: 'name', label: 'Name', width: '34%' },
+  { key: 'flow', label: 'Flow', type: 'option' as const },
+  { key: 'team', label: 'Team', type: 'option' as const },
+  { key: 'owner', label: 'Owner' },
+]
+
+const tableRows = [
+  { id: 'release-readiness', name: 'Release readiness', flow: 'Refinement', team: ['Generator', 'Reviewer'], owner: 'Maya Rivera' },
+  { id: 'security-review', name: 'Security review', flow: 'Roundtable', team: ['Generator', 'Aggregator'], owner: 'Theo Chen' },
+  { id: 'support-triage', name: 'Support triage', flow: 'Direct', team: ['Executor'], owner: 'Inés Álvarez' },
+  { id: 'weekly-synthesis', name: 'Weekly synthesis', flow: 'Refinement', team: ['Generator', 'Reviewer', 'Aggregator'], owner: 'Omar Silva' },
 ]
 
 function updateProviderRow(item: { id: string }, checked: boolean) {
@@ -2300,6 +2316,55 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>Variants</span>
                 <p><strong>plain</strong> and <strong>surface</strong> serve directory rows. <strong>key-value</strong> compresses inspection views while allowing pills to wrap or a text block to occupy the value column. Its optional SectionStage owns the Metal 025 surface and inverse edge.</p>
+              </footer>
+            </article>
+
+            <article id="table" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Table</h3>
+                    <code>UiTable</code>
+                  </div>
+                  <p>Structured datasets with quiet row surfaces and pills for finite options.</p>
+                </div>
+                <span class="ds-status"><i /> New</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Pipeline directory</span>
+                    <code>text cells · option cells · horizontal dividers</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiTable
+                      :columns="tableColumns"
+                      :rows="tableRows"
+                      caption="Pipeline directory"
+                    />
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Columns</span><code>key · label · type · align · width</code></div>
+                  <p class="ds-property__copy"><strong>text</strong> values sit directly on the row surface. <strong>option</strong> values become non-interactive UiPills automatically and accept either one value or an array.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Cells</span><code>#cell · #cell-{key} · #heading-{key}</code></div>
+                  <p class="ds-property__copy">Generic and column-specific slots allow richer pills, links, or controls without changing the table structure.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Responsive</span><code>horizontal overflow</code></div>
+                  <p class="ds-property__copy">The semantic table keeps its column relationships on narrow screens and scrolls inside its own rounded frame.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Surface</span>
+                <p>Rows use Card over the Section surface, the header uses Highlight, and hover deepens the current row. Divider is shared by the outer border and every horizontal separator; vertical rules are intentionally absent.</p>
               </footer>
             </article>
 
