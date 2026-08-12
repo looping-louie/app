@@ -23,10 +23,13 @@ interface PipelineLoop {
   stop_conditions: PipelineLoopStopConditions | null
 }
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   loop: PipelineLoop
   instanceId: string
-}>()
+  readonly?: boolean
+}>(), {
+  readonly: false,
+})
 
 const emit = defineEmits<{
   remove: [instanceId: string]
@@ -38,6 +41,7 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
 <template>
   <article class="pipeline-loop-card">
     <UiButton
+      v-if="!readonly"
       class="pipeline-loop-card__remove"
       variant="coral"
       size="sm"

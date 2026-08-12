@@ -267,7 +267,7 @@ const previousTipPath = computed(() => {
   left: 22%;
 }
 
-.pipeline-outcome-route__stop {
+.pipeline-outcome-route .pipeline-outcome-route__stop {
   position: absolute;
   z-index: 2;
   top: 0.5rem;
@@ -306,7 +306,7 @@ const previousTipPath = computed(() => {
 }
 
 @media (max-width: 48rem) {
-  .pipeline-outcome-route__stop { right: 0; }
+  .pipeline-outcome-route .pipeline-outcome-route__stop { right: 0; }
   .pipeline-outcome-route__signal--failure { left: 61%; }
   .pipeline-outcome-route--retry .pipeline-outcome-route__signal--failure { left: 76%; }
   .pipeline-outcome-route--previous .pipeline-outcome-route__signal--failure { left: 18%; }

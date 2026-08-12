@@ -9,10 +9,12 @@ import UiButton from '~/components/ui/Button.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
 import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiContainer from '~/components/ui/Container.vue'
+import UiFormProgress from '~/components/ui/FormProgress.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
+import UiTextField from '~/components/ui/TextField.vue'
 
 interface LoopAgent {
   persona_id: string
@@ -86,6 +88,28 @@ interface PipelineHumanGateActivity {
 }
 
 type PipelineActivity = PipelineLoopActivity | PipelineHumanGateActivity
+type PipelineBuilderStep = 'design' | 'details'
+
+interface PipelineLoopStepRequest {
+  type: 'loop'
+  loop_id: string
+}
+
+interface PipelineHumanGateStepRequest {
+  type: 'human_gate'
+  gate_type: 'approval' | 'quiz'
+  config?: {
+    minimum_correct_answers: number
+    question_count: number
+    option_count: number
+  }
+}
+
+type PipelineStepRequest = PipelineLoopStepRequest | PipelineHumanGateStepRequest
+
+interface PipelineResponse {
+  id: string
+}
 
 const humanGates: Array<{
   id: HumanGateKind
@@ -115,6 +139,13 @@ const humanGates: Array<{
 
 const route = useRoute()
 const router = useRouter()
+const builderSteps = ['Design', 'Details']
+const builderStep = ref<PipelineBuilderStep>(route.query.step === 'details' ? 'details' : 'design')
+const pipelineTitle = ref('')
+const pipelineDescription = ref('')
+const detailErrors = reactive({ title: '', description: '' })
+const savingPipeline = ref(false)
+const saveError = ref('')
 const stageRoot = ref<HTMLElement | null>(null)
 const paletteOpen = ref(false)
 const paletteQuery = ref('')
@@ -155,8 +186,50 @@ const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
 const loops = computed(() => [...localLoops.value, ...(data.value?.items ?? [])])
 const loopById = computed(() => new Map(loops.value.map(loop => [loop.id, loop])))
 const gateById = new Map(humanGates.map(gate => [gate.id, gate]))
-const hasProgress = computed(() => activities.value.length > 0)
+const hasProgress = computed(() => Boolean(
+  activities.value.length
+  || pipelineTitle.value.trim()
+  || pipelineDescription.value.trim(),
+))
 const hasLoop = computed(() => activities.value.some(activity => activity.type === 'loop'))
+const builderStepIndex = computed(() => builderStep.value === 'design' ? 0 : 1)
+const hasConfiguredQuiz = computed(() => activities.value.every(activity => (
+  activity.type !== 'human-gate'
+  || activity.gate !== 'multiple-choice-quiz'
+  || (typeof activity.passingScore === 'number' && activity.passingScore >= 1 && activity.passingScore <= 10)
+)))
+const hasCompleteLocalLoops = computed(() => localLoops.value.every(loop => (
+  Boolean(loop.flow)
+  && Boolean(loop.stop_conditions?.max_iterations || loop.stop_conditions?.max_tokens || loop.stop_conditions?.timeout_seconds)
+  && loop.agents.length > 0
+  && loop.agents.every(agent => Boolean(agent.persona_id && agent.model_id && agent.role))
+)))
+const canSaveDesign = computed(() => (
+  hasLoop.value
+  && activities.value.length >= 2
+  && hasConfiguredQuiz.value
+  && hasCompleteLocalLoops.value
+))
+const canSavePipeline = computed(() => (
+  canSaveDesign.value
+  && Boolean(pipelineTitle.value.trim())
+  && Boolean(pipelineDescription.value.trim())
+  && !savingPipeline.value
+))
+const designHint = computed(() => {
+  if (!hasLoop.value) return ''
+  if (activities.value.length < 2) return 'Add one more step to complete the design.'
+  if (!hasConfiguredQuiz.value) return 'Set a passing score for every quiz.'
+  if (!hasCompleteLocalLoops.value) return 'Complete every loop configuration before continuing.'
+  return ''
+})
+const breadcrumbItems = computed(() => [
+  { label: 'Pipelines', to: '/app/pipelines' },
+  { label: 'Create new pipeline' },
+  ...(builderStep.value === 'details'
+    ? [{ label: 'Design', to: '/app/pipelines/new?step=design' }, { label: 'Details' }]
+    : [{ label: 'Design' }]),
+])
 
 const paletteItems = computed<CommandPaletteItem[]>(() => {
   if (paletteKind.value === 'users') {
@@ -385,12 +458,136 @@ function measureStage() {
   stageRoot.value.style.setProperty('--pipeline-stage-min-height', `${remainingHeight}px`)
 }
 
+function saveLocalDraft() {
+  if (!import.meta.client) return
+  localStorage.setItem(localKey, JSON.stringify({
+    activities: activities.value,
+    localLoops: localLoops.value,
+    title: pipelineTitle.value,
+    description: pipelineDescription.value,
+    step: builderStep.value,
+    updatedAt: new Date().toISOString(),
+  }))
+}
+
+async function saveDesign() {
+  if (!canSaveDesign.value) return
+  saveError.value = ''
+  builderStep.value = 'details'
+  saveLocalDraft()
+  await router.replace({ query: { ...route.query, step: 'details' } })
+  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function validateDetails() {
+  detailErrors.title = pipelineTitle.value.trim() ? '' : 'Give this pipeline a title.'
+  detailErrors.description = pipelineDescription.value.trim() ? '' : 'Describe what this pipeline does.'
+  return !detailErrors.title && !detailErrors.description
+}
+
+function pipelineSteps(): PipelineStepRequest[] {
+  return activities.value.map((activity): PipelineStepRequest => {
+    if (activity.type === 'loop') {
+      return { type: 'loop', loop_id: activity.loopId }
+    }
+    if (activity.gate === 'multiple-choice-quiz') {
+      return {
+        type: 'human_gate',
+        gate_type: 'quiz',
+        config: {
+          minimum_correct_answers: activity.passingScore!,
+          question_count: 10,
+          option_count: 3,
+        },
+      }
+    }
+    return { type: 'human_gate', gate_type: 'approval' }
+  })
+}
+
+async function persistLocalLoops() {
+  for (let index = 0; index < localLoops.value.length; index += 1) {
+    const loop = localLoops.value[index]!
+    if (!loop.id.startsWith('local-loop-')) continue
+
+    const created = await $fetch<LoopSummary>('/api/v1/loops', {
+      method: 'POST',
+      body: {
+        title: loop.title,
+        description: loop.description,
+        prompt: 'Process the input received from this pipeline using the configured team and flow.',
+        flow: loop.flow,
+        status: 'active',
+        agents: loop.agents,
+        stop_conditions: loop.stop_conditions,
+      },
+    })
+    const localId = loop.id
+    localLoops.value.splice(index, 1, created)
+    activities.value = activities.value.map(activity => (
+      activity.type === 'loop' && activity.loopId === localId
+        ? { ...activity, loopId: created.id }
+        : activity
+    ))
+    saveLocalDraft()
+  }
+}
+
+function saveFailureMessage(error: unknown) {
+  if (!error || typeof error !== 'object') return 'The pipeline could not be saved. Please try again.'
+  const data = (error as { data?: unknown }).data
+  if (data && typeof data === 'object') {
+    const detail = (data as { detail?: unknown }).detail
+    if (typeof detail === 'string') return detail
+    const apiError = (data as { error?: unknown }).error
+    if (apiError && typeof apiError === 'object' && typeof (apiError as { message?: unknown }).message === 'string') {
+      return (apiError as { message: string }).message
+    }
+  }
+  return 'The pipeline could not be saved. Please try again.'
+}
+
+async function createPipeline() {
+  if (!validateDetails() || !canSaveDesign.value || savingPipeline.value) return
+  savingPipeline.value = true
+  saveError.value = ''
+  try {
+    await persistLocalLoops()
+    await $fetch<PipelineResponse>('/api/v1/pipelines', {
+      method: 'POST',
+      body: {
+        title: pipelineTitle.value.trim(),
+        description: pipelineDescription.value.trim(),
+        steps: pipelineSteps(),
+      },
+    })
+    localStorage.removeItem(localKey)
+    clearNuxtData('pipelines-catalog')
+    allowRouteLeave.value = true
+    await router.push('/app/pipelines')
+  } catch (error) {
+    saveError.value = saveFailureMessage(error)
+    saveLocalDraft()
+  } finally {
+    savingPipeline.value = false
+  }
+}
+
 function restoreLocalDraft() {
   if (!import.meta.client) return
   const raw = localStorage.getItem(localKey)
   if (!raw) return
   try {
-    const draft = JSON.parse(raw) as { activities?: unknown, loopIds?: unknown, localLoops?: unknown }
+    const draft = JSON.parse(raw) as {
+      activities?: unknown
+      loopIds?: unknown
+      localLoops?: unknown
+      title?: unknown
+      description?: unknown
+      step?: unknown
+    }
+    pipelineTitle.value = typeof draft.title === 'string' ? draft.title : ''
+    pipelineDescription.value = typeof draft.description === 'string' ? draft.description : ''
     if (Array.isArray(draft.localLoops)) {
       localLoops.value = draft.localLoops.flatMap((candidate): LoopSummary[] => {
         if (!candidate || typeof candidate !== 'object') return []
@@ -459,6 +656,9 @@ function restoreLocalDraft() {
         .filter((id): id is string => typeof id === 'string')
         .map(loopId => ({ instanceId: createInstanceId(), type: 'loop', loopId }))
     }
+    if (route.query.step !== 'design' && route.query.step !== 'details' && draft.step === 'details') {
+      builderStep.value = 'details'
+    }
   } catch {
     localStorage.removeItem(localKey)
   }
@@ -474,11 +674,7 @@ async function saveDraftAndLeave() {
   if (exitActionPending.value) return
   exitActionPending.value = true
   try {
-    localStorage.setItem(localKey, JSON.stringify({
-      activities: activities.value,
-      localLoops: localLoops.value,
-      updatedAt: new Date().toISOString(),
-    }))
+    saveLocalDraft()
     await leaveBuilder()
   } finally {
     exitActionPending.value = false
@@ -509,8 +705,31 @@ onBeforeRouteLeave((to) => {
   return false
 })
 
-onMounted(() => {
+watch(() => route.query.step, async (requestedStep) => {
+  if (requestedStep === 'design') {
+    builderStep.value = 'design'
+    return
+  }
+  if (requestedStep === 'details') {
+    if (canSaveDesign.value) builderStep.value = 'details'
+    else await router.replace({ query: { ...route.query, step: 'design' } })
+  }
+})
+
+watch(builderStep, async (step) => {
+  await nextTick()
+  if (step === 'design' && stageRoot.value) {
+    stageResizeObserver?.observe(stageRoot.value)
+    measureStage()
+  }
+})
+
+onMounted(async () => {
   restoreLocalDraft()
+  if (builderStep.value === 'details' && !canSaveDesign.value) {
+    builderStep.value = 'design'
+    await router.replace({ query: { ...route.query, step: 'design' } })
+  }
   window.addEventListener('beforeunload', onBeforeUnload)
   window.addEventListener('resize', measureStage)
   stageResizeObserver = new ResizeObserver(measureStage)
@@ -531,27 +750,38 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
 
 <template>
   <UiContainer size="wide" class="pipeline-builder">
+    <header class="pipeline-builder__topbar">
+      <UiFormProgress :steps="builderSteps" :current="builderStepIndex" />
+    </header>
+
     <UiBreadcrumb
-      :items="[
-        { label: 'Pipelines', to: '/app/pipelines' },
-        { label: 'Create new pipeline' },
-      ]"
+      :items="breadcrumbItems"
       class="pipeline-builder__breadcrumb"
     />
 
     <UiHeadingBlock layout="split" size="section" align="start" class="pipeline-builder__heading">
       <template #title>
-        <h1>Build a new pipeline</h1>
+        <h1>{{ builderStep === 'design' ? 'Build a new pipeline' : 'Name your pipeline' }}</h1>
       </template>
       <template #description>
-        <p>Connect existing loops into one clear, repeatable workflow.</p>
+        <p v-if="builderStep === 'design'">Connect existing loops into one clear, repeatable workflow.</p>
+        <p v-else>Give your design a clear title and a short description so your team can find it later.</p>
       </template>
       <template #aside>
-        <UiButton :disabled="!hasLoop">Save pipeline</UiButton>
+        <div class="pipeline-builder__heading-actions">
+          <UiButton v-if="builderStep === 'design'" :disabled="!canSaveDesign" @click="saveDesign">
+            Save design
+          </UiButton>
+          <UiButton v-else :disabled="!canSavePipeline" :loading="savingPipeline" @click="createPipeline">
+            Save pipeline
+          </UiButton>
+          <p v-if="builderStep === 'design' && designHint" class="pipeline-builder__design-hint">{{ designHint }}</p>
+          <p v-if="saveError" class="pipeline-builder__save-error" role="alert">{{ saveError }}</p>
+        </div>
       </template>
     </UiHeadingBlock>
 
-    <div ref="stageRoot" class="pipeline-builder__stage">
+    <div v-if="builderStep === 'design'" ref="stageRoot" class="pipeline-builder__stage">
       <UiCollectionGroupTitle title="Your pipeline" heading-as="h2" />
       <UiSectionStage inverse="bottom">
         <div class="pipeline-builder__canvas">
@@ -691,6 +921,39 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
       </UiSectionStage>
     </div>
 
+    <section v-else class="pipeline-builder__details" aria-label="Pipeline details">
+      <div class="pipeline-builder__field-stage">
+        <UiCollectionGroupTitle title="Title *" heading-as="h2" />
+        <UiSectionStage inverse="bottom">
+          <UiTextField
+            v-model="pipelineTitle"
+            label="Title"
+            hide-label
+            required
+            placeholder="e.g. Review and approve a launch plan"
+            :error="detailErrors.title"
+            @input="detailErrors.title = ''; saveError = ''"
+          />
+        </UiSectionStage>
+      </div>
+      <div class="pipeline-builder__field-stage">
+        <UiCollectionGroupTitle title="Description *" heading-as="h2" />
+        <UiSectionStage inverse="bottom">
+          <UiTextField
+            v-model="pipelineDescription"
+            label="Description"
+            hide-label
+            multiline
+            :rows="7"
+            required
+            placeholder="Explain what this pipeline coordinates and when your team should use it…"
+            :error="detailErrors.description"
+            @input="detailErrors.description = ''; saveError = ''"
+          />
+        </UiSectionStage>
+      </div>
+    </section>
+
     <PipelineLoopDrawer
       v-model:open="loopDrawerOpen"
       :personas="loopOptionsData?.personas ?? []"
@@ -762,12 +1025,53 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
   padding-block: var(--ll-space-6) 0;
 }
 
+.pipeline-builder__topbar {
+  width: calc(100% + var(--ui-container-gutter));
+  margin-bottom: var(--ll-space-10);
+}
+
 .pipeline-builder__breadcrumb {
   margin-bottom: var(--ll-space-5);
 }
 
 .pipeline-builder__heading {
   margin-bottom: var(--ll-space-10);
+}
+
+.pipeline-builder__heading-actions {
+  display: grid;
+  max-width: 22rem;
+  justify-items: end;
+  gap: var(--ll-space-3);
+}
+
+.pipeline-builder__save-error {
+  margin: 0;
+  color: var(--ll-color-brand-ink);
+  font: 500 var(--ll-text-xs) / 1.45 var(--ll-font-control);
+  text-align: right;
+}
+
+.pipeline-builder__design-hint {
+  margin: 0;
+  color: var(--ll-color-text-muted);
+  font: 500 var(--ll-text-xs) / 1.45 var(--ll-font-control);
+  text-align: right;
+}
+
+.pipeline-builder__details {
+  display: grid;
+  gap: var(--ll-space-6);
+  padding-bottom: var(--ll-space-12);
+}
+
+.pipeline-builder__field-stage {
+  min-width: 0;
+}
+
+.pipeline-builder__field-stage :deep(.ui-section-stage__shell) {
+  width: 100%;
+  margin-inline: 0;
 }
 
 .pipeline-builder__stage {
@@ -1018,6 +1322,20 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
 @media (max-width: 48rem) {
   .pipeline-builder__heading {
     margin-bottom: var(--ll-space-8);
+  }
+
+  .pipeline-builder__heading-actions {
+    width: 100%;
+    max-width: none;
+    justify-items: start;
+  }
+
+  .pipeline-builder__save-error {
+    text-align: left;
+  }
+
+  .pipeline-builder__design-hint {
+    text-align: left;
   }
 
   .pipeline-builder__actions {

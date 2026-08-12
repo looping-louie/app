@@ -146,6 +146,7 @@ useHead({
         <UiCard
           v-for="pipeline in displayedPipelines"
           :key="pipeline.id"
+          :to="`/app/pipelines/${encodeURIComponent(pipeline.id)}`"
           variant="editorial"
           accent-on-hover
           class="catalog-card"

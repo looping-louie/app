@@ -4,13 +4,18 @@ import UiCard from '~/components/ui/Card.vue'
 
 type HumanGateKind = 'human-review' | 'four-eye-review' | 'multiple-choice-quiz'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   instanceId: string
   gate: HumanGateKind
   teamMembers?: Array<'any-person' | null>
   passingScore?: number | null
-}>()
+  readonly?: boolean
+}>(), {
+  teamMembers: undefined,
+  passingScore: undefined,
+  readonly: false,
+})
 
 const emit = defineEmits<{
   remove: [instanceId: string]
@@ -24,6 +29,7 @@ const SMILEY_PATH = 'M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0
 const memberSlots = computed(() => props.gate === 'four-eye-review' ? 2 : props.gate === 'human-review' ? 1 : 0)
 
 function onPassingScoreInput(event: Event) {
+  if (props.readonly) return
   const input = event.currentTarget as HTMLInputElement
   if (!input.value) {
     emit('update-passing-score', props.instanceId, null)
@@ -39,6 +45,7 @@ function onPassingScoreInput(event: Event) {
 <template>
   <article class="pipeline-human-gate-card">
     <UiButton
+      v-if="!readonly"
       class="pipeline-human-gate-card__remove"
       variant="coral"
       size="sm"
@@ -64,13 +71,14 @@ function onPassingScoreInput(event: Event) {
         <UiButton
           v-for="slotIndex in memberSlots"
           :key="slotIndex"
+          :as="readonly ? 'span' : 'button'"
           variant="secondary"
           icon-only
           draggable="false"
           :aria-label="teamMembers?.[slotIndex - 1] === 'any-person' ? `Change team member ${slotIndex}` : `Choose team member ${slotIndex}`"
           :title="teamMembers?.[slotIndex - 1] === 'any-person' ? 'Any person' : 'Choose a person'"
           @mousedown.stop
-          @click.stop="emit('choose-member', instanceId, slotIndex - 1)"
+          @click.stop="readonly ? undefined : emit('choose-member', instanceId, slotIndex - 1)"
         >
           <template #leading>
             <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
@@ -92,6 +100,8 @@ function onPassingScoreInput(event: Event) {
           step="1"
           inputmode="numeric"
           draggable="false"
+          :readonly="readonly"
+          :tabindex="readonly ? -1 : undefined"
           aria-label="Passing score out of 10"
           @pointerdown.stop
           @mousedown.stop
