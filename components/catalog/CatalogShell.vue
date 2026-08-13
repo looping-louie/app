@@ -2,6 +2,7 @@
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiContainer from '~/components/ui/Container.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import UiPagination from '~/components/ui/Pagination.vue'
 
 type AsyncStageStatus = 'idle' | 'pending' | 'success' | 'error'
 type SectionStageInverse = 'none' | 'top' | 'bottom' | 'both'
@@ -15,6 +16,9 @@ withDefaults(defineProps<{
   loadingLabel?: string
   errorLabel?: string
   emptyLabel?: string
+  paginationTotal?: number
+  paginationOffset?: number
+  paginationPageSize?: number
 }>(), {
   status: 'success',
   empty: false,
@@ -22,10 +26,13 @@ withDefaults(defineProps<{
   loadingLabel: 'Loading…',
   errorLabel: 'Content could not be loaded.',
   emptyLabel: 'Nothing to show yet.',
+  paginationOffset: 0,
+  paginationPageSize: 12,
 })
 
 defineEmits<{
   retry: []
+  'update:paginationOffset': [offset: number]
 }>()
 </script>
 
@@ -56,6 +63,15 @@ defineEmits<{
       <template v-if="$slots.empty" #empty><slot name="empty" /></template>
       <slot />
     </UiAsyncStage>
+
+    <UiPagination
+      v-if="status === 'success' && paginationTotal !== undefined"
+      :offset="paginationOffset"
+      :total="paginationTotal"
+      :page-size="paginationPageSize"
+      aria-label="Catalog pagination"
+      @update:offset="$emit('update:paginationOffset', $event)"
+    />
   </UiContainer>
 </template>
 

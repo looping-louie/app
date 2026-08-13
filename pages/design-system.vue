@@ -19,6 +19,7 @@ import UiPill from '~/components/ui/Pill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiMetricCard from '~/components/ui/MetricCard.vue'
+import UiPagination from '~/components/ui/Pagination.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
@@ -56,6 +57,7 @@ const sampleCommandPaletteOpen = ref(false)
 const sampleCommandPaletteSelection = ref('No command selected')
 const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
+const samplePaginationOffset = ref(24)
 const buttonDropdownSelection = ref('No action selected')
 const copiedCommand = ref<string | null>(null)
 const copyError = ref<string | null>(null)
@@ -214,6 +216,7 @@ const designSystemNavItems = [
   { id: 'grid-card', label: 'Grid & card', level: 2 },
   { id: 'grid-list', label: 'Grid list', level: 2 },
   { id: 'async-stage', label: 'Async stage', level: 2 },
+  { id: 'pagination', label: 'Pagination', level: 2 },
   { id: 'table', label: 'Table', level: 2 },
   { id: 'team-grid', label: 'Team grid', level: 2 },
   { id: 'accordion', label: 'Accordion', level: 2 },
@@ -2437,6 +2440,53 @@ onBeforeUnmount(() => {
                 <span>Composition</span>
                 <p>Use it around one asynchronous collection or content block. Page headings and filters belong to the surrounding shell, not to this component.</p>
               </footer>
+            </article>
+
+            <article id="pagination" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Pagination</h3>
+                    <code>UiPagination</code>
+                  </div>
+                  <p>Offset-based navigation for catalogs with a fixed API page size.</p>
+                </div>
+                <span class="ds-status"><i /> New</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Model catalog</span>
+                    <code>offset · total · page-size</code>
+                  </div>
+                  <UiSectionStage inverse="bottom" class="ds-collection-stage">
+                    <UiGrid :columns="3" gap="lg" class="ds-team-grid">
+                      <div v-for="member in teamMembers.slice(0, 3)" :key="member.id" class="ds-team-member">
+                        <span class="ds-team-member__avatar">{{ member.initials }}</span>
+                        <div><strong>{{ member.name }}</strong><span>{{ member.role }}</span></div>
+                      </div>
+                    </UiGrid>
+                  </UiSectionStage>
+                  <UiPagination
+                    v-model:offset="samplePaginationOffset"
+                    :total="73"
+                    :page-size="24"
+                    aria-label="Model catalog pagination example"
+                  />
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Contract</span><code>v-model:offset · total · page-size</code></div>
+                  <p class="ds-property__copy">The component derives its range and disabled states, clamps stale offsets when totals shrink, and hides itself when one page is enough.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Composition</span><code>CatalogShell · below SectionStage</code></div>
+                  <p class="ds-property__copy">Keep pagination outside the Metal 025 surface so the collection and its navigation remain visually distinct.</p>
+                </div>
+              </div>
             </article>
 
             <article id="table" class="ds-component">
