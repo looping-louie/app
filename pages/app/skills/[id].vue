@@ -6,19 +6,13 @@ import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiMarkdownContent from '~/components/ui/MarkdownContent.vue'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
 
-interface SkillDetail {
-  id: string
-  name: string
-  description: string
-  instructions: string
-}
-
 const route = useRoute()
 const skillId = computed(() => String(route.params.id))
+const api = useApiClient()
 
 const { data: skill, status, error, refresh } = await useAsyncData(
   () => `skill-${skillId.value}`,
-  () => $fetch<SkillDetail>(`/api/v1/skills/${encodeURIComponent(skillId.value)}`),
+  () => api.skills.get(skillId.value),
 )
 
 definePageMeta({
@@ -37,7 +31,7 @@ useHead(() => ({
     <div v-if="status === 'pending'" class="skill-state" role="status">Loading skill…</div>
     <div v-else-if="error" class="skill-state skill-state--error" role="alert">
       <span>Skill could not be loaded.</span>
-      <UiButton variant="stroke" size="sm" @click="refresh">Retry</UiButton>
+      <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
     </div>
     <template v-else-if="skill">
       <UiBreadcrumb

@@ -4,21 +4,11 @@ import UiCard from '~/components/ui/Card.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 
-interface AgentSummary {
-  id: string
-  name: string
-  description: string
-  source_instruction_id: string | null
-}
-
-interface AgentListResponse {
-  items: AgentSummary[]
-  total: number
-}
+const api = useApiClient()
 
 const { data, status, refresh } = await useAsyncData(
   'agents-catalog',
-  () => $fetch<AgentListResponse>('/api/v1/personas'),
+  () => api.personas.list(),
 )
 
 const agents = computed(() => data.value?.items ?? [])

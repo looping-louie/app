@@ -12,51 +12,26 @@ import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
-
-interface LoopAgent {
-  persona_id: string
-  model_id: string
-  role: string
-}
-
-interface LoopStopConditions {
-  max_iterations?: number | null
-  max_tokens?: number | null
-  timeout_seconds?: number | null
-}
+import type {
+  ActivityCreateRequest,
+  LoopAgentInput,
+  LoopActivityType,
+  LoopFlow,
+  LoopOutputContract,
+  LoopRole,
+  LoopStopConditions,
+} from '~/types/api'
+import { apiErrorMessage } from '~/utils/api/errors'
 
 interface LoopSummary {
   id: string
   title: string
   description: string
-  flow: string | null
+  flow: LoopFlow
   status: string
-  agents: LoopAgent[]
-  stop_conditions: LoopStopConditions | null
-}
-
-interface LoopListResponse {
-  items: LoopSummary[]
-  total: number
-}
-
-interface PersonaSummary {
-  id: string
-  name: string
-  description?: string
-  source_instruction_id?: string | null
-}
-
-interface ModelSummary {
-  id: string
-  name: string
-  vendor: string
-  family: string
-}
-
-interface ListResponse<T> {
-  items: T[]
-  total: number
+  agents: LoopAgentInput[]
+  stop_conditions: LoopStopConditions
+  output_contract?: LoopOutputContract
 }
 
 interface CommandPaletteItem {
@@ -86,27 +61,6 @@ interface PipelineHumanGateActivity {
 
 type PipelineActivity = PipelineLoopActivity | PipelineHumanGateActivity
 type PipelineBuilderStep = 'design' | 'details'
-
-interface PipelineLoopStepRequest {
-  type: 'loop'
-  loop_id: string
-}
-
-interface PipelineHumanGateStepRequest {
-  type: 'human_gate'
-  gate_type: 'approval' | 'quiz'
-  config?: {
-    minimum_correct_answers: number
-    question_count: number
-    option_count: number
-  }
-}
-
-type PipelineStepRequest = PipelineLoopStepRequest | PipelineHumanGateStepRequest
-
-interface PipelineResponse {
-  id: string
-}
 
 const humanGates: Array<{
   id: HumanGateKind
@@ -156,19 +110,20 @@ const exitActionPending = ref(false)
 const allowRouteLeave = ref(false)
 const pendingDestination = ref('/app/pipelines')
 const localKey = 'looping-louie:pipeline-builder-draft:v1'
+const api = useApiClient()
 let stageResizeObserver: ResizeObserver | undefined
 
 const { data } = await useAsyncData(
   'pipeline-builder-loops',
-  () => $fetch<LoopListResponse>('/api/v1/loops?offset=0'),
+  () => api.loops.list({ offset: 0 }),
 )
 
 const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
   'pipeline-builder-loop-options',
   async () => {
     const [personas, models] = await Promise.all([
-      $fetch<ListResponse<PersonaSummary>>('/api/v1/personas'),
-      $fetch<ListResponse<ModelSummary>>('/api/v1/models?available=true'),
+      api.personas.list(),
+      api.models.list({ available: true }),
     ])
     return { personas: personas.items, models: models.items }
   },
@@ -177,23 +132,28 @@ const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
 const loops = computed(() => [...localLoops.value, ...(data.value?.items ?? [])])
 const loopById = computed(() => new Map(loops.value.map(loop => [loop.id, loop])))
 const gateById = new Map(humanGates.map(gate => [gate.id, gate]))
-const canvasActivities = computed<PipelineCanvasActivity[]>(() => activities.value.flatMap((activity) => {
-  if (activity.type === 'loop') {
-    const loop = loopById.value.get(activity.loopId)
-    return loop ? [{ instanceId: activity.instanceId, type: 'loop' as const, loop }] : []
-  }
+const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
+  const result: PipelineCanvasActivity[] = []
+  for (const activity of activities.value) {
+    if (activity.type === 'loop') {
+      const loop = loopById.value.get(activity.loopId)
+      if (loop) result.push({ instanceId: activity.instanceId, type: 'loop', loop })
+      continue
+    }
 
-  const gate = gateById.get(activity.gate)
-  if (!gate) return []
-  return [{
-    instanceId: activity.instanceId,
-    type: 'human-gate' as const,
-    gate: activity.gate,
-    title: gate.title,
-    teamMembers: activity.teamMembers,
-    passingScore: activity.passingScore,
-  }]
-}))
+    const gate = gateById.get(activity.gate)
+    if (!gate) continue
+    result.push({
+      instanceId: activity.instanceId,
+      type: 'human-gate',
+      gate: activity.gate,
+      title: gate.title,
+      teamMembers: activity.teamMembers,
+      passingScore: activity.passingScore,
+    })
+  }
+  return result
+})
 const hasProgress = computed(() => Boolean(
   activities.value.length
   || pipelineTitle.value.trim()
@@ -414,88 +374,76 @@ function validateDetails() {
   return !detailErrors.title && !detailErrors.description
 }
 
-function pipelineSteps(): PipelineStepRequest[] {
-  return activities.value.map((activity): PipelineStepRequest => {
-    if (activity.type === 'loop') {
-      return { type: 'loop', loop_id: activity.loopId }
+function activityRequest(activity: PipelineActivity): ActivityCreateRequest {
+  if (activity.type === 'loop') {
+    const loop = loopById.value.get(activity.loopId)
+    if (!loop) throw new Error(`Loop ${activity.loopId} is no longer available.`)
+    const type: LoopActivityType = `${loop.flow}_loop`
+    return {
+      title: loop.title,
+      description: loop.description,
+      type,
+      config: {
+        type,
+        agents: loop.agents,
+        stop_conditions: loop.stop_conditions,
+        output_contract: loop.output_contract ?? {
+          type: 'text',
+          description: 'Return the completed result as text.',
+          files: [],
+          schema: null,
+        },
+      },
     }
-    if (activity.gate === 'multiple-choice-quiz') {
-      return {
-        type: 'human_gate',
-        gate_type: 'quiz',
-        config: {
+  }
+
+  const gate = gateById.get(activity.gate)
+  if (!gate) throw new Error('This human gate is no longer available.')
+  if (activity.gate === 'multiple-choice-quiz') {
+    return {
+      title: gate.title,
+      description: gate.description,
+      type: 'quiz',
+      config: {
+        type: 'quiz',
+        quiz: {
           minimum_correct_answers: activity.passingScore!,
           question_count: 10,
           option_count: 3,
         },
-      }
-    }
-    return { type: 'human_gate', gate_type: 'approval' }
-  })
-}
-
-async function persistLocalLoops() {
-  for (let index = 0; index < localLoops.value.length; index += 1) {
-    const loop = localLoops.value[index]!
-    if (!loop.id.startsWith('local-loop-')) continue
-
-    const created = await $fetch<LoopSummary>('/api/v1/loops', {
-      method: 'POST',
-      body: {
-        title: loop.title,
-        description: loop.description,
-        prompt: 'Process the input received from this pipeline using the configured team and flow.',
-        flow: loop.flow,
-        status: 'active',
-        agents: loop.agents,
-        stop_conditions: loop.stop_conditions,
       },
-    })
-    const localId = loop.id
-    localLoops.value.splice(index, 1, created)
-    activities.value = activities.value.map(activity => (
-      activity.type === 'loop' && activity.loopId === localId
-        ? { ...activity, loopId: created.id }
-        : activity
-    ))
-    saveLocalDraft()
-  }
-}
-
-function saveFailureMessage(error: unknown) {
-  if (!error || typeof error !== 'object') return 'The pipeline could not be saved. Please try again.'
-  const data = (error as { data?: unknown }).data
-  if (data && typeof data === 'object') {
-    const detail = (data as { detail?: unknown }).detail
-    if (typeof detail === 'string') return detail
-    const apiError = (data as { error?: unknown }).error
-    if (apiError && typeof apiError === 'object' && typeof (apiError as { message?: unknown }).message === 'string') {
-      return (apiError as { message: string }).message
     }
   }
-  return 'The pipeline could not be saved. Please try again.'
+  return {
+    title: gate.title,
+    description: gate.description,
+    type: 'approval',
+    config: { type: 'approval' },
+  }
 }
 
 async function createPipeline() {
   if (!validateDetails() || !canSaveDesign.value || savingPipeline.value) return
   savingPipeline.value = true
   saveError.value = ''
+  const createdActivityIds: string[] = []
   try {
-    await persistLocalLoops()
-    await $fetch<PipelineResponse>('/api/v1/pipelines', {
-      method: 'POST',
-      body: {
-        title: pipelineTitle.value.trim(),
-        description: pipelineDescription.value.trim(),
-        steps: pipelineSteps(),
-      },
+    for (const activity of activities.value) {
+      const created = await api.activities.create(activityRequest(activity))
+      createdActivityIds.push(created.id)
+    }
+    await api.pipelines.create({
+      title: pipelineTitle.value.trim(),
+      description: pipelineDescription.value.trim(),
+      steps: createdActivityIds.map(activity_id => ({ activity_id })),
     })
     localStorage.removeItem(localKey)
     clearNuxtData('pipelines-catalog')
     allowRouteLeave.value = true
     await router.push('/app/pipelines')
   } catch (error) {
-    saveError.value = saveFailureMessage(error)
+    await Promise.allSettled(createdActivityIds.map(id => api.activities.remove(id)))
+    saveError.value = apiErrorMessage(error, 'The pipeline could not be saved. Please try again.')
     saveLocalDraft()
   } finally {
     savingPipeline.value = false
@@ -524,23 +472,24 @@ function restoreLocalDraft() {
         if (
           typeof value.id !== 'string'
           || typeof value.title !== 'string'
+          || !isLoopFlow(value.flow)
           || !Array.isArray(value.agents)
         ) return []
         return [{
           id: value.id,
           title: value.title,
           description: typeof value.description === 'string' ? value.description : '',
-          flow: typeof value.flow === 'string' ? value.flow : null,
+          flow: value.flow,
           status: typeof value.status === 'string' ? value.status : 'draft',
-          agents: value.agents.flatMap((agent): LoopAgent[] => {
+          agents: value.agents.flatMap((agent): LoopAgentInput[] => {
             if (!agent || typeof agent !== 'object') return []
             const item = agent as Record<string, unknown>
-            if (typeof item.persona_id !== 'string' || typeof item.model_id !== 'string' || typeof item.role !== 'string') return []
+            if (typeof item.persona_id !== 'string' || typeof item.model_id !== 'string' || !isLoopRole(item.role)) return []
             return [{ persona_id: item.persona_id, model_id: item.model_id, role: item.role }]
           }),
           stop_conditions: value.stop_conditions && typeof value.stop_conditions === 'object'
             ? value.stop_conditions as LoopStopConditions
-            : null,
+            : { max_iterations: 3, max_tokens: null, timeout_seconds: null },
         }]
       })
     }
@@ -591,6 +540,14 @@ function restoreLocalDraft() {
   } catch {
     localStorage.removeItem(localKey)
   }
+}
+
+function isLoopFlow(value: unknown): value is LoopFlow {
+  return value === 'direct' || value === 'refinement' || value === 'roundtable'
+}
+
+function isLoopRole(value: unknown): value is LoopRole {
+  return value === 'generator' || value === 'reviewer' || value === 'aggregator'
 }
 
 async function leaveBuilder() {

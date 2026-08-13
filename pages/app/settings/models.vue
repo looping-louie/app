@@ -3,21 +3,11 @@ import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 
-interface ModelSummaryResponse {
-  id: string
-  name: string
-  vendor: string
-  family: string
-}
-
-interface ModelListResponse {
-  items: ModelSummaryResponse[]
-  total: number
-}
+const api = useApiClient()
 
 const { data, status, refresh } = await useAsyncData(
   'settings-models',
-  () => $fetch<ModelListResponse>('/api/v1/models'),
+  () => api.models.list(),
 )
 
 const models = computed(() => data.value?.items ?? [])

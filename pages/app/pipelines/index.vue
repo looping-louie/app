@@ -5,47 +5,27 @@ import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
+import type { ActivityResponse, PipelineResponse } from '~/types/api'
 
-interface PipelineLoopStep {
-  type: 'loop'
-  loop_id: string
+interface PipelineCatalogItem extends PipelineResponse {
+  activities: ActivityResponse[]
 }
 
-interface PipelineQuizConfig {
-  minimum_correct_answers: number
-  question_count: number
-  option_count: number
-}
-
-interface PipelineHumanGateStep {
-  type: 'human_gate'
-  gate_type: 'approval' | 'quiz'
-  config: PipelineQuizConfig | null
-}
-
-type PipelineStep = PipelineLoopStep | PipelineHumanGateStep
-
-interface PipelineSummary {
-  id: string
-  title: string
-  description: string
-  enabled: boolean
-  steps: PipelineStep[]
-  created_at: string
-  updated_at: string
-}
-
-interface PipelineListResponse {
-  items: PipelineSummary[]
-  total: number
-}
+const api = useApiClient()
+const { resolve: resolveActivities } = usePipelineActivities()
 
 const { data, status, refresh } = await useAsyncData(
   'pipelines-catalog',
-  () => $fetch<PipelineListResponse>('/api/v1/pipelines?offset=0'),
+  async () => {
+    const page = await api.pipelines.list({ offset: 0 })
+    return await Promise.all(page.items.map(async pipeline => ({
+      ...pipeline,
+      activities: await resolveActivities(pipeline.steps),
+    })))
+  },
 )
 
-const pipelines = computed(() => data.value?.items ?? [])
+const pipelines = computed(() => data.value ?? [])
 const pipelineStatus = ref('all')
 const pipelineStep = ref('all')
 const pipelineSort = ref('alphabetical-asc')
@@ -65,7 +45,7 @@ const pipelineStepOptions = [
 const displayedPipelines = computed(() => {
   const filtered = pipelines.value.filter(pipeline => (
     (pipelineStatus.value === 'all' || pipelineStatusValue(pipeline) === pipelineStatus.value)
-    && (pipelineStep.value === 'all' || pipeline.steps.some(step => step.type === pipelineStep.value))
+    && (pipelineStep.value === 'all' || pipeline.activities.some(activity => activityKind(activity) === pipelineStep.value))
   ))
 
   return [...filtered].sort((first, second) => {
@@ -78,20 +58,24 @@ const displayedPipelines = computed(() => {
 
 const { formatDate } = useDateTime()
 
-function pipelineStatusValue(pipeline: PipelineSummary) {
+function pipelineStatusValue(pipeline: PipelineCatalogItem) {
   return pipeline.enabled ? 'active' : 'disabled'
 }
 
-function pipelineStatusLabel(pipeline: PipelineSummary) {
+function pipelineStatusLabel(pipeline: PipelineCatalogItem) {
   return pipeline.enabled ? 'Active' : 'Disabled'
 }
 
-function pipelineStatusTone(pipeline: PipelineSummary) {
+function pipelineStatusTone(pipeline: PipelineCatalogItem) {
   return pipeline.enabled ? 'enabled' : 'disabled'
 }
 
-function countSteps(pipeline: PipelineSummary, type: PipelineStep['type']) {
-  return pipeline.steps.filter(step => step.type === type).length
+function activityKind(activity: ActivityResponse) {
+  return activity.type.endsWith('_loop') ? 'loop' : 'human_gate'
+}
+
+function countSteps(pipeline: PipelineCatalogItem, type: 'loop' | 'human_gate') {
+  return pipeline.activities.filter(activity => activityKind(activity) === type).length
 }
 
 definePageMeta({

@@ -46,7 +46,7 @@ async function saveProviderKey(provider: Provider, apiKey: string) {
 
   try {
     const result = await saveCredential(provider.id, { api_key: apiKey })
-    provider.keyTrimmed = result.key_trimmed
+    provider.keyTrimmed = result.key_trimmed ?? undefined
     provider.modelCount = result.model_count
     feedback.value = `${provider.name} API key saved.`
   } catch (cause) {

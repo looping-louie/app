@@ -3,49 +3,15 @@ import CatalogShell from '~/components/catalog/CatalogShell.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiTable from '~/components/ui/Table.vue'
-
-interface PipelineLoopStep {
-  type: 'loop'
-  loop_id: string
-}
-
-interface PipelineHumanGateStep {
-  type: 'human_gate'
-  gate_type: 'approval' | 'quiz'
-}
-
-interface PipelineSummary {
-  id: string
-  title: string
-  steps: Array<PipelineLoopStep | PipelineHumanGateStep>
-}
-
-interface PipelineListResponse {
-  items: PipelineSummary[]
-  total: number
-}
-
-interface LoopRun {
-  id: string
-  loop_id: string
-  input: string
-  status: 'in_progress' | 'failed' | 'completed' | 'stopped'
-  created_at: string
-  created_by: string
-  payload: Record<string, unknown>
-}
-
-interface LoopRunListResponse {
-  items: LoopRun[]
-  total: number
-}
+import type { LoopRunResponse, PipelineResponse } from '~/types/api'
+import { isLoopActivity } from '~/types/api'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
   name: string
   project: string
   status: string
-  statusValue: LoopRun['status']
+  statusValue: LoopRunResponse['status']
   runningSince: string
   runningSinceValue: string
   tokensConsumed: string
@@ -79,6 +45,8 @@ const dateRangeOptions = [
 const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
 const runSort = ref('newest')
+const api = useApiClient()
+const { resolve: resolveActivities } = usePipelineActivities()
 
 const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'Last 24 hours'
@@ -87,26 +55,24 @@ const selectedDateRangeLabel = computed(() => (
 const { data, status, refresh } = await useAsyncData(
   'runs-catalog',
   async () => {
-    const pipelineResponse = await $fetch<PipelineListResponse>('/api/v1/pipelines?offset=0')
-    const loopIds = [...new Set(
-      pipelineResponse.items.flatMap(pipeline => pipeline.steps.flatMap(step => (
-        step.type === 'loop' ? [step.loop_id] : []
-      ))),
-    )]
-
-    const runPages = await Promise.all(loopIds.map(async loopId => ({
-      loopId,
-      page: await $fetch<LoopRunListResponse>(`/api/v1/loops/${encodeURIComponent(loopId)}/runs?offset=0`),
+    const pipelineResponse = await api.pipelines.list({ offset: 0 })
+    const pipelineActivities = await Promise.all(pipelineResponse.items.map(async pipeline => ({
+      pipeline,
+      activities: await resolveActivities(pipeline.steps),
     })))
-    const runsByLoop = new Map(runPages.map(({ loopId, page }) => [loopId, page.items]))
+    const loopActivityIds = [...new Set(pipelineActivities.flatMap(item => (
+      item.activities.filter(isLoopActivity).map(activity => activity.id)
+    )))]
+    const runPages = await Promise.all(loopActivityIds.map(async activityId => ({
+      activityId,
+      page: await api.activities.listRuns(activityId, { offset: 0 }),
+    })))
+    const runsByActivity = new Map(runPages.map(({ activityId, page }) => [activityId, page.items]))
 
-    return pipelineResponse.items.flatMap(pipeline => {
-      const pipelineLoopIds = [...new Set(pipeline.steps.flatMap(step => (
-        step.type === 'loop' ? [step.loop_id] : []
-      )))]
-
-      return pipelineLoopIds.flatMap(loopId => (
-        (runsByLoop.get(loopId) ?? []).map(run => toTableRow(run, pipeline))
+    return pipelineActivities.flatMap(({ pipeline, activities }) => {
+      const ids = activities.filter(isLoopActivity).map(activity => activity.id)
+      return ids.flatMap(activityId => (
+        (runsByActivity.get(activityId) ?? []).map(run => toTableRow(run, pipeline))
       ))
     })
   },
@@ -127,7 +93,7 @@ const displayedRuns = computed(() => {
   })
 })
 
-function toTableRow(run: LoopRun, pipeline: PipelineSummary): RunTableRow {
+function toTableRow(run: LoopRunResponse, pipeline: PipelineResponse): RunTableRow {
   return {
     id: `${pipeline.id}:${run.loop_id}:${run.id}`,
     name: run.input.trim().split('\n')[0] || run.id,
@@ -141,7 +107,7 @@ function toTableRow(run: LoopRun, pipeline: PipelineSummary): RunTableRow {
   }
 }
 
-function runStatusLabel(value: LoopRun['status']) {
+function runStatusLabel(value: LoopRunResponse['status']) {
   return {
     in_progress: 'In progress',
     completed: 'Completed',

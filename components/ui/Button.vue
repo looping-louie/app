@@ -75,7 +75,7 @@ const componentTag = computed(() => {
 
 const componentAttributes = computed(() => {
   if (props.dropdown) return {
-    type: 'button',
+    type: 'button' as const,
     disabled: isUnavailable.value,
   }
 

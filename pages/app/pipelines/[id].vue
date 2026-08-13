@@ -9,61 +9,13 @@ import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
-
-interface PipelineLoopStep {
-  type: 'loop'
-  loop_id: string
-}
-
-interface PipelineQuizConfig {
-  minimum_correct_answers: number
-  question_count: number
-  option_count: number
-}
-
-interface PipelineHumanGateStep {
-  type: 'human_gate'
-  gate_type: 'approval' | 'quiz'
-  config: PipelineQuizConfig | null
-}
-
-type PipelineStep = PipelineLoopStep | PipelineHumanGateStep
-
-interface PipelineDetail {
-  id: string
-  title: string
-  description: string
-  enabled: boolean
-  steps: PipelineStep[]
-  created_at: string
-  updated_at: string
-  user?: string | null
-}
-
-interface LoopAgent {
-  persona_id: string
-  model_id: string
-  role: string
-}
-
-interface LoopStopConditions {
-  max_iterations?: number | null
-  max_tokens?: number | null
-  timeout_seconds?: number | null
-}
-
-interface LoopSummary {
-  id: string
-  title: string
-  description: string
-  flow: string | null
-  agents: LoopAgent[]
-  stop_conditions: LoopStopConditions | null
-}
+import type { ActivityResponse, PipelineResponse, QuizActivityConfig } from '~/types/api'
+import { isLoopActivity } from '~/types/api'
+import { apiErrorMessage } from '~/utils/api/errors'
 
 interface PipelineView {
-  pipeline: PipelineDetail
-  loops: LoopSummary[]
+  pipeline: PipelineResponse
+  activities: ActivityResponse[]
 }
 
 interface DetailRow {
@@ -71,12 +23,7 @@ interface DetailRow {
   title: string
   kind: 'status' | 'created' | 'design'
   value?: string
-}
-
-interface ApiErrorEnvelope {
-  error?: {
-    message?: string
-  }
+  [key: string]: unknown
 }
 
 const route = useRoute()
@@ -85,6 +32,8 @@ const { formatDate } = useDateTime()
 const editingStatus = ref(false)
 const savingStatus = ref(false)
 const updateError = ref('')
+const api = useApiClient()
+const { resolve: resolveActivities } = usePipelineActivities()
 
 const statusOptions = [
   { value: 'active', label: 'active' },
@@ -94,27 +43,13 @@ const statusOptions = [
 const { data: view, status, error, refresh } = await useAsyncData(
   () => `pipeline-${pipelineId.value}`,
   async (): Promise<PipelineView> => {
-    const pipeline = await $fetch<PipelineDetail>(
-      `/api/v1/pipelines/${encodeURIComponent(pipelineId.value)}`,
-    )
-    const loopIds = [...new Set(
-      pipeline.steps
-        .filter((step): step is PipelineLoopStep => step.type === 'loop')
-        .map(step => step.loop_id),
-    )]
-    const loops = (await Promise.all(loopIds.map(async (loopId) => {
-      try {
-        return await $fetch<LoopSummary>(`/api/v1/loops/${encodeURIComponent(loopId)}`)
-      } catch {
-        return null
-      }
-    }))).filter((loop): loop is LoopSummary => loop !== null)
-    return { pipeline, loops }
+    const pipeline = await api.pipelines.get(pipelineId.value)
+    return { pipeline, activities: await resolveActivities(pipeline.steps) }
   },
 )
 
 const pipeline = computed(() => view.value?.pipeline)
-const loopById = computed(() => new Map((view.value?.loops ?? []).map(loop => [loop.id, loop])))
+const activityById = computed(() => new Map((view.value?.activities ?? []).map(activity => [activity.id, activity])))
 const statusValue = computed(() => pipeline.value?.enabled ? 'active' : 'inactive')
 const breadcrumbItems = computed(() => [
   { label: 'Pipelines', to: '/app/pipelines' },
@@ -133,46 +68,44 @@ const detailItems = computed<DetailRow[]>(() => {
   ]
 })
 
-const createdBy = computed(() => pipeline.value?.user?.trim() || 'user')
-const canvasActivities = computed<PipelineCanvasActivity[]>(() => (
-  pipeline.value?.steps.map((step, index) => {
+const createdBy = computed(() => 'user')
+const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
+  const result: PipelineCanvasActivity[] = []
+  pipeline.value?.steps.forEach((step, index) => {
     const instanceId = `pipeline-detail-step-${index}`
-    if (step.type === 'loop') {
-      return {
+    const activity = activityById.value.get(step.activity_id)
+    if (!activity) return
+    if (isLoopActivity(activity)) {
+      result.push({
         instanceId,
-        type: 'loop' as const,
-        loop: loopForStep(step),
-      }
+        type: 'loop',
+        loop: {
+          id: activity.id,
+          title: activity.title,
+          flow: activity.type.replace('_loop', ''),
+          agents: activity.config.agents,
+          stop_conditions: activity.config.stop_conditions,
+        },
+      })
+      return
     }
 
-    const isQuiz = step.gate_type === 'quiz'
-    return {
+    const isQuiz = activity.type === 'quiz'
+    const quiz = isQuiz ? (activity.config as QuizActivityConfig).quiz : undefined
+    const passingScore = typeof quiz?.minimum_correct_answers === 'number'
+      ? quiz.minimum_correct_answers
+      : undefined
+    result.push({
       instanceId,
-      type: 'human-gate' as const,
-      gate: isQuiz ? 'multiple-choice-quiz' as const : 'human-review' as const,
-      title: isQuiz ? 'Multiple-choice quiz' : 'Human review',
-      teamMembers: isQuiz ? undefined : ['any-person' as const],
-      passingScore: step.config?.minimum_correct_answers,
-    }
-  }) ?? []
-))
-
-function loopForStep(step: PipelineLoopStep): LoopSummary {
-  return loopById.value.get(step.loop_id) ?? {
-    id: step.loop_id,
-    title: step.loop_id,
-    description: '',
-    flow: null,
-    agents: [],
-    stop_conditions: null,
-  }
-}
-
-function apiErrorMessage(cause: unknown) {
-  const data = (cause as { data?: ApiErrorEnvelope } | null)?.data
-  return data?.error?.message
-    ?? (cause instanceof Error ? cause.message : 'The pipeline could not be updated.')
-}
+      type: 'human-gate',
+      gate: isQuiz ? 'multiple-choice-quiz' : 'human-review',
+      title: activity.title,
+      teamMembers: isQuiz ? undefined : ['any-person'],
+      passingScore,
+    })
+  })
+  return result
+})
 
 async function selectStatus(value: string | string[]) {
   if (!pipeline.value || savingStatus.value) return
@@ -182,17 +115,11 @@ async function selectStatus(value: string | string[]) {
   savingStatus.value = true
   updateError.value = ''
   try {
-    const updated = await $fetch<PipelineDetail>(
-      `/api/v1/pipelines/${encodeURIComponent(pipelineId.value)}`,
-      {
-        method: 'PATCH',
-        body: { enabled: selected === 'active' },
-      },
-    )
+    const updated = await api.pipelines.patch(pipelineId.value, { enabled: selected === 'active' })
     if (view.value) view.value.pipeline = updated
     clearNuxtData('pipelines-catalog')
   } catch (cause) {
-    updateError.value = apiErrorMessage(cause)
+    updateError.value = apiErrorMessage(cause, 'The pipeline could not be updated.')
   } finally {
     savingStatus.value = false
   }
@@ -223,7 +150,7 @@ useHead(() => ({
     <div v-if="status === 'pending'" class="pipeline-state" role="status">Loading pipeline…</div>
     <div v-else-if="error" class="pipeline-state pipeline-state--error" role="alert">
       <span>Pipeline could not be loaded.</span>
-      <UiButton variant="stroke" size="sm" @click="refresh">Retry</UiButton>
+      <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
     </div>
 
     <template v-else-if="pipeline">

@@ -5,22 +5,11 @@ import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
 
-interface SkillSummary {
-  id: string
-  name: string
-  description: string
-  updated_at: string
-  enabled: boolean
-}
-
-interface SkillListResponse {
-  items: SkillSummary[]
-  total: number
-}
+const api = useApiClient()
 
 const { data, status, refresh } = await useAsyncData(
   'skills-catalog',
-  () => $fetch<SkillListResponse>('/api/v1/skills'),
+  () => api.skills.list(),
 )
 
 const skills = computed(() => data.value?.items ?? [])

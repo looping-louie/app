@@ -6,22 +6,14 @@ import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiMarkdownContent from '~/components/ui/MarkdownContent.vue'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
 
-interface PersonaDetail {
-  id: string
-  name: string
-  description: string
-  instructions: string
-  skill_ids: string[]
-  source_instruction_id: string | null
-}
-
 const route = useRoute()
 const personaId = computed(() => String(route.params.id))
 const { personaIcon } = usePersonaIcon()
+const api = useApiClient()
 
 const { data: persona, status, error, refresh } = await useAsyncData(
   () => `persona-${personaId.value}`,
-  () => $fetch<PersonaDetail>(`/api/v1/personas/${encodeURIComponent(personaId.value)}`),
+  () => api.personas.get(personaId.value),
 )
 
 function skillLabel(skillId: string) {
@@ -44,7 +36,7 @@ useHead(() => ({
     <div v-if="status === 'pending'" class="persona-state" role="status">Loading agent…</div>
     <div v-else-if="error" class="persona-state persona-state--error" role="alert">
       <span>Agent could not be loaded.</span>
-      <UiButton variant="stroke" size="sm" @click="refresh">Retry</UiButton>
+      <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
     </div>
     <template v-else-if="persona">
       <UiBreadcrumb

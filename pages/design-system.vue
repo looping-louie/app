@@ -246,7 +246,7 @@ function keepActiveNavItemVisible() {
 function updateActiveNavItem() {
   scrollSpyFrame = undefined
   const marker = 100
-  let nextActive = designSystemNavItems[0].id
+  let nextActive: (typeof designSystemNavItems)[number]['id'] = designSystemNavItems[0].id
 
   for (const item of designSystemNavItems) {
     const section = document.getElementById(item.id)
