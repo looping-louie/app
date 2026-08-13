@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import UiButton from '~/components/ui/Button.vue'
-import UiSectionStage from '~/components/ui/SectionStage.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import ProviderAccordion from '~/components/settings/ProviderAccordion.vue'
 import type { Provider } from '~/composables/useProviders'
 import { useProviders } from '~/composables/useProviders'
@@ -9,6 +8,11 @@ const { providers, pending, error, fetchProviders, saveCredential, setEnabled } 
 const togglingId = ref<string | null>(null)
 const savingId = ref<string | null>(null)
 const feedback = ref('')
+const providerStageStatus = computed<'pending' | 'error' | 'success'>(() => {
+  if (pending.value) return 'pending'
+  if (error.value) return 'error'
+  return 'success'
+})
 
 await useAsyncData('settings-providers', () => fetchProviders())
 
@@ -67,12 +71,14 @@ useHead({
   <section aria-labelledby="providers-heading">
     <h2 id="providers-heading" class="visually-hidden">Providers</h2>
 
-    <div v-if="pending" class="settings-state" role="status">Loading providers…</div>
-    <div v-else-if="error" class="settings-state settings-state--error" role="alert">
-      <span>{{ error }}</span>
-      <UiButton variant="stroke" size="sm" @click="fetchProviders">Retry</UiButton>
-    </div>
-    <UiSectionStage v-else inverse="bottom">
+    <UiAsyncStage
+      :status="providerStageStatus"
+      :empty="providers.length === 0"
+      loading-label="Loading providers…"
+      :error-label="error || 'Providers could not be loaded.'"
+      empty-label="No providers found."
+      @retry="fetchProviders"
+    >
       <ProviderAccordion
         :providers="providers"
         :toggling-id="togglingId"
@@ -81,29 +87,13 @@ useHead({
         @toggle="updateProvider"
         @save="saveProviderKey"
       />
-    </UiSectionStage>
+    </UiAsyncStage>
 
     <p class="settings-feedback" aria-live="polite">{{ feedback }}</p>
   </section>
 </template>
 
 <style scoped>
-.settings-state {
-  display: flex;
-  min-height: 10rem;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ll-space-4);
-  color: var(--ll-color-text-muted);
-  background: var(--ll-color-section);
-  border-radius: var(--ll-radius-structural);
-  font-size: var(--ll-text-sm);
-}
-
-.settings-state--error {
-  color: var(--ll-color-brand-ink);
-}
-
 .settings-feedback {
   min-height: 1.5rem;
   margin: var(--ll-space-4) 0 0;

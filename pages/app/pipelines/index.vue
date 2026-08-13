@@ -1,11 +1,9 @@
 <script setup lang="ts">
+import CatalogShell from '~/components/catalog/CatalogShell.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
-import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
-import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
-import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
 
 interface PipelineLoopStep {
@@ -42,7 +40,7 @@ interface PipelineListResponse {
   total: number
 }
 
-const { data, status, error, refresh } = await useAsyncData(
+const { data, status, refresh } = await useAsyncData(
   'pipelines-catalog',
   () => $fetch<PipelineListResponse>('/api/v1/pipelines?offset=0'),
 )
@@ -106,43 +104,33 @@ useHead({
 </script>
 
 <template>
-  <UiContainer size="wide" class="catalog-page">
-    <UiHeadingBlock layout="split" size="section" align="start" class="catalog-heading">
-      <template #title>
-        <h1>Pipelines</h1>
-      </template>
-      <template #description>
-        <p>Ordered workflows that connect loops with human checkpoints.</p>
-      </template>
-      <template #aside>
-        <div class="catalog-heading__actions">
-          <UiButton to="/app/pipelines/new">Create new pipeline</UiButton>
-        </div>
-      </template>
-    </UiHeadingBlock>
+  <CatalogShell
+    title="Pipelines"
+    description="Ordered workflows that connect loops with human checkpoints."
+    :status="status"
+    :empty="displayedPipelines.length === 0"
+    loading-label="Loading pipelines…"
+    error-label="Pipelines could not be loaded."
+    empty-label="No pipelines match these filters."
+    @retry="refresh"
+  >
+    <template #actions><UiButton to="/app/pipelines/new">Create new pipeline</UiButton></template>
+    <template #filters>
+      <UiCatalogFilterBar
+        v-model:status="pipelineStatus"
+        v-model:category="pipelineStep"
+        v-model:sort="pipelineSort"
+        interactive
+        :show-search="false"
+        :status-options="pipelineStatusOptions"
+        third-label="Step"
+        third-icon="task"
+        third-selection-type="radio"
+        :third-options="pipelineStepOptions"
+      />
+    </template>
 
-    <UiCatalogFilterBar
-      v-model:status="pipelineStatus"
-      v-model:category="pipelineStep"
-      v-model:sort="pipelineSort"
-      interactive
-      :show-search="false"
-      :status-options="pipelineStatusOptions"
-      third-label="Step"
-      third-icon="task"
-      third-selection-type="radio"
-      :third-options="pipelineStepOptions"
-      class="catalog-filters"
-    />
-
-    <div v-if="status === 'pending'" class="catalog-state" role="status">Loading pipelines…</div>
-    <div v-else-if="error" class="catalog-state catalog-state--error" role="alert">
-      <span>Pipelines could not be loaded.</span>
-      <button type="button" @click="refresh">Retry</button>
-    </div>
-    <UiSectionStage v-else inverse="bottom" class="catalog-stage">
-      <div v-if="displayedPipelines.length === 0" class="catalog-state">No pipelines match these filters.</div>
-      <UiGrid v-else :columns="3" gap="md">
+    <UiGrid :columns="3" gap="md">
         <UiCard
           v-for="pipeline in displayedPipelines"
           :key="pipeline.id"
@@ -177,59 +165,11 @@ useHead({
             </UiStatusText>
           </template>
         </UiCard>
-      </UiGrid>
-    </UiSectionStage>
-  </UiContainer>
+    </UiGrid>
+  </CatalogShell>
 </template>
 
 <style scoped>
-.catalog-page {
-  padding-block: var(--ll-space-10) var(--ll-space-16);
-}
-
-.catalog-heading {
-  margin-bottom: var(--ll-space-6);
-}
-
-.catalog-heading__actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.catalog-filters {
-  margin-bottom: var(--ll-space-10);
-}
-
-.catalog-stage :deep(.ui-section-stage__shell) {
-  width: 100%;
-}
-
-.catalog-state {
-  display: flex;
-  min-height: 10rem;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ll-space-4);
-  color: var(--ll-color-text-muted);
-  background: var(--ll-color-section);
-  border-radius: var(--ll-radius-structural);
-  font-size: var(--ll-text-sm);
-}
-
-.catalog-state--error {
-  color: var(--ll-color-brand-ink);
-}
-
-.catalog-state button {
-  padding: var(--ll-space-2) var(--ll-space-4);
-  color: var(--ll-color-ink);
-  background: var(--ll-color-card);
-  border: 1px solid var(--ll-color-divider);
-  border-radius: var(--ll-radius-pill);
-  cursor: pointer;
-  font: 600 var(--ll-text-sm) / 1 var(--ll-font-control);
-}
-
 .catalog-card {
   position: relative;
   overflow: visible;

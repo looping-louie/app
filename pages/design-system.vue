@@ -2,6 +2,7 @@
 import UiMainNavigation from '~/components/navigation/MainNavigation.vue'
 import UiSiteFooter from '~/components/site/SiteFooter.vue'
 import UiAccordion from '~/components/ui/Accordion.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
@@ -210,6 +211,7 @@ const designSystemNavItems = [
   { id: 'collections', label: '06 · Collections', level: 1 },
   { id: 'grid-card', label: 'Grid & card', level: 2 },
   { id: 'grid-list', label: 'Grid list', level: 2 },
+  { id: 'async-stage', label: 'Async stage', level: 2 },
   { id: 'table', label: 'Table', level: 2 },
   { id: 'team-grid', label: 'Team grid', level: 2 },
   { id: 'accordion', label: 'Accordion', level: 2 },
@@ -428,6 +430,19 @@ const tableRows = [
   { id: 'support-triage', name: 'Support triage', flow: 'Direct', team: ['Executor'], owner: 'Inés Álvarez' },
   { id: 'weekly-synthesis', name: 'Weekly synthesis', flow: 'Refinement', team: ['Generator', 'Reviewer', 'Aggregator'], owner: 'Omar Silva' },
 ]
+
+const asyncStageMode = ref('success')
+const asyncStageOptions = [
+  { value: 'success', label: 'Success' },
+  { value: 'pending', label: 'Loading' },
+  { value: 'error', label: 'Error' },
+  { value: 'empty', label: 'Empty' },
+]
+const asyncStageStatus = computed<'pending' | 'error' | 'success'>(() => {
+  if (asyncStageMode.value === 'pending') return 'pending'
+  if (asyncStageMode.value === 'error') return 'error'
+  return 'success'
+})
 
 function updateProviderRow(item: { id: string }, checked: boolean) {
   const provider = providerRows.value.find(row => row.id === item.id)
@@ -2316,6 +2331,65 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>Variants</span>
                 <p><strong>plain</strong> and <strong>surface</strong> serve directory rows. <strong>key-value</strong> compresses inspection views while allowing pills to wrap or a text block to occupy the value column. Its optional SectionStage owns the Metal 025 surface and inverse edge.</p>
+              </footer>
+            </article>
+
+            <article id="async-stage" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Async stage</h3>
+                    <code>UiAsyncStage</code>
+                  </div>
+                  <p>One stable surface for loading, error, empty, and successful asynchronous content.</p>
+                </div>
+                <span class="ds-status"><i /> New</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Directory state</span>
+                    <UiSegmentedControl
+                      v-model="asyncStageMode"
+                      :options="asyncStageOptions"
+                      variant="contained"
+                      aria-label="Async stage state"
+                    />
+                  </div>
+                  <UiAsyncStage
+                    :status="asyncStageStatus"
+                    :empty="asyncStageMode === 'empty'"
+                    loading-label="Loading the directory…"
+                    error-label="The directory could not be loaded."
+                    empty-label="No entries match these filters."
+                    class="ds-collection-stage"
+                    @retry="asyncStageMode = 'success'"
+                  >
+                    <UiGrid :columns="3" gap="lg" class="ds-team-grid">
+                      <div v-for="member in teamMembers.slice(0, 3)" :key="member.id" class="ds-team-member">
+                        <span class="ds-team-member__avatar">{{ member.initials }}</span>
+                        <div><strong>{{ member.name }}</strong><span>{{ member.role }}</span></div>
+                      </div>
+                    </UiGrid>
+                  </UiAsyncStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>State</span><code>idle · pending · error · success</code></div>
+                  <p class="ds-property__copy">Loading and error states use the same dimensions as catalog feedback. Successful and empty states retain the selected SectionStage inverse edge.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Slots</span><code>#loading · #error · #empty · default</code></div>
+                  <p class="ds-property__copy">Default copy covers routine cases while slots allow richer feedback without duplicating the surrounding state structure.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Composition</span>
+                <p>Use it around one asynchronous collection or content block. Page headings and filters belong to the surrounding shell, not to this component.</p>
               </footer>
             </article>
 

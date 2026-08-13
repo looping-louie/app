@@ -1,9 +1,7 @@
 <script setup lang="ts">
+import CatalogShell from '~/components/catalog/CatalogShell.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
-import UiContainer from '~/components/ui/Container.vue'
-import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
-import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTable from '~/components/ui/Table.vue'
 
 interface PipelineLoopStep {
@@ -86,7 +84,7 @@ const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'Last 24 hours'
 ))
 
-const { data, status, error, refresh } = await useAsyncData(
+const { data, status, refresh } = await useAsyncData(
   'runs-catalog',
   async () => {
     const pipelineResponse = await $fetch<PipelineListResponse>('/api/v1/pipelines?offset=0')
@@ -197,87 +195,32 @@ useHead({ title: 'Runs · Looping Louie' })
 </script>
 
 <template>
-  <UiContainer size="wide" class="runs-page">
-    <UiHeadingBlock layout="split" size="section" align="start" class="runs-heading">
-      <template #title><h1>Runs</h1></template>
-      <template #description><p>Monitor pipeline executions, resource use, and ownership from one place.</p></template>
-      <template #aside>
-        <div class="runs-heading__actions"><UiButton>New run</UiButton></div>
-      </template>
-    </UiHeadingBlock>
+  <CatalogShell
+    title="Runs"
+    description="Monitor pipeline executions, resource use, and ownership from one place."
+    :status="status"
+    loading-label="Loading runs…"
+    error-label="Runs could not be loaded."
+    @retry="refresh"
+  >
+    <template #actions><UiButton>New run</UiButton></template>
+    <template #filters>
+      <UiCatalogFilterBar
+        v-model:status="runStatus"
+        v-model:category="dateRange"
+        v-model:sort="runSort"
+        interactive
+        :show-search="false"
+        :status-options="runStatusOptions"
+        :third-label="selectedDateRangeLabel"
+        third-icon="calendar-blank"
+        third-selection-type="radio"
+        :third-options="dateRangeOptions"
+      />
+    </template>
 
-    <UiCatalogFilterBar
-      v-model:status="runStatus"
-      v-model:category="dateRange"
-      v-model:sort="runSort"
-      interactive
-      :show-search="false"
-      :status-options="runStatusOptions"
-      :third-label="selectedDateRangeLabel"
-      third-icon="calendar-blank"
-      third-selection-type="radio"
-      :third-options="dateRangeOptions"
-      class="runs-filters"
-    />
-
-    <div v-if="status === 'pending'" class="runs-state" role="status">Loading runs…</div>
-    <div v-else-if="error" class="runs-state runs-state--error" role="alert">
-      <span>Runs could not be loaded.</span>
-      <button type="button" @click="refresh">Retry</button>
-    </div>
-    <UiSectionStage v-else inverse="bottom" class="runs-stage">
-      <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
-        <template #empty>No runs match these filters.</template>
-      </UiTable>
-    </UiSectionStage>
-  </UiContainer>
+    <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
+      <template #empty>No runs match these filters.</template>
+    </UiTable>
+  </CatalogShell>
 </template>
-
-<style scoped>
-.runs-page {
-  padding-block: var(--ll-space-10) var(--ll-space-16);
-}
-
-.runs-heading {
-  margin-bottom: var(--ll-space-6);
-}
-
-.runs-heading__actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.runs-filters {
-  margin-bottom: var(--ll-space-10);
-}
-
-.runs-stage :deep(.ui-section-stage__shell) {
-  width: 100%;
-}
-
-.runs-state {
-  display: flex;
-  min-height: 10rem;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ll-space-4);
-  color: var(--ll-color-text-muted);
-  background: var(--ll-color-section);
-  border-radius: var(--ll-radius-structural);
-  font-size: var(--ll-text-sm);
-}
-
-.runs-state--error {
-  color: var(--ll-color-brand-ink);
-}
-
-.runs-state button {
-  padding: var(--ll-space-2) var(--ll-space-4);
-  color: var(--ll-color-ink);
-  background: var(--ll-color-card);
-  border: 1px solid var(--ll-color-divider);
-  border-radius: var(--ll-radius-pill);
-  cursor: pointer;
-  font: 600 var(--ll-text-sm) / 1 var(--ll-font-control);
-}
-</style>

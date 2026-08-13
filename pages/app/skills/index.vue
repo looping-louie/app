@@ -1,10 +1,8 @@
 <script setup lang="ts">
+import CatalogShell from '~/components/catalog/CatalogShell.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
-import UiContainer from '~/components/ui/Container.vue'
 import UiGrid from '~/components/ui/Grid.vue'
-import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
-import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
 
 interface SkillSummary {
@@ -20,7 +18,7 @@ interface SkillListResponse {
   total: number
 }
 
-const { data, status, error, refresh } = await useAsyncData(
+const { data, status, refresh } = await useAsyncData(
   'skills-catalog',
   () => $fetch<SkillListResponse>('/api/v1/skills'),
 )
@@ -49,36 +47,30 @@ useHead({
 </script>
 
 <template>
-  <UiContainer size="wide" class="catalog-page">
-    <UiHeadingBlock layout="split" size="section" align="start" class="catalog-heading">
-      <template #title>
-        <h1>Skills</h1>
-      </template>
-      <template #description>
-        <p>Capabilities available to agents when they participate in a loop.</p>
-      </template>
-    </UiHeadingBlock>
+  <CatalogShell
+    title="Skills"
+    description="Capabilities available to agents when they participate in a loop."
+    :status="status"
+    :empty="skills.length === 0"
+    loading-label="Loading skills…"
+    error-label="Skills could not be loaded."
+    empty-label="No skills found."
+    @retry="refresh"
+  >
+    <template #filters>
+      <UiCatalogFilterBar
+        v-model:status="skillStatus"
+        v-model:category="skillTasks"
+        v-model:sort="skillSort"
+        interactive
+        :show-search="false"
+        third-label="Task"
+        third-icon="task"
+        :third-options="skillTaskOptions"
+      />
+    </template>
 
-    <UiCatalogFilterBar
-      v-model:status="skillStatus"
-      v-model:category="skillTasks"
-      v-model:sort="skillSort"
-      interactive
-      :show-search="false"
-      third-label="Task"
-      third-icon="task"
-      :third-options="skillTaskOptions"
-      class="catalog-filters"
-    />
-
-    <div v-if="status === 'pending'" class="catalog-state" role="status">Loading skills…</div>
-    <div v-else-if="error" class="catalog-state catalog-state--error" role="alert">
-      <span>Skills could not be loaded.</span>
-      <button type="button" @click="refresh">Retry</button>
-    </div>
-    <UiSectionStage v-else inverse="bottom" class="catalog-stage">
-      <div v-if="skills.length === 0" class="catalog-state">No skills found.</div>
-      <UiGrid v-else :columns="3" gap="md">
+    <UiGrid :columns="3" gap="md">
         <UiCard
           v-for="skill in skills"
           :key="skill.id"
@@ -106,54 +98,11 @@ useHead({
             </UiStatusText>
           </template>
         </UiCard>
-      </UiGrid>
-    </UiSectionStage>
-  </UiContainer>
+    </UiGrid>
+  </CatalogShell>
 </template>
 
 <style scoped>
-.catalog-page {
-  padding-block: var(--ll-space-10) var(--ll-space-16);
-}
-
-.catalog-heading {
-  margin-bottom: var(--ll-space-6);
-}
-
-.catalog-filters {
-  margin-bottom: var(--ll-space-10);
-}
-
-.catalog-stage :deep(.ui-section-stage__shell) {
-  width: 100%;
-}
-
-.catalog-state {
-  display: flex;
-  min-height: 10rem;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ll-space-4);
-  color: var(--ll-color-text-muted);
-  background: var(--ll-color-section);
-  border-radius: var(--ll-radius-structural);
-  font-size: var(--ll-text-sm);
-}
-
-.catalog-state--error {
-  color: var(--ll-color-brand-ink);
-}
-
-.catalog-state button {
-  padding: var(--ll-space-2) var(--ll-space-4);
-  color: var(--ll-color-ink);
-  background: var(--ll-color-card);
-  border: 1px solid var(--ll-color-divider);
-  border-radius: var(--ll-radius-pill);
-  cursor: pointer;
-  font: 600 var(--ll-text-sm) / 1 var(--ll-font-control);
-}
-
 .catalog-card :deep(.ui-card__description p) {
   display: -webkit-box;
   overflow: hidden;

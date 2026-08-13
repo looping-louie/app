@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import UiButton from '~/components/ui/Button.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
-import UiSectionStage from '~/components/ui/SectionStage.vue'
 
 interface ModelSummaryResponse {
   id: string
@@ -16,7 +15,7 @@ interface ModelListResponse {
   total: number
 }
 
-const { data, status, error, refresh } = await useAsyncData(
+const { data, status, refresh } = await useAsyncData(
   'settings-models',
   () => $fetch<ModelListResponse>('/api/v1/models'),
 )
@@ -93,12 +92,14 @@ useHead({
       class="models-filters"
     />
 
-    <div v-if="status === 'pending'" class="settings-state" role="status">Loading models…</div>
-    <div v-else-if="error" class="settings-state settings-state--error" role="alert">
-      <span>Models could not be loaded.</span>
-      <UiButton variant="stroke" size="sm" @click="refresh">Retry</UiButton>
-    </div>
-    <UiSectionStage v-else inverse="bottom">
+    <UiAsyncStage
+      :status="status"
+      :empty="models.length === 0"
+      loading-label="Loading models…"
+      error-label="Models could not be loaded."
+      empty-label="No models found."
+      @retry="refresh"
+    >
       <UiGrid :columns="3" gap="lg">
         <div
           v-for="model in models"
@@ -125,29 +126,13 @@ useHead({
           </div>
         </div>
       </UiGrid>
-    </UiSectionStage>
+    </UiAsyncStage>
   </section>
 </template>
 
 <style scoped>
 .models-filters {
   margin-bottom: var(--ll-space-10);
-}
-
-.settings-state {
-  display: flex;
-  min-height: 10rem;
-  align-items: center;
-  justify-content: center;
-  gap: var(--ll-space-4);
-  color: var(--ll-color-text-muted);
-  background: var(--ll-color-section);
-  border-radius: var(--ll-radius-structural);
-  font-size: var(--ll-text-sm);
-}
-
-.settings-state--error {
-  color: var(--ll-color-brand-ink);
 }
 
 .model-item {
