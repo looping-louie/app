@@ -121,7 +121,6 @@ useHead({
     <UiAsyncStage
       :status="status"
       :empty="models.length === 0"
-      class="models-stage"
       loading-label="Loading models…"
       error-label="Models could not be loaded."
       empty-label="No models found."
@@ -174,11 +173,6 @@ useHead({
 <style scoped>
 .models-filters {
   margin-bottom: var(--ll-space-10);
-}
-
-.models-stage :deep(.ui-section-stage__shell) {
-  width: 100%;
-  margin-inline: 0;
 }
 
 .model-item {

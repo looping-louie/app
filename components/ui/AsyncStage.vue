@@ -63,6 +63,11 @@ defineEmits<{
   min-width: 0;
 }
 
+.ui-async-stage__stage :deep(.ui-section-stage__shell) {
+  width: 100%;
+  margin-inline: 0;
+}
+
 .ui-async-stage__state {
   display: flex;
   min-height: 10rem;

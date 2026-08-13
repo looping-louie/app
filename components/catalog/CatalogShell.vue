@@ -77,7 +77,4 @@ defineEmits<{
   margin-bottom: var(--ll-space-10);
 }
 
-.catalog-shell__stage :deep(.ui-section-stage__shell) {
-  width: 100%;
-}
 </style>
