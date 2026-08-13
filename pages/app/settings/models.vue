@@ -1,21 +1,41 @@
 <script setup lang="ts">
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
+import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
+import type { ModelSort, ModelStatus } from '~/types/api'
 
 const api = useApiClient()
-
-const { data, status, refresh } = await useAsyncData(
-  'settings-models',
-  () => api.models.list(),
-)
-
-const models = computed(() => data.value?.items ?? [])
 const route = useRoute()
 const { providerLogo } = useModelLogo()
 const modelStatus = ref('all')
 const modelLabs = ref<string[]>([])
 const modelSort = ref('alphabetical-asc')
+const modelOffset = ref(0)
+const modelPageSize = 24
+
+const modelQuery = computed(() => ({
+  offset: modelOffset.value,
+  status: modelStatus.value === 'all' ? undefined : modelStatus.value as ModelStatus,
+  include_deprecated: modelStatus.value === 'all',
+  lab: modelLabs.value.length ? modelLabs.value : undefined,
+  sort: modelSort.value as ModelSort,
+}))
+
+const { data, status, refresh } = await useAsyncData(
+  'settings-models',
+  () => api.models.list(modelQuery.value),
+  { watch: [modelQuery] },
+)
+
+const models = computed(() => data.value?.items ?? [])
+const modelTotal = computed(() => data.value?.total ?? 0)
+const hasPreviousPage = computed(() => modelOffset.value > 0)
+const hasNextPage = computed(() => modelOffset.value + models.value.length < modelTotal.value)
+
+watch([modelStatus, modelLabs, modelSort], () => {
+  modelOffset.value = 0
+}, { deep: true })
 
 const modelLabOptions = [
   { value: 'anthropic', label: 'Anthropic' },
@@ -32,6 +52,21 @@ const modelLabOptions = [
   { value: 'qwen', label: 'Qwen' },
   { value: 'z', label: 'Z' },
 ]
+
+const modelStatusOptions = [
+  { value: 'all', label: 'All' },
+  { value: 'active', label: 'Active' },
+  { value: 'preview', label: 'Preview' },
+  { value: 'deprecated', label: 'Deprecated' },
+]
+
+function previousPage() {
+  modelOffset.value = Math.max(0, modelOffset.value - modelPageSize)
+}
+
+function nextPage() {
+  if (hasNextPage.value) modelOffset.value += modelPageSize
+}
 
 function vendorInitials(vendor: string) {
   return vendor
@@ -76,6 +111,7 @@ useHead({
       v-model:sort="modelSort"
       interactive
       :show-search="false"
+      :status-options="modelStatusOptions"
       third-label="Labs"
       third-icon="labs"
       :third-options="modelLabOptions"
@@ -117,6 +153,20 @@ useHead({
         </div>
       </UiGrid>
     </UiAsyncStage>
+
+    <nav
+      v-if="status === 'success' && modelTotal > modelPageSize"
+      class="models-pagination"
+      aria-label="Models pagination"
+    >
+      <UiButton variant="secondary" :disabled="!hasPreviousPage" @click="previousPage">
+        Previous
+      </UiButton>
+      <span>{{ modelOffset + 1 }}–{{ Math.min(modelOffset + models.length, modelTotal) }} of {{ modelTotal }}</span>
+      <UiButton variant="secondary" :disabled="!hasNextPage" @click="nextPage">
+        Next
+      </UiButton>
+    </nav>
   </section>
 </template>
 
@@ -183,6 +233,16 @@ useHead({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.models-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ll-space-3);
+  margin-top: var(--ll-space-8);
+  color: var(--ll-color-text-muted);
+  font: 500 0.75rem / 1.2 var(--ll-font-mono);
 }
 
 .model-item__copy strong {

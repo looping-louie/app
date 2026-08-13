@@ -2,6 +2,7 @@ import type { ApiListResponse } from './common'
 
 export type ProviderId = 'anthropic' | 'nvidia' | 'ollama' | 'openai' | 'together'
 export type ModelStatus = 'active' | 'deprecated' | 'preview'
+export type ModelSort = 'alphabetical-asc' | 'alphabetical-desc' | 'newest' | 'oldest'
 export type ModelEndpoint = 'chat_completions' | 'messages' | 'responses'
 export type ModelCapability = 'coding' | 'function_calling' | 'reasoning' | 'structured_output' | 'text' | 'vision'
 
@@ -19,6 +20,7 @@ export interface ModelSummary {
   vendor: string
   family: string
   description: string
+  released_at: string
   capabilities: ModelCapability[]
   status: ModelStatus
   providers: ProviderId[]
@@ -56,6 +58,9 @@ export interface ModelListQuery {
   provider_id?: ProviderId
   capability?: ModelCapability
   status?: ModelStatus
+  lab?: string[]
+  sort?: ModelSort
+  offset?: number
   available?: boolean
   search?: string
   include_deprecated?: boolean
