@@ -8,6 +8,8 @@ import type { PersonaCategory, PersonaSort, PersonaStatus } from '~/types/api'
 import { instructionCategoryLabels, instructionCategoryOptions } from '~/utils/instructionCategories'
 
 const api = useApiClient()
+const router = useRouter()
+const { searchQuery: agentSearchQuery, searchTerm: agentSearchTerm } = useCatalogSearch()
 const agentStatus = ref('all')
 const agentCategories = ref<PersonaCategory[]>([])
 const agentSort = ref<PersonaSort>('alphabetical-asc')
@@ -19,6 +21,7 @@ const agentQuery = computed(() => ({
   status: agentStatus.value === 'all' ? undefined : agentStatus.value as PersonaStatus,
   category: agentCategories.value.length ? agentCategories.value : undefined,
   sort: agentSort.value,
+  search: agentSearchTerm.value || undefined,
 }))
 
 const { data, status, refresh } = await useAsyncData(
@@ -30,12 +33,24 @@ const { data, status, refresh } = await useAsyncData(
 const agents = computed(() => data.value?.items ?? [])
 const agentTotal = computed(() => data.value?.total ?? 0)
 
-watch([agentStatus, agentCategories, agentSort], () => {
+watch([agentStatus, agentCategories, agentSort, agentSearchTerm], () => {
   agentOffset.value = 0
 }, { deep: true })
 
 const { personaIcon } = usePersonaIcon()
 const { formatDate } = useDateTime()
+const agentSearchItems = computed(() => agents.value.map(agent => ({
+  id: agent.id,
+  label: agent.name,
+  description: agent.description,
+  group: 'Agents',
+  keywords: agent.category ? [instructionCategoryLabels[agent.category]] : [],
+  iconPath: personaIcon(agent),
+})))
+
+async function selectAgentSearchResult(item: { id: string }) {
+  await router.push(`/app/personas/${encodeURIComponent(item.id)}`)
+}
 
 definePageMeta({
   layout: 'app',
@@ -65,11 +80,16 @@ useHead({
         v-model:status="agentStatus"
         v-model:category="agentCategories"
         v-model:sort="agentSort"
+        v-model:search="agentSearchQuery"
         interactive
-        :show-search="false"
+        :search-items="agentSearchItems"
+        search-placeholder="Search agents…"
+        search-empty-title="No agents found"
+        search-empty-description="Try another name, description, or area."
         third-label="Area"
         third-icon="department"
         :third-options="instructionCategoryOptions"
+        @search-select="selectAgentSearchResult"
       />
     </template>
 

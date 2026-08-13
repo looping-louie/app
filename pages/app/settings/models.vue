@@ -7,7 +7,9 @@ import type { ModelSort, ModelStatus } from '~/types/api'
 
 const api = useApiClient()
 const route = useRoute()
+const router = useRouter()
 const { providerLogo } = useModelLogo()
+const { searchQuery: modelSearchQuery, searchTerm: modelSearchTerm } = useCatalogSearch()
 const modelStatus = ref('all')
 const modelLabs = ref<string[]>([])
 const modelSort = ref('alphabetical-asc')
@@ -20,6 +22,7 @@ const modelQuery = computed(() => ({
   include_deprecated: modelStatus.value === 'all',
   lab: modelLabs.value.length ? modelLabs.value : undefined,
   sort: modelSort.value as ModelSort,
+  search: modelSearchTerm.value || undefined,
 }))
 
 const { data, status, refresh } = await useAsyncData(
@@ -30,8 +33,17 @@ const { data, status, refresh } = await useAsyncData(
 
 const models = computed(() => data.value?.items ?? [])
 const modelTotal = computed(() => data.value?.total ?? 0)
+const modelSearchItems = computed(() => models.value.map(model => ({
+  id: model.id,
+  label: model.name,
+  description: `${model.vendor} · ${model.family}`,
+  group: 'Models',
+  keywords: [model.vendor, model.family, ...model.tags],
+  imageSrc: providerLogo(model.vendor, model.family) || undefined,
+  imageAlt: '',
+})))
 
-watch([modelStatus, modelLabs, modelSort], () => {
+watch([modelStatus, modelLabs, modelSort, modelSearchTerm], () => {
   modelOffset.value = 0
 }, { deep: true })
 
@@ -82,6 +94,15 @@ async function revealFocusedModel() {
 
 watch([models, () => route.query.model], () => void revealFocusedModel(), { immediate: true })
 
+async function selectModelSearchResult(item: { id: string }) {
+  await router.replace({
+    query: {
+      ...route.query,
+      model: item.id,
+    },
+  })
+}
+
 definePageMeta({
   pageTransition: false,
 })
@@ -99,13 +120,18 @@ useHead({
       v-model:status="modelStatus"
       v-model:category="modelLabs"
       v-model:sort="modelSort"
+      v-model:search="modelSearchQuery"
       interactive
-      :show-search="false"
+      :search-items="modelSearchItems"
+      search-placeholder="Search models…"
+      search-empty-title="No models found"
+      search-empty-description="Try another model, lab, or family."
       :status-options="modelStatusOptions"
       third-label="Labs"
       third-icon="labs"
       :third-options="modelLabOptions"
       class="models-filters"
+      @search-select="selectModelSearchResult"
     />
 
     <UiAsyncStage

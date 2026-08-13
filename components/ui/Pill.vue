@@ -9,6 +9,7 @@ export interface PillOption {
 type DropdownAlign = 'left' | 'right'
 type SelectionType = 'radio' | 'checkbox'
 type IconStyle = 'plain' | 'circle'
+type AriaHasPopup = 'dialog' | 'grid' | 'listbox' | 'menu' | 'tree'
 
 const props = withDefaults(defineProps<{
   src?: string
@@ -18,6 +19,7 @@ const props = withDefaults(defineProps<{
   focusable?: boolean
   ariaLabel?: string
   tooltip?: string
+  ariaHaspopup?: AriaHasPopup
   dropdownLabel?: string
   dropdownAlign?: DropdownAlign
   selectionType?: SelectionType
@@ -31,6 +33,7 @@ const props = withDefaults(defineProps<{
   focusable: true,
   ariaLabel: undefined,
   tooltip: undefined,
+  ariaHaspopup: undefined,
   dropdownLabel: 'Options',
   dropdownAlign: 'left',
   selectionType: 'radio',
@@ -40,12 +43,14 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | string[]]
+  click: [event: MouseEvent]
 }>()
 
 const slots = useSlots()
 const hasIcon = computed(() => Boolean(slots.icon))
 const hasLabel = computed(() => Boolean(slots.default))
 const hasMedia = computed(() => Boolean(props.src || hasIcon.value))
+const hasDropdown = computed(() => Boolean(props.options.length || slots.dropdown))
 const circularMedia = computed(() => Boolean(props.src || (hasIcon.value && props.iconStyle === 'circle')))
 const root = ref<HTMLElement | null>(null)
 const trigger = ref<HTMLButtonElement | null>(null)
@@ -59,7 +64,7 @@ const tooltipId = `ui-pill-tooltip-${useId().replaceAll(':', '')}`
 const connected = computed(() => open.value || closing.value)
 
 function toggleDropdown() {
-  if (!props.clickable) return
+  if (!props.clickable || !hasDropdown.value) return
   if (open.value) {
     closeDropdown()
     return
@@ -67,6 +72,15 @@ function toggleDropdown() {
 
   closing.value = false
   open.value = true
+}
+
+function activate(event: MouseEvent) {
+  if (hasDropdown.value) {
+    toggleDropdown()
+    return
+  }
+
+  emit('click', event)
 }
 
 function closeDropdown({ restoreFocus = false } = {}) {
@@ -164,9 +178,10 @@ onBeforeUnmount(() => {
       class="ui-icon-pill__trigger"
       :aria-label="ariaLabel || (!hasLabel ? tooltip : undefined)"
       :aria-describedby="tooltip ? tooltipId : undefined"
-      :aria-expanded="open"
-      :aria-controls="dropdownId"
-      @click="toggleDropdown"
+      :aria-haspopup="ariaHaspopup || (hasDropdown ? 'menu' : undefined)"
+      :aria-expanded="hasDropdown ? open : undefined"
+      :aria-controls="hasDropdown ? dropdownId : undefined"
+      @click="activate"
     >
       <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
         <img :src="src" :alt="alt" width="28" height="28" loading="lazy">
@@ -206,7 +221,7 @@ onBeforeUnmount(() => {
     </span>
 
     <svg
-      v-if="connected"
+      v-if="hasDropdown && connected"
       class="ui-icon-pill__shoulder"
       viewBox="0 0 16 16"
       preserveAspectRatio="none"
@@ -218,7 +233,7 @@ onBeforeUnmount(() => {
 
     <Transition name="ui-icon-pill-dropdown" @after-leave="onDropdownAfterLeave">
       <div
-        v-if="open"
+        v-if="hasDropdown && open"
         :id="dropdownId"
         class="ui-icon-pill__dropdown"
         :role="options.length && selectionType === 'radio' ? 'radiogroup' : 'group'"

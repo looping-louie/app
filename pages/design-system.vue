@@ -1193,6 +1193,23 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Action · opens command palette</span>
+                  <UiPill
+                    clickable
+                    aria-label="Search catalog"
+                    aria-haspopup="dialog"
+                    @click="sampleCommandPaletteOpen = true"
+                  >
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M229.66,218.34l-50.07-50.06a88.1,88.1,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z" />
+                      </svg>
+                    </template>
+                    Search
+                  </UiPill>
+                </div>
+
+                <div class="ds-icon-pill-example">
                   <span class="ds-stage__caption">Icon only</span>
                   <UiPill aria-label="Search">
                     <template #icon>
@@ -1298,6 +1315,10 @@ onBeforeUnmount(() => {
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Dropdown</span><code>clickable · selectionType · options · v-model</code></div>
                   <p class="ds-property__copy">Every content variant can become a dropdown. Built-in options support <strong>radio</strong> and <strong>checkbox</strong> selection, an optional <strong>group</strong> label, while the dropdown slot accepts custom content.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Action</span><code>clickable · @click · ariaHaspopup</code></div>
+                  <p class="ds-property__copy">A clickable Pill without options or dropdown content emits a native-style click action, allowing it to trigger overlays such as UiCommandPalette without rendering connected dropdown geometry.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Alignment</span><code>dropdownAlign</code></div>

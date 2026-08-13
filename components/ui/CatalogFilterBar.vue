@@ -1,12 +1,27 @@
 <script setup lang="ts">
+import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiPill from '~/components/ui/Pill.vue'
 
 type FilterOption = { value: string; label: string; group?: string }
 type SelectionType = 'radio' | 'checkbox'
+interface SearchItem {
+  id: string
+  label: string
+  description?: string
+  group?: string
+  keywords?: string[]
+  iconPath?: string
+  imageSrc?: string
+  imageAlt?: string
+}
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   interactive?: boolean
   showSearch?: boolean
+  searchItems?: SearchItem[]
+  searchPlaceholder?: string
+  searchEmptyTitle?: string
+  searchEmptyDescription?: string
   statusOptions?: FilterOption[]
   thirdLabel?: string
   thirdIcon?: 'department' | 'labs' | 'task' | 'scribble-loop' | 'calendar-blank'
@@ -15,6 +30,10 @@ withDefaults(defineProps<{
 }>(), {
   interactive: false,
   showSearch: true,
+  searchItems: () => [],
+  searchPlaceholder: 'Search catalog…',
+  searchEmptyTitle: 'No results found',
+  searchEmptyDescription: 'Try another search term.',
   statusOptions: () => [
     { value: 'all', label: 'All' },
     { value: 'enabled', label: 'Enabled' },
@@ -26,9 +45,15 @@ withDefaults(defineProps<{
   thirdSelectionType: 'checkbox',
 })
 
+const emit = defineEmits<{
+  searchSelect: [item: SearchItem]
+}>()
+
 const status = defineModel<string>('status', { default: 'all' })
 const category = defineModel<string | string[]>('category', { default: () => [] })
 const sort = defineModel<string>('sort', { default: 'alphabetical-asc' })
+const search = defineModel<string>('search', { default: '' })
+const searchOpen = ref(false)
 
 const sortOptions = [
   { value: 'alphabetical-asc', label: 'Alphabetical (A–Z)' },
@@ -41,7 +66,13 @@ const sortOptions = [
 <template>
   <div class="ui-catalog-filter-bar" role="group" aria-label="Catalog filters">
     <div class="ui-catalog-filter-bar__group">
-      <UiPill v-if="showSearch" aria-label="Search catalog">
+      <UiPill
+        v-if="showSearch"
+        :clickable="interactive"
+        aria-label="Search catalog"
+        aria-haspopup="dialog"
+        @click="searchOpen = true"
+      >
         <template #icon>
           <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
             <path d="M229.66,218.34l-50.07-50.06a88.1,88.1,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z" />
@@ -111,6 +142,19 @@ const sortOptions = [
       </template>
       Sort
     </UiPill>
+
+    <UiCommandPalette
+      v-if="showSearch"
+      v-model:open="searchOpen"
+      v-model:query="search"
+      :items="props.searchItems"
+      :placeholder="searchPlaceholder"
+      aria-label="Search catalog"
+      :empty-title="searchEmptyTitle"
+      :empty-description="searchEmptyDescription"
+      :keyboard-shortcut="false"
+      @select="emit('searchSelect', $event)"
+    />
   </div>
 </template>
 
