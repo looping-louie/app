@@ -171,10 +171,10 @@ const { data: loop, status, error, refresh } = await useAsyncData(
 )
 
 const breadcrumbItems = computed(() => loop.value ? [
-  { label: titleCase('loops'), to: '/app/loops' },
+  { label: titleCase('loops'), to: '/legacy/loops' },
   {
     label: titleCase(flowFromApi(loop.value.flow)),
-    to: `/app/loops?flow=${encodeURIComponent(flowFromApi(loop.value.flow))}`,
+    to: `/legacy/loops?flow=${encodeURIComponent(flowFromApi(loop.value.flow))}`,
   },
 ] : [])
 

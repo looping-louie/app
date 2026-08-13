@@ -387,9 +387,9 @@ const footerColumns = [
 ]
 
 const footerLegalLinks = [
-  { label: 'Privacy', to: '/legal/privacy' },
-  { label: 'Terms', to: '/legal/terms' },
-  { label: 'Imprint', to: '/legal/imprint' },
+  { label: 'Privacy', href: '#' },
+  { label: 'Terms', href: '#' },
+  { label: 'Imprint', href: '#' },
 ]
 
 const customerRows = [
@@ -510,8 +510,8 @@ onBeforeUnmount(() => {
 
         <div class="ds-header__meta">
           <span class="ds-version">Design system · 0.1</span>
-          <NuxtLink to="/" class="ds-header__link">Back to website</NuxtLink>
-          <UiButton to="/app" variant="stroke" size="sm">Open app</UiButton>
+          <NuxtLink to="/runs" class="ds-header__link">Back to runs</NuxtLink>
+          <UiButton to="/runs" variant="stroke" size="sm">Open app</UiButton>
         </div>
       </UiContainer>
     </header>

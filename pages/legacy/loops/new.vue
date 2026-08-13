@@ -100,7 +100,7 @@ const draftId = ref('')
 const activating = ref(false)
 const exitModalOpen = ref(false)
 const exitActionPending = ref(false)
-const pendingDestination = ref('/app/loops')
+const pendingDestination = ref('/legacy/loops')
 const allowRouteLeave = ref(false)
 const briefErrors = reactive({ title: '', prompt: '' })
 const mobileSummaryOpen = ref(false)
@@ -132,7 +132,7 @@ const currentPersona = computed(() => currentPersonaId.value ? personaById.value
 const currentAssignment = computed(() => assignments.value.find(assignment => assignment.role === modelRole.value && assignment.persona_id === currentPersonaId.value))
 const breadcrumbItems = computed(() => {
   const items = [
-    { label: 'Loops', to: '/app/loops' },
+    { label: 'Loops', to: '/legacy/loops' },
     { label: 'Create new loop' },
     { label: steps[macroStep.value] },
   ]
@@ -590,7 +590,7 @@ function restoreLocal() {
 async function loadDraft(id: string) {
   const draft = await $fetch<LoopDraft>(`/api/v1/loops/${encodeURIComponent(id)}`)
   if (draft.status !== 'draft') {
-    await router.replace(`/app/loops/${encodeURIComponent(id)}`)
+    await router.replace(`/legacy/loops/${encodeURIComponent(id)}`)
     return
   }
   draftId.value = draft.id
@@ -658,7 +658,7 @@ async function activateLoop() {
     draftId.value = activated.id
     localStorage.removeItem(localKey)
     allowRouteLeave.value = true
-    await router.push(`/app/loops/${encodeURIComponent(draftId.value)}`)
+    await router.push(`/legacy/loops/${encodeURIComponent(draftId.value)}`)
   } catch {
     // The final action owns API errors; the progress header never reports save state.
   } finally {

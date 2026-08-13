@@ -137,7 +137,7 @@ useHead({
       </template>
       <template #aside>
         <div class="catalog-heading__actions">
-          <UiButton to="/app/loops/new">Add new loop</UiButton>
+          <UiButton to="/legacy/loops/new">Add new loop</UiButton>
         </div>
       </template>
     </UiHeadingBlock>
@@ -173,7 +173,7 @@ useHead({
             <UiCard
               v-for="loop in displayedDrafts"
               :key="loop.id"
-              :to="`/app/loops/new?draft=${encodeURIComponent(loop.id)}`"
+              :to="`/legacy/loops/new?draft=${encodeURIComponent(loop.id)}`"
               variant="editorial"
               accent-on-hover
               class="catalog-card"
@@ -192,7 +192,7 @@ useHead({
         <UiCard
           v-for="loop in displayedPublished"
           :key="loop.id"
-          :to="`/app/loops/${encodeURIComponent(loop.id)}`"
+          :to="`/legacy/loops/${encodeURIComponent(loop.id)}`"
           variant="editorial"
           accent-on-hover
           class="catalog-card"

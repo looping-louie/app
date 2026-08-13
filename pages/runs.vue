@@ -189,7 +189,10 @@ function numericValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined
 }
 
-definePageMeta({ layout: 'app' })
+definePageMeta({
+  layout: 'app',
+  alias: ['/', '/app/runs'],
+})
 useHead({ title: 'Runs · Looping Louie' })
 </script>
 
