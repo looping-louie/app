@@ -5,6 +5,7 @@ import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
 import type { SkillCategory, SkillSort, SkillStatus } from '~/types/api'
+import { instructionCategoryLabels, instructionCategoryOptions } from '~/utils/instructionCategories'
 
 const api = useApiClient()
 const skillStatus = ref('all')
@@ -28,25 +29,6 @@ const { data, status, refresh } = await useAsyncData(
 
 const skills = computed(() => data.value?.items ?? [])
 const skillTotal = computed(() => data.value?.total ?? 0)
-
-const skillCategoryOptions: Array<{ value: SkillCategory; label: string; group: string }> = [
-  { value: 'software_engineering', label: 'Software engineering', group: 'Engineering' },
-  { value: 'quality_reliability', label: 'Quality & reliability', group: 'Engineering' },
-  { value: 'security_privacy', label: 'Security & privacy', group: 'Engineering' },
-  { value: 'data_ai', label: 'Data & AI', group: 'Engineering' },
-  { value: 'content_brand', label: 'Content & brand', group: 'Marketing' },
-  { value: 'growth_acquisition', label: 'Growth & acquisition', group: 'Marketing' },
-  { value: 'research_analytics', label: 'Research & analytics', group: 'Marketing' },
-  { value: 'product_discovery_strategy', label: 'Product discovery & strategy', group: 'Product & Design' },
-  { value: 'product_design_ux', label: 'Product design & UX', group: 'Product & Design' },
-  { value: 'delivery_planning', label: 'Delivery & planning', group: 'Product & Design' },
-  { value: 'sales', label: 'Sales', group: 'Sales & Customer' },
-  { value: 'customer_success_support', label: 'Customer success & support', group: 'Sales & Customer' },
-]
-
-const skillCategoryLabels = Object.fromEntries(
-  skillCategoryOptions.map(option => [option.value, option.label]),
-) as Record<SkillCategory, string>
 
 watch([skillStatus, skillCategories, skillSort], () => {
   skillOffset.value = 0
@@ -86,7 +68,7 @@ useHead({
         :show-search="false"
         third-label="Area"
         third-icon="department"
-        :third-options="skillCategoryOptions"
+        :third-options="instructionCategoryOptions"
       />
     </template>
 
@@ -100,7 +82,7 @@ useHead({
           class="catalog-card"
         >
           <template #eyebrow>
-            {{ skill.category ? skillCategoryLabels[skill.category] : 'Uncategorised' }}
+            {{ skill.category ? instructionCategoryLabels[skill.category] : 'Uncategorised' }}
           </template>
           <template #title>
             <h2>{{ skill.name }}</h2>

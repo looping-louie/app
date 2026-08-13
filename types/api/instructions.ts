@@ -1,6 +1,37 @@
 import type { ApiInstructionCapabilities, ApiInstructionSummary, ApiListResponse } from './common'
 
-export type PersonaSummary = ApiInstructionSummary
+export type InstructionCategory =
+  | 'software_engineering'
+  | 'quality_reliability'
+  | 'security_privacy'
+  | 'data_ai'
+  | 'product_discovery_strategy'
+  | 'product_design_ux'
+  | 'delivery_planning'
+  | 'content_brand'
+  | 'growth_acquisition'
+  | 'research_analytics'
+  | 'sales'
+  | 'customer_success_support'
+
+export type InstructionStatus = 'enabled' | 'disabled'
+export type InstructionSort = 'alphabetical-asc' | 'alphabetical-desc' | 'newest' | 'oldest'
+
+export type PersonaCategory = InstructionCategory
+export type PersonaStatus = InstructionStatus
+export type PersonaSort = InstructionSort
+
+export interface PersonaListQuery {
+  status?: PersonaStatus
+  category?: PersonaCategory[]
+  sort?: PersonaSort
+  offset?: number
+  search?: string
+}
+
+export interface PersonaSummary extends ApiInstructionSummary {
+  category: PersonaCategory | null
+}
 
 export interface PersonaResponse extends ApiInstructionCapabilities {
   id: string
@@ -28,22 +59,9 @@ export interface SkillMetadata extends Record<string, unknown> {
   category?: SkillCategory | null
 }
 
-export type SkillCategory =
-  | 'software_engineering'
-  | 'quality_reliability'
-  | 'security_privacy'
-  | 'data_ai'
-  | 'product_discovery_strategy'
-  | 'product_design_ux'
-  | 'delivery_planning'
-  | 'content_brand'
-  | 'growth_acquisition'
-  | 'research_analytics'
-  | 'sales'
-  | 'customer_success_support'
-
-export type SkillStatus = 'enabled' | 'disabled'
-export type SkillSort = 'alphabetical-asc' | 'alphabetical-desc' | 'newest' | 'oldest'
+export type SkillCategory = InstructionCategory
+export type SkillStatus = InstructionStatus
+export type SkillSort = InstructionSort
 
 export interface SkillListQuery {
   status?: SkillStatus

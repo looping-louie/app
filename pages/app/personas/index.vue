@@ -3,28 +3,39 @@ import CatalogShell from '~/components/catalog/CatalogShell.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
+import UiStatusText from '~/components/ui/StatusText.vue'
+import type { PersonaCategory, PersonaSort, PersonaStatus } from '~/types/api'
+import { instructionCategoryLabels, instructionCategoryOptions } from '~/utils/instructionCategories'
 
 const api = useApiClient()
+const agentStatus = ref('all')
+const agentCategories = ref<PersonaCategory[]>([])
+const agentSort = ref<PersonaSort>('alphabetical-asc')
+const agentOffset = ref(0)
+const agentPageSize = 12
+
+const agentQuery = computed(() => ({
+  offset: agentOffset.value,
+  status: agentStatus.value === 'all' ? undefined : agentStatus.value as PersonaStatus,
+  category: agentCategories.value.length ? agentCategories.value : undefined,
+  sort: agentSort.value,
+}))
 
 const { data, status, refresh } = await useAsyncData(
   'agents-catalog',
-  () => api.personas.list(),
+  () => api.personas.list(agentQuery.value),
+  { watch: [agentQuery] },
 )
 
 const agents = computed(() => data.value?.items ?? [])
-const agentStatus = ref('all')
-const agentDepartments = ref<string[]>([])
-const agentSort = ref('alphabetical-asc')
+const agentTotal = computed(() => data.value?.total ?? 0)
 
-const agentDepartmentOptions = [
-  { value: 'engineering', label: 'Engineering' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'marketing', label: 'Marketing' },
-  { value: 'operations', label: 'Operations' },
-  { value: 'sales', label: 'Sales' },
-]
+watch([agentStatus, agentCategories, agentSort], () => {
+  agentOffset.value = 0
+}, { deep: true })
 
 const { personaIcon } = usePersonaIcon()
+const { formatDate } = useDateTime()
 
 definePageMeta({
   layout: 'app',
@@ -41,6 +52,9 @@ useHead({
     description="Agent roles available to loops and pipelines."
     :status="status"
     :empty="agents.length === 0"
+    v-model:pagination-offset="agentOffset"
+    :pagination-total="agentTotal"
+    :pagination-page-size="agentPageSize"
     loading-label="Loading agents…"
     error-label="Agents could not be loaded."
     empty-label="No agents found."
@@ -49,11 +63,13 @@ useHead({
     <template #filters>
       <UiCatalogFilterBar
         v-model:status="agentStatus"
-        v-model:category="agentDepartments"
+        v-model:category="agentCategories"
         v-model:sort="agentSort"
         interactive
         :show-search="false"
-        :third-options="agentDepartmentOptions"
+        third-label="Area"
+        third-icon="department"
+        :third-options="instructionCategoryOptions"
       />
     </template>
 
@@ -63,13 +79,28 @@ useHead({
           :key="agent.id"
           :to="`/app/personas/${encodeURIComponent(agent.id)}`"
           variant="media"
+          accent-on-hover
           class="catalog-card"
         >
+          <template #eyebrow>
+            {{ agent.category ? instructionCategoryLabels[agent.category] : 'Uncategorised' }}
+          </template>
           <template #title>
             <h2>{{ agent.name }}</h2>
           </template>
           <template #description>
             <p>{{ agent.description }}</p>
+          </template>
+          <template #meta>
+            <time :datetime="agent.updated_at">{{ formatDate(agent.updated_at) }}</time>
+          </template>
+          <template #trailing>
+            <UiStatusText
+              :tone="agent.enabled ? 'enabled' : 'disabled'"
+              activation="card-hover"
+            >
+              {{ agent.enabled ? 'enabled' : 'disabled' }}
+            </UiStatusText>
           </template>
           <template #media>
             <div class="agent-media" aria-hidden="true">

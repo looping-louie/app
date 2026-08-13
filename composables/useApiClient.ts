@@ -5,7 +5,6 @@ import type {
   ActivityResponse,
   ApiDeleteResponse,
   ApiListQuery,
-  ApiSearchQuery,
   LoopCreateRequest,
   LoopListResponse,
   LoopPatchRequest,
@@ -15,6 +14,7 @@ import type {
   ModelListResponse,
   ModelResponse,
   PersonaListResponse,
+  PersonaListQuery,
   PersonaResponse,
   PipelineCreateRequest,
   PipelineListQuery,
@@ -56,7 +56,7 @@ export function useApiClient() {
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('pipelines', id), { method: 'DELETE' }),
     },
     personas: {
-      list: (query: ApiSearchQuery = {}) => $fetch<PersonaListResponse>('/api/v1/personas', { query }),
+      list: (query: PersonaListQuery = {}) => $fetch<PersonaListResponse>('/api/v1/personas', { query }),
       get: (id: string) => $fetch<PersonaResponse>(resourcePath('personas', id)),
     },
     skills: {
