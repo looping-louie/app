@@ -7,6 +7,11 @@ export function apiErrorMessage(cause: unknown, fallback = 'The request could no
   return cause instanceof Error && cause.message ? cause.message : fallback
 }
 
+export function apiErrorCode(cause: unknown) {
+  const data = cause && typeof cause === 'object' ? (cause as { data?: unknown }).data : undefined
+  return isApiErrorEnvelope(data) ? data.error.code : undefined
+}
+
 function isApiErrorEnvelope(value: unknown): value is ApiErrorEnvelope {
   if (!value || typeof value !== 'object') return false
   const error = (value as { error?: unknown }).error

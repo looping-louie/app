@@ -55,6 +55,14 @@ export interface PersonaCreateRequest {
   }
 }
 
+export interface PersonaPatchRequest {
+  expected_version: number
+  name?: string
+  description?: string
+  instructions?: string
+  skill_ids?: string[]
+}
+
 export type PersonaListResponse = ApiListResponse<PersonaSummary>
 
 export interface SkillDefaultStrictness {

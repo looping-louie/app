@@ -3,21 +3,75 @@ const props = withDefaults(defineProps<{
   content?: string | null
   stripFirstHeading?: boolean
   stripFirstParagraph?: boolean
+  editable?: boolean
 }>(), {
   content: '',
   stripFirstHeading: false,
   stripFirstParagraph: false,
+  editable: false,
 })
 
+const emit = defineEmits<{
+  change: []
+}>()
+
 const { formatMarkdown } = useMarkdown()
+const root = ref<HTMLElement | null>(null)
 const renderedContent = computed(() => formatMarkdown(props.content, {
   stripFirstHeading: props.stripFirstHeading,
   stripFirstParagraph: props.stripFirstParagraph,
 }))
+
+function inlineMarkdown(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? ''
+  if (!(node instanceof HTMLElement)) return ''
+  const content = [...node.childNodes].map(inlineMarkdown).join('')
+  if (node.matches('strong, b')) return `**${content}**`
+  if (node.matches('em, i')) return `*${content}*`
+  if (node.matches('code') && node.parentElement?.tagName !== 'PRE') return `\`${content}\``
+  if (node.matches('a')) return `[${content}](${node.getAttribute('href') ?? ''})`
+  if (node.matches('br')) return '\n'
+  return content
+}
+
+function blockMarkdown(element: HTMLElement): string {
+  if (element.matches('h1, h2, h3, h4, h5, h6')) {
+    return `${'#'.repeat(Number(element.tagName.slice(1)))} ${inlineMarkdown(element)}`
+  }
+  if (element.matches('ul, ol')) {
+    return [...element.children].map((item, index) => (
+      `${element.tagName === 'OL' ? `${index + 1}.` : '-'} ${inlineMarkdown(item)}`
+    )).join('\n')
+  }
+  if (element.matches('blockquote')) return inlineMarkdown(element).split('\n').map(line => `> ${line}`).join('\n')
+  if (element.matches('pre')) return `\`\`\`\n${element.textContent ?? ''}\n\`\`\``
+  if (element.matches('hr')) return '---'
+  return inlineMarkdown(element)
+}
+
+function readMarkdown() {
+  if (!root.value) return props.content ?? ''
+  return [...root.value.children]
+    .map(child => blockMarkdown(child as HTMLElement).trim())
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+defineExpose({ focus: () => root.value?.focus(), readMarkdown })
 </script>
 
 <template>
-  <div class="ui-markdown-content" v-html="renderedContent" />
+  <div
+    ref="root"
+    class="ui-markdown-content"
+    :class="{ 'ui-markdown-content--editable': editable }"
+    :contenteditable="editable ? 'true' : undefined"
+    :role="editable ? 'textbox' : undefined"
+    :aria-multiline="editable || undefined"
+    :tabindex="editable ? 0 : undefined"
+    v-html="renderedContent"
+    @input="emit('change')"
+  />
 </template>
 
 <style scoped>
@@ -27,6 +81,10 @@ const renderedContent = computed(() => formatMarkdown(props.content, {
   line-height: 1.75;
   text-align: left;
 }
+
+.ui-markdown-content--editable { min-height: 12rem; border-radius: var(--ll-radius-sm); outline: 1px solid transparent; transition: outline-color var(--ll-duration-fast) var(--ll-ease-out), box-shadow var(--ll-duration-fast) var(--ll-ease-out); }
+.ui-markdown-content--editable:hover { outline-color: var(--ll-color-divider); }
+.ui-markdown-content--editable:focus { outline: 1px solid var(--ll-color-primary); box-shadow: 0 0 0 3px var(--ll-color-primary-highlight); }
 
 .ui-markdown-content :deep(:is(h1, h2, h3, h4, h5, h6)) {
   margin: var(--ll-space-8) 0 var(--ll-space-3);

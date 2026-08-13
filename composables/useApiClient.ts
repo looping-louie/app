@@ -16,6 +16,7 @@ import type {
   PersonaListResponse,
   PersonaListQuery,
   PersonaCreateRequest,
+  PersonaPatchRequest,
   PersonaResponse,
   PipelineCreateRequest,
   PipelineListQuery,
@@ -61,6 +62,8 @@ export function useApiClient() {
       list: (query: PersonaListQuery = {}) => $fetch<PersonaListResponse>('/api/v1/personas', { query }),
       get: (id: string) => $fetch<PersonaResponse>(resourcePath('personas', id)),
       create: (body: PersonaCreateRequest) => $fetch<PersonaResponse>('/api/v1/personas', { method: 'POST', body }),
+      patch: (id: string, body: PersonaPatchRequest) => $fetch<PersonaResponse>(resourcePath('personas', id), { method: 'PATCH', body }),
+      remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('personas', id), { method: 'DELETE' }),
     },
     skills: {
       list: (query: SkillListQuery = {}) => $fetch<SkillListResponse>('/api/v1/skills', { query }),
