@@ -86,4 +86,13 @@ export interface SkillResponse extends ApiInstructionCapabilities {
   updated_at: string
 }
 
+export interface SkillCreateRequest {
+  name: string
+  description: string
+  instructions: string
+  metadata: {
+    category: SkillCategory
+  }
+}
+
 export type SkillListResponse = ApiListResponse<SkillSummary>

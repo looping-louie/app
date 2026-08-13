@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CatalogShell from '~/components/catalog/CatalogShell.vue'
+import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
@@ -75,6 +76,7 @@ useHead({
     empty-label="No skills found."
     @retry="refresh"
   >
+    <template #actions><UiButton to="/app/skills/new">Create new skill</UiButton></template>
     <template #filters>
       <UiCatalogFilterBar
         v-model:status="skillStatus"

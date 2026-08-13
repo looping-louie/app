@@ -25,6 +25,7 @@ import type {
   ProviderResponse,
   SkillListResponse,
   SkillListQuery,
+  SkillCreateRequest,
   SkillResponse,
 } from '~/types/api'
 
@@ -62,6 +63,7 @@ export function useApiClient() {
     skills: {
       list: (query: SkillListQuery = {}) => $fetch<SkillListResponse>('/api/v1/skills', { query }),
       get: (id: string) => $fetch<SkillResponse>(resourcePath('skills', id)),
+      create: (body: SkillCreateRequest) => $fetch<SkillResponse>('/api/v1/skills', { method: 'POST', body }),
     },
     models: {
       list: (query: ModelListQuery = {}) => $fetch<ModelListResponse>('/api/v1/models', { query }),
