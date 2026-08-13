@@ -14,6 +14,7 @@ import UiDrawer from '~/components/ui/Drawer.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import UiMarkdownContent from '~/components/ui/MarkdownContent.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiModal from '~/components/ui/Modal.vue'
@@ -189,6 +190,7 @@ const designSystemNavItems = [
   { id: 'foundations', label: '01 · Foundations', level: 1 },
   { id: 'colors', label: 'Color', level: 2 },
   { id: 'typography', label: 'Typography', level: 2 },
+  { id: 'markdown-content', label: 'Markdown content', level: 2 },
   { id: 'actions', label: '02 · Actions', level: 1 },
   { id: 'buttons', label: 'Buttons', level: 2 },
   { id: 'toggle', label: 'Toggle', level: 2 },
@@ -462,6 +464,17 @@ const directorySelection = ref<string[]>(['maya'])
 const formProgressStep = ref(1)
 const formProgressSteps = ['Brief', 'Team', 'Review']
 const samplePrompt = ref('Review a launch plan and surface the risks that could prevent a successful release.')
+const markdownSample = [
+  '## Pre-flight instructions',
+  '',
+  'Use **clear acceptance criteria** before the team starts reviewing the release.',
+  '',
+  '- Check the expected outcome.',
+  '- Surface risks and unresolved dependencies.',
+  '- Record the final decision in `release-notes.md`.',
+  '',
+  '> Keep the output concise enough for an operator to scan between runs.',
+].join('\n')
 
 const faqItems = [
   {
@@ -697,6 +710,39 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>License</span>
                 <p>Both families use the SIL Open Font License 1.1 and are served from the project itself.</p>
+              </footer>
+            </article>
+
+            <article id="markdown-content" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Markdown content</h3>
+                    <code>UiMarkdownContent</code>
+                  </div>
+                  <p>Safe, consistent long-form content for agent and skill instructions.</p>
+                </div>
+                <span class="ds-status"><i /> New</span>
+              </header>
+
+              <div class="ds-stage ds-markdown-stage">
+                <UiMarkdownContent :content="markdownSample" />
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Source</span><code>content</code></div>
+                  <p class="ds-property__copy">Receives raw Markdown and delegates its escaped HTML conversion to <strong>useMarkdown</strong>.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Trimming</span><code>stripFirstHeading · stripFirstParagraph</code></div>
+                  <p class="ds-property__copy">Removes API-provided introductory content when the surrounding page already presents it in its heading.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Rule</span>
+                <p>Pages supply the source and semantic context; this component owns Markdown rendering and typography.</p>
               </footer>
             </article>
           </section>
@@ -3222,6 +3268,15 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   justify-content: center;
   gap: var(--ll-space-8);
+}
+
+.ds-markdown-stage {
+  display: grid;
+  justify-items: start;
+}
+
+.ds-markdown-stage :deep(.ui-markdown-content) {
+  width: min(100%, 48rem);
 }
 
 .ds-icon-pill-example {
