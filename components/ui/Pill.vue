@@ -3,6 +3,7 @@ export interface PillOption {
   value: string
   label: string
   disabled?: boolean
+  group?: string
 }
 
 type DropdownAlign = 'left' | 'right'
@@ -224,32 +225,39 @@ onBeforeUnmount(() => {
         :aria-label="dropdownLabel"
       >
         <div v-if="options.length" class="ui-icon-pill__options">
-          <button
-            v-for="option in options"
-            :key="option.value"
-            type="button"
-            class="ui-icon-pill__option"
-            :class="{
-              'is-selected': isSelected(option.value),
-              'is-confirming': confirmingValue === option.value,
-            }"
-            :role="selectionType === 'radio' ? 'radio' : 'checkbox'"
-            :aria-checked="isSelected(option.value)"
-            :disabled="option.disabled"
-            @click="selectOption(option)"
-          >
-            <span class="ui-icon-pill__selection-icon" aria-hidden="true">
-              <svg v-if="selectionType === 'radio'" viewBox="0 0 256 256" fill="currentColor">
-                <path v-if="isSelected(option.value)" d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
-                <path v-else d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" />
-              </svg>
-              <svg v-else viewBox="0 0 256 256" fill="currentColor">
-                <path v-if="isSelected(option.value)" d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Zm-34.34-109.66a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z" />
-                <path v-else d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Z" />
-              </svg>
+          <template v-for="(option, optionIndex) in options" :key="option.value">
+            <span
+              v-if="option.group && option.group !== options[optionIndex - 1]?.group"
+              class="ui-icon-pill__option-group"
+              role="presentation"
+            >
+              {{ option.group }}
             </span>
-            <span>{{ option.label }}</span>
-          </button>
+            <button
+              type="button"
+              class="ui-icon-pill__option"
+              :class="{
+                'is-selected': isSelected(option.value),
+                'is-confirming': confirmingValue === option.value,
+              }"
+              :role="selectionType === 'radio' ? 'radio' : 'checkbox'"
+              :aria-checked="isSelected(option.value)"
+              :disabled="option.disabled"
+              @click="selectOption(option)"
+            >
+              <span class="ui-icon-pill__selection-icon" aria-hidden="true">
+                <svg v-if="selectionType === 'radio'" viewBox="0 0 256 256" fill="currentColor">
+                  <path v-if="isSelected(option.value)" d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
+                  <path v-else d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" />
+                </svg>
+                <svg v-else viewBox="0 0 256 256" fill="currentColor">
+                  <path v-if="isSelected(option.value)" d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Zm-34.34-109.66a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z" />
+                  <path v-else d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Z" />
+                </svg>
+              </span>
+              <span>{{ option.label }}</span>
+            </button>
+          </template>
         </div>
         <slot v-else name="dropdown" :close="closeDropdown" />
       </div>
@@ -474,6 +482,16 @@ button.ui-icon-pill__trigger:focus-visible {
 }
 
 .ui-icon-pill__options { display: grid; gap: var(--ll-space-1); }
+
+.ui-icon-pill__option-group {
+  padding: var(--ll-space-3) var(--ll-space-3) var(--ll-space-1);
+  color: var(--ll-color-primary);
+  font: 650 var(--ll-text-xs) / 1 var(--ll-font-control);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ui-icon-pill__option-group:first-child { padding-top: var(--ll-space-1); }
 
 .ui-icon-pill__option {
   display: flex;

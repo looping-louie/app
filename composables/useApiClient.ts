@@ -24,6 +24,7 @@ import type {
   ProviderPatchRequest,
   ProviderResponse,
   SkillListResponse,
+  SkillListQuery,
   SkillResponse,
 } from '~/types/api'
 
@@ -59,7 +60,7 @@ export function useApiClient() {
       get: (id: string) => $fetch<PersonaResponse>(resourcePath('personas', id)),
     },
     skills: {
-      list: (query: ApiSearchQuery = {}) => $fetch<SkillListResponse>('/api/v1/skills', { query }),
+      list: (query: SkillListQuery = {}) => $fetch<SkillListResponse>('/api/v1/skills', { query }),
       get: (id: string) => $fetch<SkillResponse>(resourcePath('skills', id)),
     },
     models: {

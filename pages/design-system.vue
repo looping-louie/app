@@ -57,6 +57,7 @@ const sampleCommandPaletteOpen = ref(false)
 const sampleCommandPaletteSelection = ref('No command selected')
 const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
+const pillAreas = ref<string[]>(['software_engineering'])
 const samplePaginationOffset = ref(24)
 const buttonDropdownSelection = ref('No action selected')
 const copiedCommand = ref<string | null>(null)
@@ -122,6 +123,13 @@ const pillLabOptions = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
   { value: 'google', label: 'Google DeepMind' },
+]
+
+const pillAreaOptions = [
+  { value: 'software_engineering', label: 'Software engineering', group: 'Engineering' },
+  { value: 'security_privacy', label: 'Security & privacy', group: 'Engineering' },
+  { value: 'growth_acquisition', label: 'Growth & acquisition', group: 'Marketing' },
+  { value: 'product_design_ux', label: 'Product design & UX', group: 'Product & Design' },
 ]
 
 const buttonDropdownOptions = [
@@ -1261,6 +1269,25 @@ onBeforeUnmount(() => {
                     Labs
                   </UiPill>
                 </div>
+
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Checkbox · grouped options</span>
+                  <UiPill
+                    v-model="pillAreas"
+                    clickable
+                    selection-type="checkbox"
+                    :options="pillAreaOptions"
+                    aria-label="Filter by business area"
+                    dropdown-label="Area"
+                  >
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M240,208H224V96a16,16,0,0,0-16-16H144V32a16,16,0,0,0-24.88-13.32L39.12,72A16,16,0,0,0,32,85.34V208H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM208,96V208H144V96ZM48,85.34,128,32V208H48Z" />
+                      </svg>
+                    </template>
+                    Area
+                  </UiPill>
+                </div>
               </div>
 
               <div class="ds-properties">
@@ -1270,7 +1297,7 @@ onBeforeUnmount(() => {
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Dropdown</span><code>clickable · selectionType · options · v-model</code></div>
-                  <p class="ds-property__copy">Every content variant can become a dropdown. Built-in options support <strong>radio</strong> and <strong>checkbox</strong> selection, while the dropdown slot accepts custom content.</p>
+                  <p class="ds-property__copy">Every content variant can become a dropdown. Built-in options support <strong>radio</strong> and <strong>checkbox</strong> selection, an optional <strong>group</strong> label, while the dropdown slot accepts custom content.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Alignment</span><code>dropdownAlign</code></div>

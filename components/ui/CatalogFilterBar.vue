@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import UiPill from '~/components/ui/Pill.vue'
 
-type FilterOption = { value: string; label: string }
+type FilterOption = { value: string; label: string; group?: string }
 type SelectionType = 'radio' | 'checkbox'
 
 withDefaults(defineProps<{
