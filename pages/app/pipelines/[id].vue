@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import PipelineConnector from '~/components/pipelines/PipelineConnector.vue'
-import PipelineHumanGateCard from '~/components/pipelines/PipelineHumanGateCard.vue'
-import PipelineLoopCard from '~/components/pipelines/PipelineLoopCard.vue'
-import PipelineOutcomeRoute from '~/components/pipelines/PipelineOutcomeRoute.vue'
+import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
+import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
 import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiContainer from '~/components/ui/Container.vue'
@@ -87,7 +85,6 @@ const { formatDate } = useDateTime()
 const editingStatus = ref(false)
 const savingStatus = ref(false)
 const updateError = ref('')
-const highlightedOutcome = ref<'success' | 'failure' | null>(null)
 
 const statusOptions = [
   { value: 'active', label: 'active' },
@@ -137,6 +134,28 @@ const detailItems = computed<DetailRow[]>(() => {
 })
 
 const createdBy = computed(() => pipeline.value?.user?.trim() || 'user')
+const canvasActivities = computed<PipelineCanvasActivity[]>(() => (
+  pipeline.value?.steps.map((step, index) => {
+    const instanceId = `pipeline-detail-step-${index}`
+    if (step.type === 'loop') {
+      return {
+        instanceId,
+        type: 'loop' as const,
+        loop: loopForStep(step),
+      }
+    }
+
+    const isQuiz = step.gate_type === 'quiz'
+    return {
+      instanceId,
+      type: 'human-gate' as const,
+      gate: isQuiz ? 'multiple-choice-quiz' as const : 'human-review' as const,
+      title: isQuiz ? 'Multiple-choice quiz' : 'Human review',
+      teamMembers: isQuiz ? undefined : ['any-person' as const],
+      passingScore: step.config?.minimum_correct_answers,
+    }
+  }) ?? []
+))
 
 function loopForStep(step: PipelineLoopStep): LoopSummary {
   return loopById.value.get(step.loop_id) ?? {
@@ -147,20 +166,6 @@ function loopForStep(step: PipelineLoopStep): LoopSummary {
     agents: [],
     stop_conditions: null,
   }
-}
-
-function previousLoopDepth(index: number) {
-  if (!pipeline.value) return 0
-  for (let candidate = index - 1; candidate >= 0; candidate -= 1) {
-    if (pipeline.value.steps[candidate]?.type === 'loop') return index - candidate
-  }
-  return 0
-}
-
-function failureModeFor(step: PipelineStep, index: number) {
-  if (step.type === 'loop') return 'stop' as const
-  if (step.gate_type === 'quiz') return 'retry' as const
-  return previousLoopDepth(index) ? 'previous' as const : 'stop' as const
 }
 
 function apiErrorMessage(cause: unknown) {
@@ -297,40 +302,7 @@ useHead(() => ({
               </p>
 
               <div v-else-if="item.kind === 'design'" class="pipeline-design">
-                <div class="pipeline-design__input-node">
-                  <UiPill class="pipeline-design__input-pill" :focusable="false">Input prompt</UiPill>
-                  <PipelineConnector />
-                </div>
-
-                <ol class="pipeline-design__steps" aria-label="Pipeline design">
-                  <li
-                    v-for="(step, index) in pipeline.steps"
-                    :key="step.type === 'loop' ? `${step.loop_id}-${index}` : `${step.gate_type}-${index}`"
-                    class="pipeline-design__step"
-                  >
-                    <PipelineLoopCard
-                      v-if="step.type === 'loop'"
-                      :loop="loopForStep(step)"
-                      :instance-id="`pipeline-detail-step-${index}`"
-                      readonly
-                    />
-                    <PipelineHumanGateCard
-                      v-else
-                      :title="step.gate_type === 'quiz' ? 'Multiple-choice quiz' : 'Human review'"
-                      :instance-id="`pipeline-detail-step-${index}`"
-                      :gate="step.gate_type === 'quiz' ? 'multiple-choice-quiz' : 'human-review'"
-                      :team-members="step.gate_type === 'approval' ? ['any-person'] : undefined"
-                      :passing-score="step.config?.minimum_correct_answers"
-                      readonly
-                    />
-                    <PipelineOutcomeRoute
-                      :failure-mode="failureModeFor(step, index)"
-                      :return-depth="previousLoopDepth(index) || 1"
-                      :highlighted="highlightedOutcome"
-                      @highlight="highlightedOutcome = $event"
-                    />
-                  </li>
-                </ol>
+                <PipelineCanvas :activities="canvasActivities" readonly aria-label="Pipeline design" />
               </div>
             </template>
 
@@ -366,10 +338,6 @@ useHead(() => ({
 .pipeline-status__error { flex: 1 0 100%; margin: 0; color: var(--ll-color-brand-ink); font-size: var(--ll-text-xs); line-height: 1.4; }
 .pipeline-created { display: flex; min-height: 2rem; flex-wrap: wrap; align-items: center; gap: 0.3em; margin: 0; color: var(--ll-color-text); }
 .pipeline-design { display: flex; width: 100%; min-width: 0; box-sizing: border-box; flex-direction: column; align-items: stretch; padding: var(--ll-space-2) 0 var(--ll-space-8); }
-.pipeline-design__input-node { display: flex; flex-direction: column; align-items: center; }
-.pipeline-design__input-pill :deep(.ui-icon-pill__trigger) { background: transparent; border-style: dashed; }
-.pipeline-design__steps { width: 100%; min-width: 0; padding: 0; margin: 0; list-style: none; }
-.pipeline-design__step { position: relative; width: 100%; }
 .pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__item) { grid-template-columns: minmax(9rem, 0.36fr) minmax(0, 1fr) auto; }
 .pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__metadata) { display: block; width: 100%; grid-column: 1 / -1; grid-row: 2; }
 .pipeline-inline-action {
