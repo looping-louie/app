@@ -15,6 +15,7 @@ import type {
   ModelResponse,
   PersonaListResponse,
   PersonaListQuery,
+  PersonaCreateRequest,
   PersonaResponse,
   PipelineCreateRequest,
   PipelineListQuery,
@@ -59,6 +60,7 @@ export function useApiClient() {
     personas: {
       list: (query: PersonaListQuery = {}) => $fetch<PersonaListResponse>('/api/v1/personas', { query }),
       get: (id: string) => $fetch<PersonaResponse>(resourcePath('personas', id)),
+      create: (body: PersonaCreateRequest) => $fetch<PersonaResponse>('/api/v1/personas', { method: 'POST', body }),
     },
     skills: {
       list: (query: SkillListQuery = {}) => $fetch<SkillListResponse>('/api/v1/skills', { query }),

@@ -45,6 +45,16 @@ export interface PersonaResponse extends ApiInstructionCapabilities {
   updated_at: string
 }
 
+export interface PersonaCreateRequest {
+  name: string
+  description: string
+  instructions: string
+  skill_ids: string[]
+  metadata: {
+    category: PersonaCategory
+  }
+}
+
 export type PersonaListResponse = ApiListResponse<PersonaSummary>
 
 export interface SkillDefaultStrictness {
