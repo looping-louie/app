@@ -1,24 +1,21 @@
 <script setup lang="ts">
+import PageShell from '~/components/layout/PageShell.vue'
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
 import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
-import PageShell from '~/components/layout/PageShell.vue'
+import PipelineDesignEditor from '~/components/pipelines/PipelineDesignEditor.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
-import { entityActionMenuOptions } from '~/utils/entityActionMenu'
-import type { LoopAgentInput, LoopStopConditions } from '~/types/api'
+import type {
+  LoopActivityConfig,
+  PipelineActivityStepRequest,
+  QuizActivityConfig,
+} from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
-
-interface HydratedLoopConfig {
-  agents: LoopAgentInput[]
-  stop_conditions: LoopStopConditions
-}
-
-interface HydratedQuizConfig {
-  quiz: Record<string, unknown>
-}
+import { entityActionMenuOptions } from '~/utils/entityActionMenu'
+import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
   id: string
@@ -29,19 +26,38 @@ interface DetailRow {
 }
 
 const route = useRoute()
+const router = useRouter()
 const pipelineId = computed(() => String(route.params.id))
 const { formatDate } = useDateTime()
-const editingStatus = ref(false)
-const savingStatus = ref(false)
-const updateError = ref('')
+const api = useApiClient()
+const editing = ref(false)
+const saving = ref(false)
+const editName = ref('')
+const editDescription = ref('')
+const editEnabled = ref(true)
+const editSteps = ref<PipelineActivityStepRequest[]>([])
+const editDesignValid = ref(false)
+const editDesignMessage = ref('')
+const editError = ref('')
+const editNameElement = ref<HTMLElement | null>(null)
+const editDescriptionElement = ref<HTMLElement | null>(null)
+const duplicating = ref(false)
+const actionError = ref('')
 const deleteModalOpen = ref(false)
 const deleting = ref(false)
 const deleteError = ref('')
-const api = useApiClient()
 
 const statusOptions = [
   { value: 'active', label: 'active' },
-  { value: 'inactive', label: 'inactive' },
+  { value: 'disabled', label: 'disabled' },
+]
+const pipelineActionMenuOptions = [
+  {
+    value: 'edit',
+    label: 'Edit',
+    iconPath: 'M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96A16,16,0,0,0,227.31,73.37ZM92.69,208H48V163.31l88-88L180.69,120ZM216,84.69l-24,24L147.31,64l24-24L216,84.69Z',
+  },
+  ...entityActionMenuOptions,
 ]
 
 const { data: pipeline, status, error, refresh } = await useAsyncData(
@@ -49,23 +65,26 @@ const { data: pipeline, status, error, refresh } = await useAsyncData(
   () => api.pipelines.get(pipelineId.value),
 )
 
-const statusValue = computed(() => pipeline.value?.enabled ? 'active' : 'inactive')
+const statusValue = computed(() => pipeline.value?.enabled ? 'active' : 'disabled')
+const editStatusValue = computed(() => editEnabled.value ? 'active' : 'disabled')
 const breadcrumbItems = computed(() => [
   { label: 'Pipelines', to: '/app/pipelines' },
-  { label: statusValue.value === 'active' ? 'Active' : 'Inactive' },
+  { label: statusValue.value === 'active' ? 'Active' : 'Disabled' },
 ])
 const detailItems = computed<DetailRow[]>(() => {
   if (!pipeline.value) return []
   return [
     { id: 'status', title: 'Status', kind: 'status', value: statusValue.value },
-    {
-      id: 'created',
-      title: 'Created',
-      kind: 'created',
-    },
+    ...(!editing.value ? [{ id: 'created', title: 'Created', kind: 'created' as const }] : []),
     { id: 'design', title: 'Design', kind: 'design' },
   ]
 })
+const canSaveEditing = computed(() => (
+  editDesignValid.value
+  && Boolean(editName.value.trim())
+  && Boolean(editDescription.value.trim())
+  && !saving.value
+))
 
 const createdBy = computed(() => 'user')
 const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
@@ -73,7 +92,7 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
   pipeline.value?.steps.forEach((activity, index) => {
     const instanceId = `pipeline-detail-step-${index}`
     if (activity.type.endsWith('_loop')) {
-      const config = activity.config as unknown as HydratedLoopConfig
+      const config = activity.config as LoopActivityConfig
       result.push({
         instanceId,
         type: 'loop',
@@ -89,7 +108,7 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
     }
 
     const isQuiz = activity.type === 'quiz'
-    const quiz = isQuiz ? (activity.config as unknown as HydratedQuizConfig).quiz : undefined
+    const quiz = isQuiz ? (activity.config as QuizActivityConfig).quiz : undefined
     const passingScore = typeof quiz?.minimum_correct_answers === 'number'
       ? quiz.minimum_correct_answers
       : undefined
@@ -105,25 +124,111 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
   return result
 })
 
-async function selectStatus(value: string | string[]) {
-  if (!pipeline.value || savingStatus.value) return
-  const selected = Array.isArray(value) ? value[0] : value
-  if (!selected || selected === statusValue.value) return
+function editableText(element: HTMLElement | null) {
+  return element?.innerText.replace(/\u00a0/g, ' ').trim() ?? ''
+}
 
-  savingStatus.value = true
-  updateError.value = ''
+function beginEditing() {
+  if (!pipeline.value || saving.value) return
+  editName.value = pipeline.value.name
+  editDescription.value = pipeline.value.description
+  editEnabled.value = pipeline.value.enabled
+  editSteps.value = pipelineStepRequestsFromResponse(pipeline.value.steps)
+  editDesignValid.value = false
+  editDesignMessage.value = ''
+  editError.value = ''
+  actionError.value = ''
+  editing.value = true
+  nextTick(() => editNameElement.value?.focus())
+}
+
+function cancelEditing() {
+  if (saving.value) return
+  editing.value = false
+  editError.value = ''
+}
+
+function markEditDirty() {
+  editError.value = ''
+}
+
+function updateEditStatus(value: string | string[]) {
+  const selected = Array.isArray(value) ? value[0] : value
+  if (selected === 'active' || selected === 'disabled') {
+    editEnabled.value = selected === 'active'
+    editError.value = ''
+  }
+}
+
+function updateEditSteps(steps: PipelineActivityStepRequest[]) {
+  editSteps.value = steps
+}
+
+function updateEditDesignValidity(valid: boolean, message: string) {
+  editDesignValid.value = valid
+  editDesignMessage.value = message
+}
+
+async function saveEditing() {
+  if (!pipeline.value || saving.value) return
+  const name = editableText(editNameElement.value)
+  const description = editableText(editDescriptionElement.value)
+  if (!name || !description) {
+    editError.value = !name ? 'Give this pipeline a name.' : 'Describe what this pipeline does.'
+    return
+  }
+  if (!editDesignValid.value) {
+    editError.value = editDesignMessage.value || 'Complete the pipeline design before saving.'
+    return
+  }
+
+  saving.value = true
+  editError.value = ''
   try {
-    const updated = await api.pipelines.patch(pipelineId.value, { enabled: selected === 'active' })
-    pipeline.value = updated
+    pipeline.value = await api.pipelines.patch(pipelineId.value, {
+      name,
+      description,
+      enabled: editEnabled.value,
+      steps: editSteps.value,
+    })
+    editing.value = false
     clearNuxtData('pipelines-catalog')
   } catch (cause) {
-    updateError.value = apiErrorMessage(cause, 'The pipeline could not be updated.')
+    editError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
   } finally {
-    savingStatus.value = false
+    saving.value = false
+  }
+}
+
+async function duplicatePipeline() {
+  if (!pipeline.value || duplicating.value) return
+  duplicating.value = true
+  actionError.value = ''
+  try {
+    const duplicate = await api.pipelines.create({
+      name: `${pipeline.value.name} (Copy)`,
+      description: pipeline.value.description,
+      steps: pipelineStepRequestsFromResponse(pipeline.value.steps),
+    })
+    clearNuxtData('pipelines-catalog')
+    await router.push(`/app/pipelines/${encodeURIComponent(duplicate.id)}`)
+    pipeline.value = duplicate
+  } catch (cause) {
+    actionError.value = apiErrorMessage(cause, 'The pipeline could not be duplicated. Please try again.')
+  } finally {
+    duplicating.value = false
   }
 }
 
 function selectAction(option: { value: string }) {
+  if (option.value === 'edit') {
+    beginEditing()
+    return
+  }
+  if (option.value === 'duplicate') {
+    void duplicatePipeline()
+    return
+  }
   if (option.value !== 'delete') return
   deleteError.value = ''
   deleteModalOpen.value = true
@@ -150,17 +255,6 @@ async function deletePipeline() {
   }
 }
 
-function onDocumentPointerDown(event: PointerEvent) {
-  if (!editingStatus.value) return
-  const target = event.target as HTMLElement | null
-  if (target?.closest('[data-pipeline-editor]')) return
-  editingStatus.value = false
-  updateError.value = ''
-}
-
-onMounted(() => document.addEventListener('pointerdown', onDocumentPointerDown))
-onBeforeUnmount(() => document.removeEventListener('pointerdown', onDocumentPointerDown))
-
 definePageMeta({ layout: 'app' })
 
 useHead(() => ({
@@ -173,34 +267,64 @@ useHead(() => ({
 <template>
   <PageShell
     class="pipeline-page"
-    :title="pipeline?.name"
-    :description="pipeline?.description"
     :breadcrumbs="pipeline ? breadcrumbItems : []"
     :show-heading="Boolean(pipeline)"
   >
+    <template #title>
+      <h1
+        v-if="pipeline"
+        ref="editNameElement"
+        :class="{ 'pipeline-editable': editing }"
+        :contenteditable="editing ? 'true' : undefined"
+        :role="editing ? 'textbox' : undefined"
+        :tabindex="editing ? 0 : undefined"
+        spellcheck="true"
+        @input="markEditDirty"
+        @keydown.enter.prevent
+      >{{ editing ? editName : pipeline.name }}</h1>
+    </template>
+    <template #description>
+      <p
+        v-if="pipeline"
+        ref="editDescriptionElement"
+        :class="{ 'pipeline-editable': editing }"
+        :contenteditable="editing ? 'true' : undefined"
+        :role="editing ? 'textbox' : undefined"
+        :tabindex="editing ? 0 : undefined"
+        spellcheck="true"
+        @input="markEditDirty"
+      >{{ editing ? editDescription : pipeline.description }}</p>
+    </template>
     <template #actions>
       <div v-if="pipeline" class="pipeline-actions">
-        <UiButton type="button">Run</UiButton>
-        <UiButton
-          type="button"
-          variant="secondary"
-          dropdown
-          dropdown-align="right"
-          icon-only
-          aria-label="More pipeline actions"
-          dropdown-label="Pipeline actions"
-          :options="entityActionMenuOptions"
-          :disabled="deleting"
-          @select="selectAction"
-        >
-          <template #leading>
-            <svg viewBox="0 0 256 256" fill="currentColor">
-              <circle cx="128" cy="56" r="12" />
-              <circle cx="128" cy="128" r="12" />
-              <circle cx="128" cy="200" r="12" />
-            </svg>
-          </template>
-        </UiButton>
+        <template v-if="editing">
+          <UiButton type="button" :disabled="!canSaveEditing" :loading="saving" @click="saveEditing">Save</UiButton>
+          <UiButton type="button" variant="secondary" :disabled="saving" @click="cancelEditing">Cancel</UiButton>
+        </template>
+        <template v-else>
+          <UiButton type="button">Run</UiButton>
+          <UiButton
+            type="button"
+            variant="stroke"
+            dropdown
+            dropdown-align="right"
+            icon-only
+            aria-label="More pipeline actions"
+            dropdown-label="Pipeline actions"
+            :options="pipelineActionMenuOptions"
+            :disabled="deleting || duplicating"
+            :loading="duplicating"
+            @select="selectAction"
+          >
+            <template #leading>
+              <svg viewBox="0 0 256 256" fill="currentColor">
+                <circle cx="128" cy="56" r="12" />
+                <circle cx="128" cy="128" r="12" />
+                <circle cx="128" cy="200" r="12" />
+              </svg>
+            </template>
+          </UiButton>
+        </template>
       </div>
     </template>
 
@@ -211,6 +335,9 @@ useHead(() => ({
     </div>
 
     <template v-else-if="pipeline">
+      <p v-if="actionError" class="pipeline-action-error" role="alert">{{ actionError }}</p>
+      <p v-if="editError" class="pipeline-edit-error" role="alert">{{ editError }}</p>
+
       <section class="pipeline-details" aria-label="Pipeline configuration">
         <UiSectionStage inverse="bottom" class="pipeline-details-stage">
           <UiGridList
@@ -219,31 +346,28 @@ useHead(() => ({
             aria-label="Pipeline configuration"
             class="pipeline-details-grid"
           >
-            <template #leading="{ item }">
-              <h4>{{ item.title }}</h4>
-            </template>
+            <template #leading="{ item }"><h4>{{ item.title }}</h4></template>
 
             <template #metadata="{ item }">
-              <div v-if="item.kind === 'status'" class="pipeline-status" :data-pipeline-editor="editingStatus ? '' : undefined">
+              <div v-if="item.kind === 'status'" class="pipeline-status">
                 <UiPill
-                  v-if="editingStatus"
-                  :model-value="statusValue"
+                  v-if="editing"
+                  :model-value="editStatusValue"
                   clickable
                   selection-type="radio"
                   :options="statusOptions"
                   dropdown-label="Status"
                   aria-label="Choose pipeline status"
-                  @update:model-value="selectStatus"
+                  @update:model-value="updateEditStatus"
                 >
                   <template #icon>
                     <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
                       <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" />
                     </svg>
                   </template>
-                  {{ statusValue }}
+                  {{ editStatusValue }}
                 </UiPill>
                 <UiPill v-else>{{ item.value }}</UiPill>
-                <p v-if="updateError" class="pipeline-status__error" role="alert">{{ updateError }}</p>
               </div>
 
               <p v-else-if="item.kind === 'created'" class="pipeline-created">
@@ -251,23 +375,21 @@ useHead(() => ({
                 <time :datetime="pipeline.created_at">{{ formatDate(pipeline.created_at) }}</time>
               </p>
 
-              <div v-else-if="item.kind === 'design'" class="pipeline-design">
-                <PipelineCanvas :activities="canvasActivities" readonly aria-label="Pipeline design" />
+              <div v-else-if="item.kind === 'design'" class="pipeline-design" :class="{ 'pipeline-design--editing': editing }">
+                <PipelineDesignEditor
+                  v-if="editing"
+                  :initial-steps="pipeline.steps"
+                  :show-title="false"
+                  :use-stage="false"
+                  @update:steps="updateEditSteps"
+                  @validity-change="updateEditDesignValidity"
+                  @change="markEditDirty"
+                />
+                <PipelineCanvas v-else :activities="canvasActivities" readonly aria-label="Pipeline design" />
               </div>
             </template>
 
-            <template #trailing="{ item }">
-              <button
-                v-if="item.id === 'status' && !editingStatus"
-                type="button"
-                class="pipeline-inline-action"
-                :disabled="savingStatus"
-                @click="editingStatus = true"
-              >
-                <span>Edit</span><span aria-hidden="true">→</span>
-              </button>
-              <span v-else class="pipeline-inline-action pipeline-inline-action--placeholder" aria-hidden="true">Edit →</span>
-            </template>
+            <template #trailing><span aria-hidden="true" /></template>
           </UiGridList>
         </UiSectionStage>
       </section>
@@ -298,41 +420,25 @@ useHead(() => ({
 
 <style scoped>
 .pipeline-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--ll-space-3); }
+.pipeline-editable { border-radius: var(--ll-radius-sm); outline: 1px solid transparent; transition: outline-color var(--ll-duration-fast) var(--ll-ease-out), box-shadow var(--ll-duration-fast) var(--ll-ease-out); }
+.pipeline-editable:hover { outline-color: var(--ll-color-divider); }
+.pipeline-editable:focus { outline: 1px solid var(--ll-color-primary); box-shadow: 0 0 0 3px var(--ll-color-primary-highlight); }
 .pipeline-details { min-width: 0; }
 .pipeline-details-stage :deep(.ui-section-stage__shell) { width: 100%; margin-inline: 0; }
 .pipeline-state { display: flex; min-height: 24rem; align-items: center; justify-content: center; gap: var(--ll-space-3); color: var(--ll-color-text-muted); }
 .pipeline-state--error { color: var(--ll-color-brand-ink); }
-.pipeline-delete-error { margin: 0; color: var(--ll-color-brand-ink); font: 500 var(--ll-text-sm) / 1.45 var(--ll-font-control); }
+.pipeline-delete-error,
+.pipeline-action-error,
+.pipeline-edit-error { margin: 0; color: var(--ll-color-brand-ink); font: 500 var(--ll-text-sm) / 1.45 var(--ll-font-control); }
+.pipeline-action-error,
+.pipeline-edit-error { margin-bottom: var(--ll-space-4); }
 .pipeline-status { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: var(--ll-space-2); }
-.pipeline-status__error { flex: 1 0 100%; margin: 0; color: var(--ll-color-brand-ink); font-size: var(--ll-text-xs); line-height: 1.4; }
 .pipeline-created { display: flex; min-height: 2rem; flex-wrap: wrap; align-items: center; gap: 0.3em; margin: 0; color: var(--ll-color-text); }
 .pipeline-design { display: flex; width: 100%; min-width: 0; box-sizing: border-box; flex-direction: column; align-items: stretch; padding: var(--ll-space-2) 0 var(--ll-space-8); }
+.pipeline-design--editing { padding-top: 0; }
 .pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__item) { grid-template-columns: minmax(9rem, 0.36fr) minmax(0, 1fr) auto; }
 .pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__metadata) { display: block; width: 100%; grid-column: 1 / -1; grid-row: 2; }
-.pipeline-inline-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem 0.125rem;
-  color: var(--ll-color-primary-depth);
-  background: transparent;
-  border: 0;
-  font: 600 var(--ll-text-sm) / 1.2 var(--ll-font-control);
-  opacity: 0;
-  pointer-events: none;
-  cursor: pointer;
-  transition: color var(--ll-duration-normal) var(--ll-ease-out), opacity var(--ll-duration-normal) var(--ll-ease-out);
-}
-.pipeline-inline-action--placeholder { visibility: hidden; }
-.pipeline-details-grid :deep(.ui-grid-list__row:hover) .pipeline-inline-action,
-.pipeline-details-grid :deep(.ui-grid-list__row:focus-within) .pipeline-inline-action,
-.pipeline-inline-action:focus-visible { opacity: 1; pointer-events: auto; }
-.pipeline-inline-action:hover:not(:disabled) { color: var(--ll-color-primary); }
-.pipeline-inline-action:focus-visible { outline: 2px solid var(--ll-color-primary); outline-offset: 3px; }
-.pipeline-inline-action:disabled { cursor: wait; opacity: 0.55; }
 @media (max-width: 48rem) { .pipeline-actions { justify-content: flex-start; } }
-@media (max-width: 44rem) {
-  .pipeline-design { padding-bottom: var(--ll-space-6); }
-}
-@media (prefers-reduced-motion: reduce) { .pipeline-inline-action { transition: none; } }
+@media (max-width: 44rem) { .pipeline-design { padding-bottom: var(--ll-space-6); } }
+@media (prefers-reduced-motion: reduce) { .pipeline-editable { transition: none; } }
 </style>

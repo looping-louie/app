@@ -60,11 +60,13 @@ const props = withDefaults(defineProps<{
   personas: Persona[]
   models: Model[]
   loading?: boolean
-}>(), { loading: false })
+  loop?: LoopDraft | null
+}>(), { loading: false, loop: null })
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
   add: [loop: LoopDraft]
+  update: [loop: LoopDraft]
 }>()
 
 const { personaIcon } = usePersonaIcon()
@@ -179,13 +181,13 @@ function modelInitials(model: Model | undefined) {
     .toUpperCase()
 }
 
-function resetForm() {
-  name.value = ''
-  flow.value = 'direct'
-  assignments.value = []
-  maxIterations.value = '3'
-  maxTokens.value = ''
-  timeoutSeconds.value = ''
+function resetForm(loop: LoopDraft | null = null) {
+  name.value = loop?.title ?? ''
+  flow.value = loop?.flow ?? 'direct'
+  assignments.value = loop?.agents.map(agent => ({ ...agent, key: createId('assignment-') })) ?? []
+  maxIterations.value = formatIntegerInput(loop?.stop_conditions.max_iterations ?? 3)
+  maxTokens.value = formatIntegerInput(loop?.stop_conditions.max_tokens)
+  timeoutSeconds.value = formatIntegerInput(loop?.stop_conditions.timeout_seconds)
   paletteOpen.value = false
   paletteQuery.value = ''
   targetAssignmentKey.value = null
@@ -236,21 +238,23 @@ function removeAssignment(key: string) {
   assignments.value = assignments.value.filter(assignment => assignment.key !== key)
 }
 
-function addLoop() {
+function submitLoop() {
   if (!canAdd.value) return
-  emit('add', {
-    id: createId('local-loop-'),
+  const loop: LoopDraft = {
+    id: props.loop?.id ?? createId('local-loop-'),
     title: name.value.trim(),
-    description: 'Configured inside this pipeline draft.',
+    description: props.loop?.description ?? 'Configured inside this pipeline draft.',
     flow: flow.value,
-    status: 'draft',
+    status: props.loop?.status ?? 'draft',
     agents: assignments.value.map(({ persona_id, model_id, role }) => ({ persona_id, model_id, role })),
     stop_conditions: {
       max_iterations: positiveInteger(maxIterations.value),
       max_tokens: positiveInteger(maxTokens.value),
       timeout_seconds: positiveInteger(timeoutSeconds.value),
     },
-  })
+  }
+  if (props.loop) emit('update', loop)
+  else emit('add', loop)
   closeDrawer()
 }
 
@@ -266,20 +270,20 @@ watch(flow, () => {
 })
 
 watch(() => props.open, (open) => {
-  if (open) resetForm()
+  if (open) resetForm(props.loop)
 })
 </script>
 
 <template>
   <UiDrawer
     :open="open"
-    title="Your loop"
-    description="Configure the loop to be used in your pipeline."
+    :title="loop ? 'Edit loop' : 'Your loop'"
+    :description="loop ? 'Update this loop configuration.' : 'Configure the loop to be used in your pipeline.'"
     title-variant="eyebrow"
     size="default"
     @update:open="emit('update:open', $event)"
   >
-    <form class="pipeline-loop-drawer" @submit.prevent="addLoop">
+    <form class="pipeline-loop-drawer" @submit.prevent="submitLoop">
       <label class="pipeline-loop-drawer__section pipeline-loop-drawer__brief">
         <span>Loop name</span>
         <input v-model="name" data-autofocus type="text" placeholder="Untitled loop" required>
@@ -386,7 +390,7 @@ watch(() => props.open, (open) => {
     </form>
 
     <template #footer>
-      <UiButton block :disabled="!canAdd" @click="addLoop">Add loop</UiButton>
+      <UiButton block :disabled="!canAdd" @click="submitLoop">{{ loop ? 'Save changes' : 'Add loop' }}</UiButton>
     </template>
   </UiDrawer>
 

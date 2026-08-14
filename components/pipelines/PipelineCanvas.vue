@@ -64,6 +64,7 @@ const emit = defineEmits<{
   'add-loop': []
   'add-human-gate': []
   'add-hook': []
+  'edit-loop': [instanceId: string]
   'remove': [instanceId: string]
   'move': [sourceId: string, targetId: string]
   'choose-member': [instanceId: string, slotIndex: number]
@@ -143,7 +144,14 @@ function onDrop(event: DragEvent, instanceId: string) {
 }
 
 function onActivityKeydown(event: KeyboardEvent, instanceId: string) {
-  if (props.readonly || !event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return
+  if (props.readonly) return
+  const activity = props.activities.find(candidate => candidate.instanceId === instanceId)
+  if (!event.altKey && activity?.type === 'loop' && ['Enter', ' '].includes(event.key)) {
+    event.preventDefault()
+    emit('edit-loop', instanceId)
+    return
+  }
+  if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return
   event.preventDefault()
   const index = props.activities.findIndex(activity => activity.instanceId === instanceId)
   const target = event.key === 'ArrowUp' ? index - 1 : index + 1
@@ -151,6 +159,16 @@ function onActivityKeydown(event: KeyboardEvent, instanceId: string) {
   if (!targetActivity) return
   emit('move', instanceId, targetActivity.instanceId)
   nextTick(() => canvasRoot.value?.querySelector<HTMLElement>(`[data-activity-id="${instanceId}"]`)?.focus())
+}
+
+function editActivity(event: MouseEvent, activity: PipelineCanvasActivity) {
+  if (
+    props.readonly
+    || activity.type !== 'loop'
+    || draggingActivityId.value
+    || (event.target as HTMLElement).closest('button, a, input, textarea, select, [role="button"]')
+  ) return
+  emit('edit-loop', activity.instanceId)
 }
 
 function onActivityPointerDown(event: PointerEvent, instanceId: string) {
@@ -225,6 +243,7 @@ onBeforeUnmount(resetDragState)
           @dragleave.self="dropTargetActivityId = null"
           @drop="onDrop($event, activity.instanceId)"
           @dragend="resetDragState"
+          @click="editActivity($event, activity)"
           @keydown="onActivityKeydown($event, activity.instanceId)"
           @pointerdown="onActivityPointerDown($event, activity.instanceId)"
           @pointermove="onActivityPointerMove"
