@@ -6,25 +6,21 @@ export type LoopActivityType = 'direct_loop' | 'refinement_loop' | 'roundtable_l
 export type ActivityType = 'approval' | 'quiz' | LoopActivityType
 
 export interface LoopActivityConfig {
-  type: LoopActivityType
   stop_conditions: LoopStopConditions
   agents: LoopAgentInput[]
   output_contract: LoopOutputContract
 }
 
-export interface ApprovalActivityConfig {
-  type: 'approval'
-}
+export type ApprovalActivityConfig = Record<string, never>
 
 export interface QuizActivityConfig {
-  type: 'quiz'
   quiz: Record<string, unknown>
 }
 
 export type ActivityConfig = LoopActivityConfig | ApprovalActivityConfig | QuizActivityConfig
 
 interface ActivityRequestBase {
-  title: string
+  name: string
   description: string
 }
 
@@ -35,7 +31,7 @@ export type ActivityCreateRequest = ActivityRequestBase & (
 )
 
 export interface ActivityPatchRequest {
-  title?: string
+  name?: string
   description?: string
   status?: ActivityStatus
   config?: ActivityConfig

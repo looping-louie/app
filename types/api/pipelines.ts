@@ -1,30 +1,53 @@
 import type { ApiListResponse } from './common'
+import type {
+  ActivityCreateRequest,
+  ActivityResponse,
+} from './activities'
 
 export type PipelineStatus = 'active' | 'disabled' | 'archived'
 
-export interface PipelineActivityStep {
-  activity_id: string
+export interface PipelineStepDependencyRequest {
+  activity: string
+  condition: 'success' | 'failure'
+}
+
+export type PipelineActivityStepRequest = ActivityCreateRequest & {
+  dependsOn: PipelineStepDependencyRequest[]
 }
 
 export interface PipelineCreateRequest {
-  title: string
+  name: string
   description: string
-  steps: PipelineActivityStep[]
+  steps: PipelineActivityStepRequest[]
 }
 
 export interface PipelinePatchRequest {
-  title?: string
+  name?: string
   description?: string
   enabled?: boolean
-  steps?: PipelineActivityStep[]
+  steps?: PipelineActivityStepRequest[]
 }
 
-export interface PipelineResponse extends PipelineCreateRequest {
+export interface PipelineStepDependencyResponse {
+  activity: string
+  condition: 'success' | 'failure'
+}
+
+export type PipelineActivityStepResponse = ActivityResponse & {
+  dependsOn: PipelineStepDependencyResponse[]
+}
+
+export interface PipelineListItemResponse {
   id: string
+  name: string
+  description: string
   enabled: boolean
+  steps: PipelineActivityStepResponse[]
   created_at: string
   updated_at: string
 }
+
+export type PipelineResponse = PipelineListItemResponse
 
 export interface PipelineListQuery {
   offset?: number
@@ -32,4 +55,4 @@ export interface PipelineListQuery {
   search?: string
 }
 
-export type PipelineListResponse = ApiListResponse<PipelineResponse>
+export type PipelineListResponse = ApiListResponse<PipelineListItemResponse>

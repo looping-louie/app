@@ -20,6 +20,7 @@ import type {
   LoopOutputContract,
   LoopRole,
   LoopStopConditions,
+  PipelineActivityStepRequest,
 } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 
@@ -380,11 +381,10 @@ function activityRequest(activity: PipelineActivity): ActivityCreateRequest {
     if (!loop) throw new Error(`Loop ${activity.loopId} is no longer available.`)
     const type: LoopActivityType = `${loop.flow}_loop`
     return {
-      title: loop.title,
+      name: loop.title,
       description: loop.description,
       type,
       config: {
-        type,
         agents: loop.agents,
         stop_conditions: loop.stop_conditions,
         output_contract: loop.output_contract ?? {
@@ -401,11 +401,10 @@ function activityRequest(activity: PipelineActivity): ActivityCreateRequest {
   if (!gate) throw new Error('This human gate is no longer available.')
   if (activity.gate === 'multiple-choice-quiz') {
     return {
-      title: gate.title,
+      name: gate.title,
       description: gate.description,
       type: 'quiz',
       config: {
-        type: 'quiz',
         quiz: {
           minimum_correct_answers: activity.passingScore!,
           question_count: 10,
@@ -415,34 +414,52 @@ function activityRequest(activity: PipelineActivity): ActivityCreateRequest {
     }
   }
   return {
-    title: gate.title,
+    name: gate.title,
     description: gate.description,
     type: 'approval',
-    config: { type: 'approval' },
+    config: {},
   }
+}
+
+function pipelineStepRequests(): PipelineActivityStepRequest[] {
+  const usedNames = new Set<string>()
+  const requests = activities.value.map((activity) => {
+    const request = activityRequest(activity)
+    // Dependencies target names, so repeated loops or gates need distinct persisted names.
+    let name = request.name
+    let suffix = 2
+    while (usedNames.has(name)) {
+      name = `${request.name} ${suffix}`
+      suffix += 1
+    }
+    usedNames.add(name)
+    return { ...request, name }
+  })
+
+  // The builder represents a linear success path from each card to the next one.
+  return requests.map((request, index) => ({
+    ...request,
+    dependsOn: index === 0
+      ? []
+      : [{ activity: requests[index - 1]!.name, condition: 'success' }],
+  }))
 }
 
 async function createPipeline() {
   if (!validateDetails() || !canSaveDesign.value || savingPipeline.value) return
   savingPipeline.value = true
   saveError.value = ''
-  const createdActivityIds: string[] = []
   try {
-    for (const activity of activities.value) {
-      const created = await api.activities.create(activityRequest(activity))
-      createdActivityIds.push(created.id)
-    }
     await api.pipelines.create({
-      title: pipelineTitle.value.trim(),
+      name: pipelineTitle.value.trim(),
       description: pipelineDescription.value.trim(),
-      steps: createdActivityIds.map(activity_id => ({ activity_id })),
+      steps: pipelineStepRequests(),
     })
     localStorage.removeItem(localKey)
     clearNuxtData('pipelines-catalog')
     allowRouteLeave.value = true
     await router.push('/app/pipelines')
   } catch (error) {
-    await Promise.allSettled(createdActivityIds.map(id => api.activities.remove(id)))
     saveError.value = apiErrorMessage(error, 'The pipeline could not be saved. Please try again.')
     saveLocalDraft()
   } finally {

@@ -5,23 +5,15 @@ import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
-import type { ActivityResponse, PipelineResponse } from '~/types/api'
-
-interface PipelineCatalogItem extends PipelineResponse {
-  activities: ActivityResponse[]
-}
+import type { PipelineActivityStepResponse, PipelineListItemResponse } from '~/types/api'
 
 const api = useApiClient()
-const { resolve: resolveActivities } = usePipelineActivities()
 
 const { data, status, refresh } = await useAsyncData(
   'pipelines-catalog',
   async () => {
     const page = await api.pipelines.list({ offset: 0 })
-    return await Promise.all(page.items.map(async pipeline => ({
-      ...pipeline,
-      activities: await resolveActivities(pipeline.steps),
-    })))
+    return page.items
   },
 )
 
@@ -39,43 +31,45 @@ const pipelineStatusOptions = [
 const pipelineStepOptions = [
   { value: 'all', label: 'All' },
   { value: 'loop', label: 'Loops' },
-  { value: 'human_gate', label: 'Human gates' },
+  { value: 'checkpoint', label: 'Checkpoints' },
 ]
 
 const displayedPipelines = computed(() => {
   const filtered = pipelines.value.filter(pipeline => (
     (pipelineStatus.value === 'all' || pipelineStatusValue(pipeline) === pipelineStatus.value)
-    && (pipelineStep.value === 'all' || pipeline.activities.some(activity => activityKind(activity) === pipelineStep.value))
+    && (pipelineStep.value === 'all' || pipeline.steps.some(activity => activityKind(activity) === pipelineStep.value))
   ))
 
   return [...filtered].sort((first, second) => {
-    if (pipelineSort.value === 'alphabetical-desc') return second.title.localeCompare(first.title)
+    if (pipelineSort.value === 'alphabetical-desc') return second.name.localeCompare(first.name)
     if (pipelineSort.value === 'newest') return Date.parse(second.updated_at) - Date.parse(first.updated_at)
     if (pipelineSort.value === 'oldest') return Date.parse(first.updated_at) - Date.parse(second.updated_at)
-    return first.title.localeCompare(second.title)
+    return first.name.localeCompare(second.name)
   })
 })
 
 const { formatDate } = useDateTime()
 
-function pipelineStatusValue(pipeline: PipelineCatalogItem) {
+function pipelineStatusValue(pipeline: PipelineListItemResponse) {
   return pipeline.enabled ? 'active' : 'disabled'
 }
 
-function pipelineStatusLabel(pipeline: PipelineCatalogItem) {
+function pipelineStatusLabel(pipeline: PipelineListItemResponse) {
   return pipeline.enabled ? 'Active' : 'Disabled'
 }
 
-function pipelineStatusTone(pipeline: PipelineCatalogItem) {
+function pipelineStatusTone(pipeline: PipelineListItemResponse) {
   return pipeline.enabled ? 'enabled' : 'disabled'
 }
 
-function activityKind(activity: ActivityResponse) {
-  return activity.type.endsWith('_loop') ? 'loop' : 'human_gate'
+function activityKind(activity: PipelineActivityStepResponse) {
+  if (activity.type.endsWith('_loop')) return 'loop'
+  if (activity.type === 'approval' || activity.type === 'quiz') return 'checkpoint'
+  return 'hook'
 }
 
-function countSteps(pipeline: PipelineCatalogItem, type: 'loop' | 'human_gate') {
-  return pipeline.activities.filter(activity => activityKind(activity) === type).length
+function countSteps(pipeline: PipelineListItemResponse, type: 'loop' | 'checkpoint' | 'hook') {
+  return pipeline.steps.filter(activity => activityKind(activity) === type).length
 }
 
 definePageMeta({
@@ -125,7 +119,7 @@ useHead({
         >
           <template #eyebrow>{{ pipeline.steps.length }} {{ pipeline.steps.length === 1 ? 'step' : 'steps' }}</template>
           <template #title>
-            <h2>{{ pipeline.title }}</h2>
+            <h2>{{ pipeline.name }}</h2>
           </template>
           <template #description>
             <p>{{ pipeline.description }}</p>
@@ -135,8 +129,12 @@ useHead({
                 <dd>{{ countSteps(pipeline, 'loop') }}</dd>
               </div>
               <div>
-                <dt>Human gates</dt>
-                <dd>{{ countSteps(pipeline, 'human_gate') }}</dd>
+                <dt>Checkpoints</dt>
+                <dd>{{ countSteps(pipeline, 'checkpoint') }}</dd>
+              </div>
+              <div>
+                <dt>Hooks</dt>
+                <dd>{{ countSteps(pipeline, 'hook') }}</dd>
               </div>
             </dl>
           </template>
@@ -174,7 +172,7 @@ useHead({
 
 .pipeline-details {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--ll-space-4);
   margin: var(--ll-space-5) 0 0;
   padding-top: var(--ll-space-4);
@@ -184,8 +182,10 @@ useHead({
 .pipeline-details div {
   display: flex;
   min-width: 0;
+  align-items: center;
   flex-direction: column;
   gap: var(--ll-space-2);
+  text-align: center;
 }
 
 .pipeline-details dt {

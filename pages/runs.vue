@@ -3,8 +3,7 @@ import CatalogShell from '~/components/catalog/CatalogShell.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { LoopRunResponse, PipelineResponse } from '~/types/api'
-import { isLoopActivity } from '~/types/api'
+import type { LoopRunResponse, PipelineListItemResponse } from '~/types/api'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
@@ -46,7 +45,6 @@ const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
 const runSort = ref('newest')
 const api = useApiClient()
-const { resolve: resolveActivities } = usePipelineActivities()
 
 const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'Last 24 hours'
@@ -56,12 +54,12 @@ const { data, status, refresh } = await useAsyncData(
   'runs-catalog',
   async () => {
     const pipelineResponse = await api.pipelines.list({ offset: 0 })
-    const pipelineActivities = await Promise.all(pipelineResponse.items.map(async pipeline => ({
+    const pipelineActivities = pipelineResponse.items.map(pipeline => ({
       pipeline,
-      activities: await resolveActivities(pipeline.steps),
-    })))
+      activities: pipeline.steps,
+    }))
     const loopActivityIds = [...new Set(pipelineActivities.flatMap(item => (
-      item.activities.filter(isLoopActivity).map(activity => activity.id)
+      item.activities.filter(activity => activity.type.endsWith('_loop')).map(activity => activity.id)
     )))]
     const runPages = await Promise.all(loopActivityIds.map(async activityId => ({
       activityId,
@@ -70,7 +68,7 @@ const { data, status, refresh } = await useAsyncData(
     const runsByActivity = new Map(runPages.map(({ activityId, page }) => [activityId, page.items]))
 
     return pipelineActivities.flatMap(({ pipeline, activities }) => {
-      const ids = activities.filter(isLoopActivity).map(activity => activity.id)
+      const ids = activities.filter(activity => activity.type.endsWith('_loop')).map(activity => activity.id)
       return ids.flatMap(activityId => (
         (runsByActivity.get(activityId) ?? []).map(run => toTableRow(run, pipeline))
       ))
@@ -93,11 +91,11 @@ const displayedRuns = computed(() => {
   })
 })
 
-function toTableRow(run: LoopRunResponse, pipeline: PipelineResponse): RunTableRow {
+function toTableRow(run: LoopRunResponse, pipeline: PipelineListItemResponse): RunTableRow {
   return {
     id: `${pipeline.id}:${run.loop_id}:${run.id}`,
     name: run.input.trim().split('\n')[0] || run.id,
-    project: pipeline.title,
+    project: pipeline.name,
     status: runStatusLabel(run.status),
     statusValue: run.status,
     runningSince: formatDateTime(run.created_at),

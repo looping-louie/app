@@ -6,16 +6,20 @@ import UiButton from '~/components/ui/Button.vue'
 import UiContainer from '~/components/ui/Container.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import UiModal from '~/components/ui/Modal.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
-import type { ActivityResponse, PipelineResponse, QuizActivityConfig } from '~/types/api'
-import { isLoopActivity } from '~/types/api'
+import type { LoopAgentInput, LoopStopConditions } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 
-interface PipelineView {
-  pipeline: PipelineResponse
-  activities: ActivityResponse[]
+interface HydratedLoopConfig {
+  agents: LoopAgentInput[]
+  stop_conditions: LoopStopConditions
+}
+
+interface HydratedQuizConfig {
+  quiz: Record<string, unknown>
 }
 
 interface DetailRow {
@@ -32,24 +36,21 @@ const { formatDate } = useDateTime()
 const editingStatus = ref(false)
 const savingStatus = ref(false)
 const updateError = ref('')
+const deleteModalOpen = ref(false)
+const deleting = ref(false)
+const deleteError = ref('')
 const api = useApiClient()
-const { resolve: resolveActivities } = usePipelineActivities()
 
 const statusOptions = [
   { value: 'active', label: 'active' },
   { value: 'inactive', label: 'inactive' },
 ]
 
-const { data: view, status, error, refresh } = await useAsyncData(
+const { data: pipeline, status, error, refresh } = await useAsyncData(
   () => `pipeline-${pipelineId.value}`,
-  async (): Promise<PipelineView> => {
-    const pipeline = await api.pipelines.get(pipelineId.value)
-    return { pipeline, activities: await resolveActivities(pipeline.steps) }
-  },
+  () => api.pipelines.get(pipelineId.value),
 )
 
-const pipeline = computed(() => view.value?.pipeline)
-const activityById = computed(() => new Map((view.value?.activities ?? []).map(activity => [activity.id, activity])))
 const statusValue = computed(() => pipeline.value?.enabled ? 'active' : 'inactive')
 const breadcrumbItems = computed(() => [
   { label: 'Pipelines', to: '/app/pipelines' },
@@ -71,27 +72,26 @@ const detailItems = computed<DetailRow[]>(() => {
 const createdBy = computed(() => 'user')
 const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
   const result: PipelineCanvasActivity[] = []
-  pipeline.value?.steps.forEach((step, index) => {
+  pipeline.value?.steps.forEach((activity, index) => {
     const instanceId = `pipeline-detail-step-${index}`
-    const activity = activityById.value.get(step.activity_id)
-    if (!activity) return
-    if (isLoopActivity(activity)) {
+    if (activity.type.endsWith('_loop')) {
+      const config = activity.config as unknown as HydratedLoopConfig
       result.push({
         instanceId,
         type: 'loop',
         loop: {
           id: activity.id,
-          title: activity.title,
+          title: activity.name,
           flow: activity.type.replace('_loop', ''),
-          agents: activity.config.agents,
-          stop_conditions: activity.config.stop_conditions,
+          agents: config.agents,
+          stop_conditions: config.stop_conditions,
         },
       })
       return
     }
 
     const isQuiz = activity.type === 'quiz'
-    const quiz = isQuiz ? (activity.config as QuizActivityConfig).quiz : undefined
+    const quiz = isQuiz ? (activity.config as unknown as HydratedQuizConfig).quiz : undefined
     const passingScore = typeof quiz?.minimum_correct_answers === 'number'
       ? quiz.minimum_correct_answers
       : undefined
@@ -99,7 +99,7 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
       instanceId,
       type: 'human-gate',
       gate: isQuiz ? 'multiple-choice-quiz' : 'human-review',
-      title: activity.title,
+      title: activity.name,
       teamMembers: isQuiz ? undefined : ['any-person'],
       passingScore,
     })
@@ -116,12 +116,39 @@ async function selectStatus(value: string | string[]) {
   updateError.value = ''
   try {
     const updated = await api.pipelines.patch(pipelineId.value, { enabled: selected === 'active' })
-    if (view.value) view.value.pipeline = updated
+    pipeline.value = updated
     clearNuxtData('pipelines-catalog')
   } catch (cause) {
     updateError.value = apiErrorMessage(cause, 'The pipeline could not be updated.')
   } finally {
     savingStatus.value = false
+  }
+}
+
+function selectAction(option: { value: string }) {
+  if (option.value !== 'delete') return
+  deleteError.value = ''
+  deleteModalOpen.value = true
+}
+
+function updateDeleteModal(open: boolean) {
+  if (!open && deleting.value) return
+  deleteModalOpen.value = open
+  if (!open) deleteError.value = ''
+}
+
+async function deletePipeline() {
+  if (!pipeline.value || deleting.value) return
+  deleting.value = true
+  deleteError.value = ''
+  try {
+    await api.pipelines.remove(pipelineId.value)
+    deleteModalOpen.value = false
+    window.location.replace('/app/pipelines')
+  } catch (cause) {
+    deleteError.value = apiErrorMessage(cause, 'The pipeline could not be deleted. Please try again.')
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -140,7 +167,7 @@ definePageMeta({ layout: 'app' })
 
 useHead(() => ({
   title: pipeline.value
-    ? `${pipeline.value.title} · Pipelines · Looping Louie`
+    ? `${pipeline.value.name} · Pipelines · Looping Louie`
     : 'Pipeline · Looping Louie',
 }))
 </script>
@@ -158,7 +185,7 @@ useHead(() => ({
 
       <UiHeadingBlock layout="split" size="section" align="start" class="pipeline-heading">
         <template #title>
-          <h1>{{ pipeline.title }}</h1>
+          <h1>{{ pipeline.name }}</h1>
         </template>
         <template #description>
           <p>{{ pipeline.description }}</p>
@@ -175,6 +202,8 @@ useHead(() => ({
               aria-label="More pipeline actions"
               dropdown-label="Pipeline actions"
               :options="entityActionMenuOptions"
+              :disabled="deleting"
+              @select="selectAction"
             >
               <template #leading>
                 <svg viewBox="0 0 256 256" fill="currentColor">
@@ -249,6 +278,27 @@ useHead(() => ({
         </UiSectionStage>
       </section>
     </template>
+
+    <UiModal
+      v-if="pipeline"
+      :open="deleteModalOpen"
+      title="Delete this pipeline?"
+      :description="`This archives ${pipeline.name} and removes it from the active pipeline list. It cannot be edited or enabled afterwards.`"
+      :close-on-backdrop="!deleting"
+      :show-close="!deleting"
+      @update:open="updateDeleteModal"
+    >
+      <template #icon>
+        <svg viewBox="0 0 256 256" fill="currentColor">
+          <path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z" />
+        </svg>
+      </template>
+      <p v-if="deleteError" class="pipeline-delete-error" role="alert">{{ deleteError }}</p>
+      <template #actions>
+        <UiButton data-autofocus variant="secondary" :disabled="deleting" @click="deleteModalOpen = false">Cancel</UiButton>
+        <UiButton variant="coral" :loading="deleting" @click="deletePipeline">Delete pipeline</UiButton>
+      </template>
+    </UiModal>
   </UiContainer>
 </template>
 
@@ -261,6 +311,7 @@ useHead(() => ({
 .pipeline-details-stage :deep(.ui-section-stage__shell) { width: 100%; margin-inline: 0; }
 .pipeline-state { display: flex; min-height: 24rem; align-items: center; justify-content: center; gap: var(--ll-space-3); color: var(--ll-color-text-muted); }
 .pipeline-state--error { color: var(--ll-color-brand-ink); }
+.pipeline-delete-error { margin: 0; color: var(--ll-color-brand-ink); font: 500 var(--ll-text-sm) / 1.45 var(--ll-font-control); }
 .pipeline-status { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: var(--ll-space-2); }
 .pipeline-status__error { flex: 1 0 100%; margin: 0; color: var(--ll-color-brand-ink); font-size: var(--ll-text-xs); line-height: 1.4; }
 .pipeline-created { display: flex; min-height: 2rem; flex-wrap: wrap; align-items: center; gap: 0.3em; margin: 0; color: var(--ll-color-text); }
