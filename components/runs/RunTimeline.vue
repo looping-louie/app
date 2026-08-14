@@ -18,12 +18,14 @@ function gateResolved(event: PipelineRunEventResponse, index: number) {
   if (!event.step_id) return true
   if (props.resolvedGates.has(event.step_id)) return true
   return props.run.events.slice(index + 1).some(item => (
-    item.step_id === event.step_id && ['step_completed', 'step_failed'].includes(item.type)
+    item.step_id === event.step_id
+    && ['human_gate_decided', 'step_completed', 'step_failed'].includes(item.type)
   ))
 }
 
 function eventDetail(event: PipelineRunEventResponse) {
   if (event.type === 'step_failed') return String(event.payload.message || 'Activity failed')
+  if (event.type === 'human_gate_decided') return String(event.payload.status || 'decided')
   if (event.type === 'agent_response_received') {
     const tokens = eventTokenCount(event)
     const latency = eventLatency(event)
