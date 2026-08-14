@@ -1,38 +1,44 @@
 <script setup lang="ts">
 import PageShell from '~/components/layout/PageShell.vue'
+import RunTimeline from '~/components/runs/RunTimeline.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { LoopRunResponse, PipelineListItemResponse } from '~/types/api'
+import type { GateDecisionRequest, PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
+import { apiErrorMessage } from '~/utils/api/errors'
+import { collectApiPages } from '~/utils/apiPagination'
+import { activeRunStatuses, runPrompt, runTokenCount } from '~/utils/pipelineRuns'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
+  pipelineId: string
   name: string
-  project: string
+  pipeline: string
   status: string
-  statusValue: LoopRunResponse['status']
-  runningSince: string
-  runningSinceValue: string
-  tokensConsumed: string
+  statusValue: PipelineRunResponse['status']
+  started: string
+  startedValue: string
+  tokens: string
   runBy: string
 }
 
 const tableColumns = [
-  { key: 'name', label: 'Name', width: '25%' },
-  { key: 'project', label: 'Project', width: '18%' },
+  { key: 'name', label: 'Initial prompt', width: '30%' },
+  { key: 'pipeline', label: 'Pipeline', width: '18%' },
   { key: 'status', label: 'Status', type: 'option' as const },
-  { key: 'runningSince', label: 'Running since' },
-  { key: 'tokensConsumed', label: 'Tokens consumed', align: 'end' as const },
+  { key: 'started', label: 'Started' },
+  { key: 'tokens', label: 'Tokens', align: 'end' as const },
   { key: 'runBy', label: 'Run by' },
 ]
 
 const runStatusOptions = [
   { value: 'all', label: 'All' },
-  { value: 'in_progress', label: 'In progress' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'claimed', label: 'Claimed' },
+  { value: 'running', label: 'Running' },
   { value: 'completed', label: 'Completed' },
   { value: 'failed', label: 'Failed' },
-  { value: 'stopped', label: 'Stopped' },
 ]
 
 const dateRangeOptions = [
@@ -42,77 +48,88 @@ const dateRangeOptions = [
   { value: 'last-quarter', label: 'Last quarter' },
 ]
 
+const route = useRoute()
+const router = useRouter()
+const api = useApiClient()
 const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
 const runSort = ref('newest')
-const api = useApiClient()
+const resolvedGates = ref(new Set<string>())
+const decidingGate = ref('')
+const decisionError = ref('')
+let pollTimer: ReturnType<typeof setInterval> | undefined
 
 const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'Last 24 hours'
 ))
 
-const { data, status, refresh } = await useAsyncData(
-  'runs-catalog',
-  async () => {
-    const pipelineResponse = await api.pipelines.list({ offset: 0 })
-    const pipelineActivities = pipelineResponse.items.map(pipeline => ({
-      pipeline,
-      activities: pipeline.steps,
-    }))
-    const loopActivityIds = [...new Set(pipelineActivities.flatMap(item => (
-      item.activities.filter(activity => activity.type.endsWith('_loop')).map(activity => activity.id)
-    )))]
-    const runPages = await Promise.all(loopActivityIds.map(async activityId => ({
-      activityId,
-      page: await api.activities.listRuns(activityId, { offset: 0 }),
-    })))
-    const runsByActivity = new Map(runPages.map(({ activityId, page }) => [activityId, page.items]))
-
-    return pipelineActivities.flatMap(({ pipeline, activities }) => {
-      const ids = activities.filter(activity => activity.type.endsWith('_loop')).map(activity => activity.id)
-      return ids.flatMap(activityId => (
-        (runsByActivity.get(activityId) ?? []).map(run => toTableRow(run, pipeline))
-      ))
-    })
-  },
-)
-
+const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
+const selectedRun = computed(() => data.value?.runs.find(run => run.id === route.query.run) ?? null)
 const displayedRuns = computed(() => {
   const cutoff = Date.now() - rangeDuration(dateRange.value)
-  const filtered = (data.value ?? []).filter(run => (
-    (runStatus.value === 'all' || run.statusValue === runStatus.value)
-    && Date.parse(run.runningSinceValue) >= cutoff
-  ))
-
-  return [...filtered].sort((first, second) => {
+  const rows = (data.value?.runs ?? [])
+    .filter(run => (runStatus.value === 'all' || run.status === runStatus.value) && Date.parse(run.created_at) >= cutoff)
+    .map(run => toTableRow(run, data.value?.pipelineNames.get(run.pipeline_id) ?? run.pipeline_id))
+  return rows.sort((first, second) => {
     if (runSort.value === 'alphabetical-desc') return second.name.localeCompare(first.name)
-    if (runSort.value === 'oldest') return Date.parse(first.runningSinceValue) - Date.parse(second.runningSinceValue)
-    if (runSort.value === 'newest') return Date.parse(second.runningSinceValue) - Date.parse(first.runningSinceValue)
+    if (runSort.value === 'oldest') return Date.parse(first.startedValue) - Date.parse(second.startedValue)
+    if (runSort.value === 'newest') return Date.parse(second.startedValue) - Date.parse(first.startedValue)
     return first.name.localeCompare(second.name)
   })
 })
 
-function toTableRow(run: LoopRunResponse, pipeline: PipelineListItemResponse): RunTableRow {
+async function loadRuns() {
+  const pipelines = await collectApiPages(offset => api.pipelines.list({ offset }))
+  const pages = await Promise.all(pipelines.map(async pipeline => ({
+    pipeline,
+    runs: await collectApiPages(offset => api.pipelines.listRuns(pipeline.id, { offset })),
+  })))
+  const summaries = pages.flatMap(item => item.runs)
+  const details = await Promise.all(summaries.map(run => api.pipelines.getRun(run.pipeline_id, run.id)))
+  const selectedPipeline = typeof route.query.pipeline === 'string' ? route.query.pipeline : ''
+  const selectedId = typeof route.query.run === 'string' ? route.query.run : ''
+  if (selectedPipeline && selectedId && !details.some(run => run.id === selectedId)) {
+    details.push(await api.pipelines.getRun(selectedPipeline, selectedId))
+  }
   return {
-    id: `${pipeline.id}:${run.loop_id}:${run.id}`,
-    name: run.input.trim().split('\n')[0] || run.id,
-    project: pipeline.name,
-    status: runStatusLabel(run.status),
-    statusValue: run.status,
-    runningSince: formatDateTime(run.created_at),
-    runningSinceValue: run.created_at,
-    tokensConsumed: formatTokens(run.payload),
-    runBy: run.created_by,
+    runs: details,
+    pipelineNames: new Map(pipelines.map(pipeline => [pipeline.id, pipeline.name])),
   }
 }
 
-function runStatusLabel(value: LoopRunResponse['status']) {
+function selectRun(row: RunTableRow) {
+  decisionError.value = ''
+  void router.replace({ query: { ...route.query, pipeline: row.pipelineId, run: row.id } })
+}
+
+async function decideGate(event: PipelineRunEventResponse, decision: GateDecisionRequest) {
+  if (!selectedRun.value || !event.step_id || decidingGate.value) return
+  decidingGate.value = event.step_id
+  decisionError.value = ''
+  try {
+    await api.pipelines.decideGate(selectedRun.value.pipeline_id, selectedRun.value.id, event.step_id, decision)
+    resolvedGates.value = new Set([...resolvedGates.value, event.step_id])
+    await refresh()
+  } catch (cause) {
+    decisionError.value = apiErrorMessage(cause, 'This gate could not be resolved. Please try again.')
+  } finally {
+    decidingGate.value = ''
+  }
+}
+
+function toTableRow(run: PipelineRunResponse, pipeline: string): RunTableRow {
   return {
-    in_progress: 'In progress',
-    completed: 'Completed',
-    failed: 'Failed',
-    stopped: 'Stopped',
-  }[value]
+    id: run.id,
+    pipelineId: run.pipeline_id,
+    name: runPrompt(run).split('\n')[0]!.slice(0, 90),
+    pipeline,
+    status: run.status.replace(/^./, first => first.toUpperCase()),
+    statusValue: run.status,
+    started: formatDateTime(run.started_at ?? run.created_at),
+    startedValue: run.started_at ?? run.created_at,
+    tokens: runTokenCount(run).toLocaleString(),
+    runBy: run.created_by,
+  }
 }
 
 function rangeDuration(value: string) {
@@ -125,46 +142,25 @@ function rangeDuration(value: string) {
 
 function formatDateTime(value: string) {
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
   }).format(date)
 }
 
-function formatTokens(payload: Record<string, unknown>) {
-  const usage = payload.usage && typeof payload.usage === 'object'
-    ? payload.usage as Record<string, unknown>
-    : undefined
-  const direct = numericValue(payload.tokens_consumed) ?? numericValue(payload.total_tokens) ?? numericValue(usage?.total_tokens)
-  if (direct !== undefined) return new Intl.NumberFormat('en-US').format(direct)
-
-  const input = numericValue(usage?.input_tokens)
-  const output = numericValue(usage?.output_tokens)
-  if (input === undefined && output === undefined) return '—'
-  return new Intl.NumberFormat('en-US').format((input ?? 0) + (output ?? 0))
-}
-
-function numericValue(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined
-}
-
-definePageMeta({
-  layout: 'app',
-  alias: ['/', '/app/runs'],
+onMounted(() => {
+  pollTimer = setInterval(() => {
+    if ((data.value?.runs ?? []).some(run => activeRunStatuses.has(run.status))) void refresh()
+  }, 3000)
 })
+onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer) })
+
+definePageMeta({ layout: 'app', alias: ['/', '/app/runs'] })
 useHead({ title: 'Runs · Looping Louie' })
 </script>
 
 <template>
-  <PageShell
-    title="Runs"
-    description="Monitor pipeline executions, resource use, and ownership from one place."
-  >
-    <template #actions><UiButton>New run</UiButton></template>
+  <PageShell title="Runs" description="Monitor pipeline executions, their event timeline, and human decisions.">
+    <template #actions><UiButton to="/app/pipelines">New run</UiButton></template>
     <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="runStatus"
@@ -180,15 +176,30 @@ useHead({ title: 'Runs · Looping Louie' })
       />
     </template>
 
-    <UiAsyncStage
-      :status="status"
-      loading-label="Loading runs…"
-      error-label="Runs could not be loaded."
-      @retry="refresh"
-    >
-      <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
-        <template #empty>No runs match these filters.</template>
-      </UiTable>
+    <UiAsyncStage :status="status" loading-label="Loading runs…" error-label="Runs could not be loaded." @retry="refresh">
+      <div class="runs-content">
+        <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
+          <template #cell-name="{ row }">
+            <button type="button" class="runs-link" @click="selectRun(row as RunTableRow)">{{ row.name }}</button>
+          </template>
+          <template #empty>No runs match these filters.</template>
+        </UiTable>
+        <p v-if="decisionError" class="runs-error" role="alert">{{ decisionError }}</p>
+        <RunTimeline
+          v-if="selectedRun"
+          :run="selectedRun"
+          :resolved-gates="resolvedGates"
+          :deciding-gate="decidingGate"
+          @decide="decideGate"
+        />
+      </div>
     </UiAsyncStage>
   </PageShell>
 </template>
+
+<style scoped>
+.runs-content { display: grid; gap: var(--ll-space-6); }
+.runs-link { padding: 0; color: var(--ll-color-ink); background: transparent; border: 0; font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
+.runs-link:hover, .runs-link:focus-visible { color: var(--ll-color-primary); text-decoration: underline; }
+.runs-error { margin: 0; color: var(--ll-color-brand-ink); }
+</style>
