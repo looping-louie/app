@@ -3,6 +3,7 @@ import PageShell from '~/components/layout/PageShell.vue'
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
 import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
 import PipelineDesignEditor from '~/components/pipelines/PipelineDesignEditor.vue'
+import PipelineRunModal from '~/components/pipelines/PipelineRunModal.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiModal from '~/components/ui/Modal.vue'
@@ -46,6 +47,7 @@ const actionError = ref('')
 const deleteModalOpen = ref(false)
 const deleting = ref(false)
 const deleteError = ref('')
+const runModalOpen = ref(false)
 
 const statusOptions = [
   { value: 'active', label: 'active' },
@@ -302,7 +304,7 @@ useHead(() => ({
           <UiButton type="button" variant="secondary" :disabled="saving" @click="cancelEditing">Cancel</UiButton>
         </template>
         <template v-else>
-          <UiButton type="button">Run</UiButton>
+          <UiButton type="button" @click="runModalOpen = true">Run</UiButton>
           <UiButton
             type="button"
             variant="stroke"
@@ -335,6 +337,11 @@ useHead(() => ({
     </div>
 
     <template v-else-if="pipeline">
+      <PipelineRunModal
+        v-model:open="runModalOpen"
+        :pipeline-id="pipeline.id"
+        :pipeline-name="pipeline.name"
+      />
       <p v-if="actionError" class="pipeline-action-error" role="alert">{{ actionError }}</p>
       <p v-if="editError" class="pipeline-edit-error" role="alert">{{ editError }}</p>
 
