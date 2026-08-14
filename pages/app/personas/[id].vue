@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import PersonaSkillsEditor from '~/components/personas/PersonaSkillsEditor.vue'
-import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
+import PageShell from '~/components/layout/PageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
-import UiContainer from '~/components/ui/Container.vue'
-import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiMarkdownContent from '~/components/ui/MarkdownContent.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import { apiErrorCode, apiErrorMessage } from '~/utils/api/errors'
@@ -200,83 +198,77 @@ useHead(() => ({
 </script>
 
 <template>
-  <UiContainer size="wide" class="persona-page">
+  <PageShell
+    class="persona-page"
+    :breadcrumbs="persona ? [
+      { label: 'Agents', to: '/app/personas' },
+      { label: persona.name },
+    ] : []"
+    :show-heading="Boolean(persona)"
+  >
+    <template #title>
+      <h1
+        v-if="persona"
+        ref="editNameElement"
+        :class="{ 'persona-editable': editing }"
+        :contenteditable="editing ? 'true' : undefined"
+        :role="editing ? 'textbox' : undefined"
+        :tabindex="editing ? 0 : undefined"
+        spellcheck="true"
+        @input="markEditDirty"
+        @keydown.enter.prevent
+      >{{ editing ? editName : persona.name }}</h1>
+    </template>
+    <template #description>
+      <p
+        v-if="persona"
+        ref="editDescriptionElement"
+        :class="{ 'persona-editable': editing }"
+        :contenteditable="editing ? 'true' : undefined"
+        :role="editing ? 'textbox' : undefined"
+        :tabindex="editing ? 0 : undefined"
+        spellcheck="true"
+        @input="markEditDirty"
+      >{{ editing ? editDescription : persona.description }}</p>
+    </template>
+    <template #actions>
+      <div v-if="persona" class="persona-actions">
+        <template v-if="editing">
+          <UiButton type="button" :loading="saving" @click="saveEditing">Save</UiButton>
+          <UiButton type="button" variant="secondary" :disabled="saving" @click="cancelEditing">Cancel</UiButton>
+        </template>
+        <template v-else>
+          <UiButton type="button" :disabled="!persona.editable" @click="beginEditing">Edit</UiButton>
+          <UiButton
+            type="button"
+            variant="secondary"
+            dropdown
+            dropdown-align="right"
+            icon-only
+            aria-label="More agent actions"
+            dropdown-label="Agent actions"
+            :options="personaActionMenuOptions"
+            :disabled="deleting"
+            @select="selectAction"
+          >
+            <template #leading>
+              <svg viewBox="0 0 256 256" fill="currentColor">
+                <circle cx="128" cy="56" r="12" />
+                <circle cx="128" cy="128" r="12" />
+                <circle cx="128" cy="200" r="12" />
+              </svg>
+            </template>
+          </UiButton>
+        </template>
+      </div>
+    </template>
+
     <div v-if="status === 'pending'" class="persona-state" role="status">Loading agent…</div>
     <div v-else-if="error" class="persona-state persona-state--error" role="alert">
       <span>Agent could not be loaded.</span>
       <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
     </div>
     <template v-else-if="persona">
-      <UiBreadcrumb
-        class="persona-breadcrumb"
-        :items="[
-          { label: 'Agents', to: '/app/personas' },
-          { label: persona.name },
-        ]"
-      />
-
-      <UiHeadingBlock
-        layout="split"
-        size="section"
-        align="start"
-        class="persona-heading"
-      >
-        <template #title>
-          <h1
-            ref="editNameElement"
-            :class="{ 'persona-editable': editing }"
-            :contenteditable="editing ? 'true' : undefined"
-            :role="editing ? 'textbox' : undefined"
-            :tabindex="editing ? 0 : undefined"
-            spellcheck="true"
-            @input="markEditDirty"
-            @keydown.enter.prevent
-          >{{ editing ? editName : persona.name }}</h1>
-        </template>
-        <template #description>
-          <p
-            ref="editDescriptionElement"
-            :class="{ 'persona-editable': editing }"
-            :contenteditable="editing ? 'true' : undefined"
-            :role="editing ? 'textbox' : undefined"
-            :tabindex="editing ? 0 : undefined"
-            spellcheck="true"
-            @input="markEditDirty"
-          >{{ editing ? editDescription : persona.description }}</p>
-        </template>
-        <template #aside>
-          <div class="persona-actions">
-            <template v-if="editing">
-              <UiButton type="button" :loading="saving" @click="saveEditing">Save</UiButton>
-              <UiButton type="button" variant="secondary" :disabled="saving" @click="cancelEditing">Cancel</UiButton>
-            </template>
-            <template v-else>
-              <UiButton type="button" :disabled="!persona.editable" @click="beginEditing">Edit</UiButton>
-              <UiButton
-                type="button"
-                variant="secondary"
-                dropdown
-                dropdown-align="right"
-                icon-only
-                aria-label="More agent actions"
-                dropdown-label="Agent actions"
-                :options="personaActionMenuOptions"
-                :disabled="deleting"
-                @select="selectAction"
-              >
-                <template #leading>
-                  <svg viewBox="0 0 256 256" fill="currentColor">
-                    <circle cx="128" cy="56" r="12" />
-                    <circle cx="128" cy="128" r="12" />
-                    <circle cx="128" cy="200" r="12" />
-                  </svg>
-                </template>
-              </UiButton>
-            </template>
-          </div>
-        </template>
-      </UiHeadingBlock>
-
       <p v-if="editError" class="persona-edit-error" role="alert">{{ editError }}</p>
 
       <div class="persona-content">
@@ -345,25 +337,17 @@ useHead(() => ({
         <UiButton data-autofocus :loading="leaveActionPending" @click="saveChangesAndLeave">Save changes</UiButton>
       </template>
     </UiModal>
-  </UiContainer>
+  </PageShell>
 </template>
 
 <style scoped>
 .persona-page {
-  padding-block: var(--ll-space-10) var(--ll-space-16);
-}
-
-.persona-heading {
-  margin-bottom: var(--ll-space-12);
+  --layout-page-shell-heading-gap: var(--ll-space-12);
 }
 
 .persona-editable { border-radius: var(--ll-radius-sm); outline: 1px solid transparent; transition: outline-color var(--ll-duration-fast) var(--ll-ease-out), box-shadow var(--ll-duration-fast) var(--ll-ease-out); }
 .persona-editable:hover { outline-color: var(--ll-color-divider); }
 .persona-editable:focus { outline: 1px solid var(--ll-color-primary); box-shadow: 0 0 0 3px var(--ll-color-primary-highlight); }
-
-.persona-breadcrumb {
-  margin-bottom: var(--ll-space-4);
-}
 
 .persona-actions {
   display: flex;
@@ -432,12 +416,6 @@ useHead(() => ({
 }
 
 .persona-edit-error { margin: calc(-1 * var(--ll-space-8)) 0 var(--ll-space-8); }
-
-@media (max-width: 38rem) {
-  .persona-page {
-    padding-block-start: var(--ll-space-8);
-  }
-}
 
 @media (max-width: 48rem) {
   .persona-content {

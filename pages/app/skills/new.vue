@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import InstructionCategorySelector from '~/components/instructions/InstructionCategorySelector.vue'
+import WizardShell from '~/components/layout/WizardShell.vue'
 import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
-import UiContainer from '~/components/ui/Container.vue'
-import UiFormProgress from '~/components/ui/FormProgress.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
@@ -286,11 +285,7 @@ useHead({ title: 'Create a skill · Looping Louie' })
 </script>
 
 <template>
-  <UiContainer size="wide" class="skill-builder">
-    <header class="skill-builder__topbar">
-      <UiFormProgress :steps="steps" :current="stepIndex" />
-    </header>
-
+  <WizardShell :steps="steps" :current="stepIndex" class="skill-builder">
     <main ref="questionRoot" class="skill-builder__question">
       <UiBreadcrumb
         :items="[{ label: 'Skills', to: '/app/skills' }, { label: 'Create new skill' }]"
@@ -409,12 +404,10 @@ useHead({ title: 'Create a skill · Looping Louie' })
         <UiButton data-autofocus :loading="exitActionPending" @click="saveDraftAndLeave">Save draft</UiButton>
       </template>
     </UiModal>
-  </UiContainer>
+  </WizardShell>
 </template>
 
 <style scoped>
-.skill-builder { padding-block: var(--ll-space-6) var(--ll-space-16); }
-.skill-builder__topbar { width: calc(100% + var(--ui-container-gutter)); margin-bottom: var(--ll-space-10); }
 .skill-builder__question { max-width: 52rem; min-width: 0; padding-bottom: 7rem; }
 .skill-builder__breadcrumb { margin-bottom: var(--ll-space-5); }
 .builder-panel { display: grid; gap: var(--ll-space-6); }

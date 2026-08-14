@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
 import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
-import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
+import PageShell from '~/components/layout/PageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
-import UiContainer from '~/components/ui/Container.vue'
 import UiGridList from '~/components/ui/GridList.vue'
-import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
@@ -173,7 +171,39 @@ useHead(() => ({
 </script>
 
 <template>
-  <UiContainer size="wide" class="pipeline-page">
+  <PageShell
+    class="pipeline-page"
+    :title="pipeline?.name"
+    :description="pipeline?.description"
+    :breadcrumbs="pipeline ? breadcrumbItems : []"
+    :show-heading="Boolean(pipeline)"
+  >
+    <template #actions>
+      <div v-if="pipeline" class="pipeline-actions">
+        <UiButton type="button">Run</UiButton>
+        <UiButton
+          type="button"
+          variant="secondary"
+          dropdown
+          dropdown-align="right"
+          icon-only
+          aria-label="More pipeline actions"
+          dropdown-label="Pipeline actions"
+          :options="entityActionMenuOptions"
+          :disabled="deleting"
+          @select="selectAction"
+        >
+          <template #leading>
+            <svg viewBox="0 0 256 256" fill="currentColor">
+              <circle cx="128" cy="56" r="12" />
+              <circle cx="128" cy="128" r="12" />
+              <circle cx="128" cy="200" r="12" />
+            </svg>
+          </template>
+        </UiButton>
+      </div>
+    </template>
+
     <div v-if="status === 'pending'" class="pipeline-state" role="status">Loading pipeline…</div>
     <div v-else-if="error" class="pipeline-state pipeline-state--error" role="alert">
       <span>Pipeline could not be loaded.</span>
@@ -181,42 +211,6 @@ useHead(() => ({
     </div>
 
     <template v-else-if="pipeline">
-      <UiBreadcrumb class="pipeline-breadcrumb" :items="breadcrumbItems" />
-
-      <UiHeadingBlock layout="split" size="section" align="start" class="pipeline-heading">
-        <template #title>
-          <h1>{{ pipeline.name }}</h1>
-        </template>
-        <template #description>
-          <p>{{ pipeline.description }}</p>
-        </template>
-        <template #aside>
-          <div class="pipeline-actions">
-            <UiButton type="button">Run</UiButton>
-            <UiButton
-              type="button"
-              variant="secondary"
-              dropdown
-              dropdown-align="right"
-              icon-only
-              aria-label="More pipeline actions"
-              dropdown-label="Pipeline actions"
-              :options="entityActionMenuOptions"
-              :disabled="deleting"
-              @select="selectAction"
-            >
-              <template #leading>
-                <svg viewBox="0 0 256 256" fill="currentColor">
-                  <circle cx="128" cy="56" r="12" />
-                  <circle cx="128" cy="128" r="12" />
-                  <circle cx="128" cy="200" r="12" />
-                </svg>
-              </template>
-            </UiButton>
-          </div>
-        </template>
-      </UiHeadingBlock>
-
       <section class="pipeline-details" aria-label="Pipeline configuration">
         <UiSectionStage inverse="bottom" class="pipeline-details-stage">
           <UiGridList
@@ -299,13 +293,10 @@ useHead(() => ({
         <UiButton variant="coral" :loading="deleting" @click="deletePipeline">Delete pipeline</UiButton>
       </template>
     </UiModal>
-  </UiContainer>
+  </PageShell>
 </template>
 
 <style scoped>
-.pipeline-page { padding-block: var(--ll-space-10) var(--ll-space-16); }
-.pipeline-breadcrumb { margin-bottom: var(--ll-space-4); }
-.pipeline-heading { margin-bottom: var(--ll-space-8); }
 .pipeline-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--ll-space-3); }
 .pipeline-details { min-width: 0; }
 .pipeline-details-stage :deep(.ui-section-stage__shell) { width: 100%; margin-inline: 0; }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import CatalogShell from '~/components/catalog/CatalogShell.vue'
+import PageShell from '~/components/layout/PageShell.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiTable from '~/components/ui/Table.vue'
@@ -159,16 +160,12 @@ useHead({ title: 'Runs · Looping Louie' })
 </script>
 
 <template>
-  <CatalogShell
+  <PageShell
     title="Runs"
     description="Monitor pipeline executions, resource use, and ownership from one place."
-    :status="status"
-    loading-label="Loading runs…"
-    error-label="Runs could not be loaded."
-    @retry="refresh"
   >
     <template #actions><UiButton>New run</UiButton></template>
-    <template #filters>
+    <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="runStatus"
         v-model:category="dateRange"
@@ -183,8 +180,15 @@ useHead({ title: 'Runs · Looping Louie' })
       />
     </template>
 
-    <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
-      <template #empty>No runs match these filters.</template>
-    </UiTable>
-  </CatalogShell>
+    <UiAsyncStage
+      :status="status"
+      loading-label="Loading runs…"
+      error-label="Runs could not be loaded."
+      @retry="refresh"
+    >
+      <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
+        <template #empty>No runs match these filters.</template>
+      </UiTable>
+    </UiAsyncStage>
+  </PageShell>
 </template>

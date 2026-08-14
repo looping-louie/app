@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import CatalogShell from '~/components/catalog/CatalogShell.vue'
+import PageShell from '~/components/layout/PageShell.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
@@ -82,18 +83,12 @@ useHead({
 </script>
 
 <template>
-  <CatalogShell
+  <PageShell
     title="Pipelines"
     description="Ordered workflows that connect loops with human checkpoints."
-    :status="status"
-    :empty="displayedPipelines.length === 0"
-    loading-label="Loading pipelines…"
-    error-label="Pipelines could not be loaded."
-    empty-label="No pipelines match these filters."
-    @retry="refresh"
   >
     <template #actions><UiButton to="/app/pipelines/new">Create new pipeline</UiButton></template>
-    <template #filters>
+    <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="pipelineStatus"
         v-model:category="pipelineStep"
@@ -108,7 +103,15 @@ useHead({
       />
     </template>
 
-    <UiGrid :columns="3" gap="md">
+    <UiAsyncStage
+      :status="status"
+      :empty="displayedPipelines.length === 0"
+      loading-label="Loading pipelines…"
+      error-label="Pipelines could not be loaded."
+      empty-label="No pipelines match these filters."
+      @retry="refresh"
+    >
+      <UiGrid :columns="3" gap="md">
         <UiCard
           v-for="pipeline in displayedPipelines"
           :key="pipeline.id"
@@ -147,8 +150,9 @@ useHead({
             </UiStatusText>
           </template>
         </UiCard>
-    </UiGrid>
-  </CatalogShell>
+      </UiGrid>
+    </UiAsyncStage>
+  </PageShell>
 </template>
 
 <style scoped>

@@ -1,8 +1,7 @@
 <script setup lang="ts">
+import PageShell from '~/components/layout/PageShell.vue'
 import UiChartCard from '~/components/ui/ChartCard.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
-import UiContainer from '~/components/ui/Container.vue'
-import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiMetricCard from '~/components/ui/MetricCard.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
@@ -59,46 +58,43 @@ useHead({
 </script>
 
 <template>
-  <UiContainer size="wide" class="observability-page">
-    <UiHeadingBlock layout="split" size="section" align="start" class="observability-heading">
-      <template #title>
-        <h1>Observability</h1>
-      </template>
-      <template #description>
-        <p>Monitor performance, usage, and operational health across every production loop.</p>
-      </template>
-    </UiHeadingBlock>
+  <PageShell
+    title="Observability"
+    description="Monitor performance, usage, and operational health across every production loop."
+    class="observability-page"
+  >
+    <template #navigation>
+      <div class="observability-controls">
+        <UiSegmentedControl
+          v-model="activeView"
+          :options="viewOptions"
+          variant="inline"
+          accent="metal"
+          bordered-options
+          aria-label="Observability view"
+        />
 
-    <div class="observability-controls">
-      <UiSegmentedControl
-        v-model="activeView"
-        :options="viewOptions"
-        variant="inline"
-        accent="metal"
-        bordered-options
-        aria-label="Observability view"
-      />
+        <div class="observability-filters">
+          <UiPill :focusable="false">
+            <template #icon>
+              <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
+                <path d="M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31l123.31-123.31A16,16,0,0,0,227.31,73.37ZM48,163.31l88-88L180.69,120l-88,88H48ZM216,84.69,192,108.69,147.31,64,171.31,40,216,84.69ZM128,216a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H136A8,8,0,0,1,128,216Z" />
+              </svg>
+            </template>
+            Edit
+          </UiPill>
 
-      <div class="observability-filters">
-        <UiPill :focusable="false">
-          <template #icon>
-            <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
-              <path d="M227.31,73.37,182.63,28.69a16,16,0,0,0-22.63,0L36.69,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31l123.31-123.31A16,16,0,0,0,227.31,73.37ZM48,163.31l88-88L180.69,120l-88,88H48ZM216,84.69,192,108.69,147.31,64,171.31,40,216,84.69ZM128,216a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H136A8,8,0,0,1,128,216Z" />
-            </svg>
-          </template>
-          Edit
-        </UiPill>
-
-        <UiPill :focusable="false">
-          <template #icon>
-            <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
-              <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V88H208V208ZM48,72V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V72Z" />
-            </svg>
-          </template>
-          This week
-        </UiPill>
+          <UiPill :focusable="false">
+            <template #icon>
+              <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
+                <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V88H208V208ZM48,72V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V72Z" />
+              </svg>
+            </template>
+            This week
+          </UiPill>
+        </div>
       </div>
-    </div>
+    </template>
 
     <div class="observability-metrics">
       <UiCollectionGroupTitle heading-as="h2" title="Metrics" />
@@ -149,22 +145,13 @@ useHead({
         </div>
       </UiSectionStage>
     </div>
-  </UiContainer>
+  </PageShell>
 </template>
 
 <style scoped>
-.observability-page {
-  padding-block: var(--ll-space-10) var(--ll-space-16);
-}
-
-.observability-heading {
-  margin-bottom: var(--ll-space-8);
-}
-
 .observability-controls {
   display: grid;
   gap: var(--ll-space-5);
-  margin-bottom: var(--ll-space-10);
 }
 
 .observability-filters {

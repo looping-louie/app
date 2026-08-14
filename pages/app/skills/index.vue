@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import CatalogShell from '~/components/catalog/CatalogShell.vue'
+import PageShell from '~/components/layout/PageShell.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
+import UiPagination from '~/components/ui/Pagination.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
 import type { SkillCategory, SkillSort, SkillStatus } from '~/types/api'
 import { instructionCategoryLabels, instructionCategoryOptions } from '~/utils/instructionCategories'
@@ -63,21 +65,12 @@ useHead({
 </script>
 
 <template>
-  <CatalogShell
+  <PageShell
     title="Skills"
     description="Capabilities available to agents when they participate in a loop."
-    :status="status"
-    :empty="skills.length === 0"
-    v-model:pagination-offset="skillOffset"
-    :pagination-total="skillTotal"
-    :pagination-page-size="skillPageSize"
-    loading-label="Loading skills…"
-    error-label="Skills could not be loaded."
-    empty-label="No skills found."
-    @retry="refresh"
   >
     <template #actions><UiButton to="/app/skills/new">Create new skill</UiButton></template>
-    <template #filters>
+    <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="skillStatus"
         v-model:category="skillCategories"
@@ -95,7 +88,15 @@ useHead({
       />
     </template>
 
-    <UiGrid :columns="3" gap="md">
+    <UiAsyncStage
+      :status="status"
+      :empty="skills.length === 0"
+      loading-label="Loading skills…"
+      error-label="Skills could not be loaded."
+      empty-label="No skills found."
+      @retry="refresh"
+    >
+      <UiGrid :columns="3" gap="md">
         <UiCard
           v-for="skill in skills"
           :key="skill.id"
@@ -125,8 +126,19 @@ useHead({
             </UiStatusText>
           </template>
         </UiCard>
-    </UiGrid>
-  </CatalogShell>
+      </UiGrid>
+    </UiAsyncStage>
+
+    <template #footer>
+      <UiPagination
+        v-if="status === 'success'"
+        v-model:offset="skillOffset"
+        :total="skillTotal"
+        :page-size="skillPageSize"
+        aria-label="Skills pagination"
+      />
+    </template>
+  </PageShell>
 </template>
 
 <style scoped>

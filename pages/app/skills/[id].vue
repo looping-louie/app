@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
+import PageShell from '~/components/layout/PageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
-import UiContainer from '~/components/ui/Container.vue'
-import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiMarkdownContent from '~/components/ui/MarkdownContent.vue'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
 
@@ -27,78 +25,53 @@ useHead(() => ({
 </script>
 
 <template>
-  <UiContainer size="wide" class="skill-page">
+  <PageShell
+    class="skill-page"
+    :title="skill?.name"
+    :description="skill?.description"
+    :breadcrumbs="skill ? [{ label: 'Skills', to: '/app/skills' }, { label: skill.name }] : []"
+    :show-heading="Boolean(skill)"
+  >
+    <template #actions>
+      <div v-if="skill" class="skill-actions">
+        <UiButton type="button">Edit</UiButton>
+        <UiButton
+          type="button"
+          variant="secondary"
+          dropdown
+          dropdown-align="right"
+          icon-only
+          aria-label="More skill actions"
+          dropdown-label="Skill actions"
+          :options="entityActionMenuOptions"
+        >
+          <template #leading>
+            <svg viewBox="0 0 256 256" fill="currentColor">
+              <circle cx="128" cy="56" r="12" />
+              <circle cx="128" cy="128" r="12" />
+              <circle cx="128" cy="200" r="12" />
+            </svg>
+          </template>
+        </UiButton>
+      </div>
+    </template>
+
     <div v-if="status === 'pending'" class="skill-state" role="status">Loading skill…</div>
     <div v-else-if="error" class="skill-state skill-state--error" role="alert">
       <span>Skill could not be loaded.</span>
       <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
     </div>
     <template v-else-if="skill">
-      <UiBreadcrumb
-        class="skill-breadcrumb"
-        :items="[
-          { label: 'Skills', to: '/app/skills' },
-          { label: skill.name },
-        ]"
-      />
-
-      <UiHeadingBlock
-        layout="split"
-        size="section"
-        align="start"
-        class="skill-heading"
-      >
-        <template #title>
-          <h1>{{ skill.name }}</h1>
-        </template>
-        <template #description>
-          <p>{{ skill.description }}</p>
-        </template>
-        <template #aside>
-          <div class="skill-actions">
-            <UiButton type="button">Edit</UiButton>
-            <UiButton
-              type="button"
-              variant="secondary"
-              dropdown
-              dropdown-align="right"
-              icon-only
-              aria-label="More skill actions"
-              dropdown-label="Skill actions"
-              :options="entityActionMenuOptions"
-            >
-              <template #leading>
-                <svg viewBox="0 0 256 256" fill="currentColor">
-                  <circle cx="128" cy="56" r="12" />
-                  <circle cx="128" cy="128" r="12" />
-                  <circle cx="128" cy="200" r="12" />
-                </svg>
-              </template>
-            </UiButton>
-          </div>
-        </template>
-      </UiHeadingBlock>
-
       <div class="skill-content">
         <h2 class="instructions-title">Instructions</h2>
         <UiMarkdownContent :content="skill.instructions" strip-first-heading />
       </div>
     </template>
-  </UiContainer>
+  </PageShell>
 </template>
 
 <style scoped>
-.skill-page {
-  padding-block: var(--ll-space-10) var(--ll-space-16);
-}
-
-.skill-heading {
-  margin-bottom: var(--ll-space-12);
-}
-
-.skill-breadcrumb {
-  margin-bottom: var(--ll-space-4);
-}
+.skill-page { --layout-page-shell-heading-gap: var(--ll-space-12); }
 
 .skill-actions {
   display: flex;
@@ -136,12 +109,6 @@ useHead(() => ({
 
 .skill-state--error {
   color: var(--ll-color-brand-ink);
-}
-
-@media (max-width: 38rem) {
-  .skill-page {
-    padding-block-start: var(--ll-space-8);
-  }
 }
 
 @media (max-width: 48rem) {

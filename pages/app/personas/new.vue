@@ -2,11 +2,10 @@
 import InstructionCategorySelector from '~/components/instructions/InstructionCategorySelector.vue'
 import InstructionSkillOption from '~/components/instructions/InstructionSkillOption.vue'
 import InstructionSkillSelector from '~/components/instructions/InstructionSkillSelector.vue'
+import WizardShell from '~/components/layout/WizardShell.vue'
 import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
-import UiContainer from '~/components/ui/Container.vue'
-import UiFormProgress from '~/components/ui/FormProgress.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
@@ -312,8 +311,7 @@ useHead({ title: 'Create an agent · Looping Louie' })
 </script>
 
 <template>
-  <UiContainer size="wide" class="agent-builder">
-    <header class="agent-builder__topbar"><UiFormProgress :steps="steps" :current="stepIndex" /></header>
+  <WizardShell :steps="steps" :current="stepIndex" class="agent-builder">
     <div class="agent-builder__layout" :class="{ 'agent-builder__layout--skills': step === 'skills' }">
       <main ref="questionRoot" class="agent-builder__question">
       <UiBreadcrumb :items="[{ label: 'Agents', to: '/app/personas' }, { label: 'Create new agent' }]" class="agent-builder__breadcrumb" />
@@ -393,12 +391,10 @@ useHead({ title: 'Create an agent · Looping Louie' })
       <template #icon><svg viewBox="0 0 256 256" fill="currentColor"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" /></svg></template>
       <template #actions><UiButton variant="coral" :disabled="exitActionPending" @click="discardDraftAndLeave">Discard draft</UiButton><UiButton data-autofocus :loading="exitActionPending" @click="saveDraftAndLeave">Save draft</UiButton></template>
     </UiModal>
-  </UiContainer>
+  </WizardShell>
 </template>
 
 <style scoped>
-.agent-builder { padding-block: var(--ll-space-6) var(--ll-space-16); }
-.agent-builder__topbar { width: calc(100% + var(--ui-container-gutter)); margin-bottom: var(--ll-space-10); }
 .agent-builder__layout { display: grid; grid-template-columns: minmax(0, 52rem); min-width: 0; }
 .agent-builder__layout--skills { grid-template-columns: minmax(0, 52rem) minmax(16rem, 20rem); gap: var(--ll-space-10); }
 .agent-builder__question { max-width: 52rem; min-width: 0; padding-bottom: 7rem; }

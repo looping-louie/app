@@ -2,12 +2,11 @@
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
 import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
 import PipelineLoopDrawer from '~/components/pipelines/PipelineLoopDrawer.vue'
+import WizardShell from '~/components/layout/WizardShell.vue'
 import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
 import UiCommandPalette from '~/components/ui/CommandPalette.vue'
-import UiContainer from '~/components/ui/Container.vue'
-import UiFormProgress from '~/components/ui/FormProgress.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
@@ -651,11 +650,7 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
 </script>
 
 <template>
-  <UiContainer size="wide" class="pipeline-builder">
-    <header class="pipeline-builder__topbar">
-      <UiFormProgress :steps="builderSteps" :current="builderStepIndex" />
-    </header>
-
+  <WizardShell :steps="builderSteps" :current="builderStepIndex" class="pipeline-builder">
     <UiBreadcrumb
       :items="breadcrumbItems"
       class="pipeline-builder__breadcrumb"
@@ -794,17 +789,12 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
         </UiButton>
       </template>
     </UiModal>
-  </UiContainer>
+  </WizardShell>
 </template>
 
 <style scoped>
 .pipeline-builder {
-  padding-block: var(--ll-space-6) 0;
-}
-
-.pipeline-builder__topbar {
-  width: calc(100% + var(--ui-container-gutter));
-  margin-bottom: var(--ll-space-10);
+  --layout-wizard-shell-padding-end: 0;
 }
 
 .pipeline-builder__breadcrumb {

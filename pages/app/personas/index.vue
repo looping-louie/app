@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import CatalogShell from '~/components/catalog/CatalogShell.vue'
+import PageShell from '~/components/layout/PageShell.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
+import UiPagination from '~/components/ui/Pagination.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
 import type { PersonaCategory, PersonaSort, PersonaStatus } from '~/types/api'
 import { instructionCategoryLabels, instructionCategoryOptions } from '~/utils/instructionCategories'
@@ -63,21 +65,12 @@ useHead({
 </script>
 
 <template>
-  <CatalogShell
+  <PageShell
     title="Agents"
     description="Agent roles available to loops and pipelines."
-    :status="status"
-    :empty="agents.length === 0"
-    v-model:pagination-offset="agentOffset"
-    :pagination-total="agentTotal"
-    :pagination-page-size="agentPageSize"
-    loading-label="Loading agents…"
-    error-label="Agents could not be loaded."
-    empty-label="No agents found."
-    @retry="refresh"
   >
     <template #actions><UiButton to="/app/personas/new">Create new agent</UiButton></template>
-    <template #filters>
+    <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="agentStatus"
         v-model:category="agentCategories"
@@ -95,7 +88,15 @@ useHead({
       />
     </template>
 
-    <UiGrid :columns="4" gap="md">
+    <UiAsyncStage
+      :status="status"
+      :empty="agents.length === 0"
+      loading-label="Loading agents…"
+      error-label="Agents could not be loaded."
+      empty-label="No agents found."
+      @retry="refresh"
+    >
+      <UiGrid :columns="4" gap="md">
         <UiCard
           v-for="agent in agents"
           :key="agent.id"
@@ -132,8 +133,19 @@ useHead({
             </div>
           </template>
         </UiCard>
-    </UiGrid>
-  </CatalogShell>
+      </UiGrid>
+    </UiAsyncStage>
+
+    <template #footer>
+      <UiPagination
+        v-if="status === 'success'"
+        v-model:offset="agentOffset"
+        :total="agentTotal"
+        :page-size="agentPageSize"
+        aria-label="Agents pagination"
+      />
+    </template>
+  </PageShell>
 </template>
 
 <style scoped>
