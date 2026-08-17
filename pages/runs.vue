@@ -8,7 +8,7 @@ import UiTable from '~/components/ui/Table.vue'
 import type { GateDecisionRequest, PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
-import { activeRunStatuses, runPrompt, runTokenCount } from '~/utils/pipelineRuns'
+import { runPrompt, runTokenCount } from '~/utils/pipelineRuns'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
@@ -57,13 +57,16 @@ const runSort = ref('newest')
 const resolvedGates = ref(new Set<string>())
 const decidingGate = ref('')
 const decisionError = ref('')
-let pollTimer: ReturnType<typeof setInterval> | undefined
 
 const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'Last 24 hours'
 ))
 
 const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
+const runPolling = usePipelineRunPolling(
+  () => data.value?.runs ?? [],
+  updateRunDetails,
+)
 const selectedRun = computed(() => data.value?.runs.find(run => run.id === route.query.run) ?? null)
 const displayedRuns = computed(() => {
   const cutoff = Date.now() - rangeDuration(dateRange.value)
@@ -109,11 +112,20 @@ async function decideGate(event: PipelineRunEventResponse, decision: GateDecisio
   try {
     await api.pipelines.decideGate(selectedRun.value.pipeline_id, selectedRun.value.id, event.step_id, decision)
     resolvedGates.value = new Set([...resolvedGates.value, event.step_id])
-    await refresh()
+    await runPolling.refreshRun(selectedRun.value)
   } catch (cause) {
     decisionError.value = apiErrorMessage(cause, 'This gate could not be resolved. Please try again.')
   } finally {
     decidingGate.value = ''
+  }
+}
+
+function updateRunDetails(updates: PipelineRunResponse[]) {
+  if (!data.value) return
+  const byId = new Map(updates.map(run => [run.id, run]))
+  data.value = {
+    ...data.value,
+    runs: data.value.runs.map(run => byId.get(run.id) ?? run),
   }
 }
 
@@ -146,13 +158,6 @@ function formatDateTime(value: string) {
     day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
   }).format(date)
 }
-
-onMounted(() => {
-  pollTimer = setInterval(() => {
-    if ((data.value?.runs ?? []).some(run => activeRunStatuses.has(run.status))) void refresh()
-  }, 3000)
-})
-onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer) })
 
 definePageMeta({ layout: 'app', alias: ['/', '/app/runs'] })
 useHead({ title: 'Runs · Looping Louie' })

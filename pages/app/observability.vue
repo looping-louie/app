@@ -9,12 +9,10 @@ import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTable from '~/components/ui/Table.vue'
 import { collectApiPages } from '~/utils/apiPagination'
-import { activeRunStatuses } from '~/utils/pipelineRuns'
 import { observabilityCharts, observabilityLogs, observabilityMetrics } from '~/utils/observability'
 
 const activeView = ref('metrics')
 const api = useApiClient()
-let pollTimer: ReturnType<typeof setInterval> | undefined
 
 const viewOptions = [
   { value: 'metrics', label: 'Metrics' },
@@ -36,17 +34,17 @@ const { data: runs, status, refresh } = await useAsyncData('observability-runs',
   const summaries = pages.flat()
   return Promise.all(summaries.map(run => api.pipelines.getRun(run.pipeline_id, run.id)))
 })
+usePipelineRunPolling(
+  () => runs.value ?? [],
+  (updates) => {
+    const byId = new Map(updates.map(run => [run.id, run]))
+    runs.value = (runs.value ?? []).map(run => byId.get(run.id) ?? run)
+  },
+)
 
 const metrics = computed(() => observabilityMetrics(runs.value ?? []))
 const charts = computed(() => observabilityCharts(runs.value ?? []))
 const logs = computed(() => observabilityLogs(runs.value ?? []))
-
-onMounted(() => {
-  pollTimer = setInterval(() => {
-    if ((runs.value ?? []).some(run => activeRunStatuses.has(run.status))) void refresh()
-  }, 5000)
-})
-onBeforeUnmount(() => { if (pollTimer) clearInterval(pollTimer) })
 
 definePageMeta({ layout: 'app' })
 useHead({ title: 'Observability · Looping Louie' })

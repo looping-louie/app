@@ -1,7 +1,5 @@
 import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
 
-export const activeRunStatuses = new Set(['pending', 'claimed', 'running'])
-
 export function runPrompt(run: PipelineRunResponse) {
   const prompt = run.input.prompt
   return typeof prompt === 'string' && prompt.trim() ? prompt.trim() : run.id
