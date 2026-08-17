@@ -111,7 +111,7 @@ async function decideGate(event: PipelineRunEventResponse, decision: GateDecisio
   decisionError.value = ''
   try {
     await api.pipelines.decideGate(selectedRun.value.pipeline_id, selectedRun.value.id, event.step_id, decision)
-    resolvedGates.value = new Set([...resolvedGates.value, event.step_id])
+    resolvedGates.value = new Set([...resolvedGates.value, event.id])
     await runPolling.refreshRun(selectedRun.value)
   } catch (cause) {
     decisionError.value = apiErrorMessage(cause, 'This gate could not be resolved. Please try again.')
