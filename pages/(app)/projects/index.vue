@@ -19,7 +19,7 @@ useHead({
     description="Organize shared work, teammates, and progress in one place."
   >
     <template #actions>
-      <UiButton variant="primary">New project</UiButton>
+      <UiButton to="/projects/new" variant="primary">New project</UiButton>
     </template>
 
     <template #toolbar>
