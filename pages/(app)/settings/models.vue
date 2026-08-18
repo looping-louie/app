@@ -3,7 +3,8 @@ import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiPagination from '~/components/ui/Pagination.vue'
-import type { ModelSort, ModelStatus } from '~/types/api'
+import UiPill from '~/components/ui/Pill.vue'
+import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
 
 const api = useApiClient()
 const route = useRoute()
@@ -15,6 +16,32 @@ const modelLabs = ref<string[]>([])
 const modelSort = ref('alphabetical-asc')
 const modelOffset = ref(0)
 const modelPageSize = 24
+const modelEnabledState = reactive<Record<string, boolean>>({})
+const arrowSquareOutIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
+
+const officialModelPages: Record<string, string> = {
+  anthropic: 'https://docs.anthropic.com/en/docs/about-claude/models/overview',
+  'deep-cogito': 'https://www.deepcogito.com/research',
+  deepcogito: 'https://www.deepcogito.com/research',
+  deepseek: 'https://api-docs.deepseek.com/quick_start/pricing',
+  'deepseek-ai': 'https://api-docs.deepseek.com/quick_start/pricing',
+  google: 'https://ai.google.dev/gemini-api/docs/models',
+  'google-deepmind': 'https://ai.google.dev/gemini-api/docs/models',
+  meta: 'https://www.llama.com/models/',
+  'meta-ai': 'https://www.llama.com/models/',
+  minimax: 'https://platform.minimax.io/docs/api-reference/models/openai/list-models',
+  mistral: 'https://docs.mistral.ai/models',
+  'mistral-ai': 'https://docs.mistral.ai/models',
+  moonshot: 'https://platform.moonshot.ai/docs/guide/start-using-kimi-api',
+  'moonshot-ai': 'https://platform.moonshot.ai/docs/guide/start-using-kimi-api',
+  nvidia: 'https://build.nvidia.com/models',
+  openai: 'https://platform.openai.com/docs/models',
+  qwen: 'https://qwen.readthedocs.io/en/stable/',
+  'thinking-machines': 'https://thinkingmachines.ai/',
+  'thinking-machines-lab': 'https://thinkingmachines.ai/',
+  z: 'https://docs.z.ai/guides/overview/models',
+  'z-ai': 'https://docs.z.ai/guides/overview/models',
+}
 
 const modelQuery = computed(() => ({
   offset: modelOffset.value,
@@ -42,6 +69,12 @@ const modelSearchItems = computed(() => models.value.map(model => ({
   imageSrc: providerLogo(model.vendor, model.family) || undefined,
   imageAlt: '',
 })))
+
+watch(models, (currentModels) => {
+  currentModels.forEach((model) => {
+    if (!(model.id in modelEnabledState)) modelEnabledState[model.id] = model.available
+  })
+}, { immediate: true })
 
 watch([modelStatus, modelLabs, modelSort, modelSearchTerm], () => {
   modelOffset.value = 0
@@ -78,6 +111,20 @@ function vendorInitials(vendor: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase()
+}
+
+function modelEnabled(model: ModelSummary) {
+  return typeof modelEnabledState[model.id] === 'boolean' ? modelEnabledState[model.id] : model.available
+}
+
+function setModelEnabled(model: ModelSummary, enabled: boolean) {
+  modelEnabledState[model.id] = enabled
+}
+
+function officialModelPage(model: ModelSummary) {
+  const vendorKey = model.vendor.trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  const familyKey = model.family.trim().toLocaleLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+  return officialModelPages[vendorKey] ?? officialModelPages[familyKey] ?? 'https://build.nvidia.com/models'
 }
 
 function focusedModelId() {
@@ -142,31 +189,33 @@ useHead({
       empty-label="No models found."
       @retry="refresh"
     >
-      <UiGrid :columns="3" gap="lg">
-        <div
+      <UiGrid :columns="3" gap="lg" class="models-grid">
+        <UiPill
           v-for="model in models"
           :id="`model-${model.id}`"
           :key="model.id"
+          variant="catalog"
+          icon-style="circle"
+          :src="providerLogo(model.vendor, model.family) || undefined"
+          alt=""
+          :description="model.name"
+          toggle
+          :toggle-value="modelEnabled(model)"
+          :toggle-label="`${modelEnabled(model) ? 'Disable' : 'Enable'} ${model.name}`"
+          :action-icon-path="arrowSquareOutIconPath"
+          :action-href="officialModelPage(model)"
+          :action-label="`View official information about ${model.name}`"
+          action-target="_blank"
+          action-visibility="hover"
           class="model-item"
           :class="{ 'model-item--focused': focusedModelId() === model.id }"
+          @update:toggle-value="setModelEnabled(model, $event)"
         >
-          <img
-            v-if="providerLogo(model.vendor, model.family)"
-            class="model-item__logo"
-            :src="providerLogo(model.vendor, model.family)"
-            :alt="`${model.vendor} logo`"
-            width="44"
-            height="44"
-            loading="lazy"
-          >
-          <span v-else class="model-item__fallback" aria-hidden="true">
-            {{ vendorInitials(model.vendor) }}
-          </span>
-          <div class="model-item__copy">
-            <strong>{{ model.vendor }}</strong>
-            <span>{{ model.name }}</span>
-          </div>
-        </div>
+          <template v-if="!providerLogo(model.vendor, model.family)" #icon>
+            <span class="model-item__fallback">{{ vendorInitials(model.vendor) }}</span>
+          </template>
+          {{ model.vendor }}
+        </UiPill>
       </UiGrid>
     </UiAsyncStage>
 
@@ -185,25 +234,10 @@ useHead({
   margin-bottom: var(--ll-space-10);
 }
 
-.model-item {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--ll-space-3);
-  padding: var(--ll-space-3);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--ll-radius-structural);
-  transition:
-    border-color var(--ll-duration-normal) var(--ll-ease-out),
-    background var(--ll-duration-normal) var(--ll-ease-out),
-    box-shadow var(--ll-duration-normal) var(--ll-ease-out);
-}
+.models-grid { column-gap: var(--ll-space-20); }
 
-.model-item:hover {
-  background: var(--ll-color-card);
-  border-color: var(--ll-color-divider);
-  box-shadow: var(--ll-shadow-raised);
+.model-item {
+  min-width: 0;
 }
 
 .model-item--focused {
@@ -212,47 +246,9 @@ useHead({
   box-shadow: 0 0 0 3px var(--ll-color-primary-highlight);
 }
 
-.model-item__logo,
 .model-item__fallback {
-  display: grid;
-  width: 2.75rem;
-  height: 2.75rem;
-  flex: none;
-  place-items: center;
-  box-sizing: border-box;
-  object-fit: cover;
-  color: #ffffff;
-  background: var(--ll-color-metal-950);
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1px var(--ll-color-border);
-}
-
-.model-item__fallback {
-  font: 600 0.6875rem / 1 var(--ll-font-mono);
-}
-
-.model-item__copy {
-  display: grid;
-  min-width: 0;
-  gap: 0.2rem;
-}
-
-.model-item__copy strong,
-.model-item__copy span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.model-item__copy strong {
   color: var(--ll-color-ink);
-  font-size: var(--ll-text-sm);
-}
-
-.model-item__copy span {
-  color: var(--ll-color-text-muted);
-  font-size: var(--ll-text-xs);
+  font: 600 0.6875rem / 1 var(--ll-font-mono);
 }
 
 .visually-hidden {
@@ -267,9 +263,4 @@ useHead({
   border: 0;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .model-item {
-    transition: none;
-  }
-}
 </style>
