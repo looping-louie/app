@@ -8,9 +8,9 @@ const route = useRoute()
 const router = useRouter()
 
 const sectionRoutes: Record<SettingsSection, string> = {
-  global: '/app/settings',
-  providers: '/app/settings/providers',
-  models: '/app/settings/models',
+  global: '/settings',
+  providers: '/settings/providers',
+  models: '/settings/models',
 }
 
 const sectionOptions = [

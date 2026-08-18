@@ -159,13 +159,13 @@ function formatDateTime(value: string) {
   }).format(date)
 }
 
-definePageMeta({ layout: 'app', alias: ['/', '/app/runs'] })
+definePageMeta({ layout: 'app', alias: ['/'] })
 useHead({ title: 'Runs · Looping Louie' })
 </script>
 
 <template>
   <PageShell title="Runs" description="Monitor pipeline executions, their event timeline, and human decisions.">
-    <template #actions><UiButton to="/app/pipelines">New run</UiButton></template>
+    <template #actions><UiButton to="/pipelines">New run</UiButton></template>
     <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="runStatus"

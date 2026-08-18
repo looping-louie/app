@@ -30,7 +30,7 @@ const saveError = ref('')
 const exitModalOpen = ref(false)
 const exitActionPending = ref(false)
 const allowRouteLeave = ref(false)
-const pendingDestination = ref('/app/skills')
+const pendingDestination = ref('/skills')
 const questionRoot = ref<HTMLElement | null>(null)
 const titleField = ref<InstanceType<typeof UiTextField> | null>(null)
 const promptField = ref<InstanceType<typeof UiTextField> | null>(null)
@@ -167,7 +167,7 @@ async function createSkill() {
     localStorage.removeItem(localKey)
     clearNuxtData('skills-catalog')
     allowRouteLeave.value = true
-    await router.push(`/app/skills/${encodeURIComponent(skill.id)}`)
+    await router.push(`/skills/${encodeURIComponent(skill.id)}`)
   } catch (error) {
     saveError.value = apiErrorMessage(error, 'The skill could not be saved. Please try again.')
     saveLocalDraft()
@@ -288,7 +288,7 @@ useHead({ title: 'Create a skill · Looping Louie' })
   <WizardShell :steps="steps" :current="stepIndex" class="skill-builder">
     <main ref="questionRoot" class="skill-builder__question">
       <UiBreadcrumb
-        :items="[{ label: 'Skills', to: '/app/skills' }, { label: 'Create new skill' }]"
+        :items="[{ label: 'Skills', to: '/skills' }, { label: 'Create new skill' }]"
         class="skill-builder__breadcrumb"
       />
 

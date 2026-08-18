@@ -124,15 +124,15 @@ const navGroups = [
     { to: '/runs', label: 'Runs', icon: iconRuns }
   ],
   [
-    { to: '/app/observability', label: 'Observability', icon: iconObservability }
+    { to: '/observability', label: 'Observability', icon: iconObservability }
   ],
   [
-    { to: '/app/pipelines', label: 'Pipelines', icon: iconPipelines },
-    { to: '/app/personas', label: 'Agents', icon: iconAgents },
-    { to: '/app/skills', label: 'Skills', icon: iconSkills }
+    { to: '/pipelines', label: 'Pipelines', icon: iconPipelines },
+    { to: '/personas', label: 'Agents', icon: iconAgents },
+    { to: '/skills', label: 'Skills', icon: iconSkills }
   ],
   [
-    { to: '/app/settings', label: 'Settings', icon: iconSettings }
+    { to: '/settings', label: 'Settings', icon: iconSettings }
   ]
 ]
 
@@ -145,10 +145,7 @@ const currentLabel = computed(() => {
 
 function isActive(to: string) {
   if (to === '/runs') {
-    return ['/', '/runs', '/app/runs'].includes(route.path)
-  }
-  if (to === '/app') {
-    return route.path === '/app'
+    return ['/', '/runs'].includes(route.path)
   }
   return route.path === to || route.path.startsWith(to + '/')
 }

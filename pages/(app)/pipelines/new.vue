@@ -32,7 +32,7 @@ const designHint = ref('')
 const exitModalOpen = ref(false)
 const exitActionPending = ref(false)
 const allowRouteLeave = ref(false)
-const pendingDestination = ref('/app/pipelines')
+const pendingDestination = ref('/pipelines')
 const localKey = 'looping-louie:pipeline-builder-draft:v1'
 
 const builderStepIndex = computed(() => builderStep.value === 'design' ? 0 : 1)
@@ -48,10 +48,10 @@ const canSavePipeline = computed(() => (
   && !savingPipeline.value
 ))
 const breadcrumbItems = computed(() => [
-  { label: 'Pipelines', to: '/app/pipelines' },
+  { label: 'Pipelines', to: '/pipelines' },
   { label: 'Create new pipeline' },
   ...(builderStep.value === 'details'
-    ? [{ label: 'Design', to: '/app/pipelines/new?step=design' }, { label: 'Details' }]
+    ? [{ label: 'Design', to: '/pipelines/new?step=design' }, { label: 'Details' }]
     : [{ label: 'Design' }]),
 ])
 
@@ -108,7 +108,7 @@ async function createPipeline() {
     localStorage.removeItem(localKey)
     clearNuxtData('pipelines-catalog')
     allowRouteLeave.value = true
-    await router.push('/app/pipelines')
+    await router.push('/pipelines')
   } catch (cause) {
     saveError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
     saveLocalDraft()

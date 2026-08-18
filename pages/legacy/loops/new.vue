@@ -885,7 +885,7 @@ useHead({ title: 'Create a loop · Looping Louie' })
                     :description="personaQuestion(persona)"
                     :selection-type="step === 'aggregator' || (step === 'generators' && flow === 'refinement') ? 'radio' : 'checkbox'"
                     :name="step"
-                    :external-href="`/app/personas/${encodeURIComponent(persona.id)}`"
+                    :external-href="`/personas/${encodeURIComponent(persona.id)}`"
                     @update:model-value="updateRoleSelection(step === 'generators' ? 'generator' : step === 'reviewers' ? 'reviewer' : 'aggregator', $event)"
                   >
                     <template #media><svg viewBox="0 0 256 256" fill="currentColor"><path :d="personaIcon(persona)" /></svg></template>
@@ -901,7 +901,7 @@ useHead({ title: 'Create a loop · Looping Louie' })
               <UiCollectionGroupTitle :title="directoryStageTitle" heading-as="h2" />
               <UiSectionStage inverse="bottom" class="builder-agent-stage">
                 <UiGrid :columns="2" gap="sm">
-                  <UiDirectoryOption v-for="model in models" :key="model.id" :model-value="currentAssignment?.model_id || ''" :value="model.id" :title="model.name" :description="model.vendor" name="agent-model" :external-href="`/app/settings/models?model=${encodeURIComponent(model.id)}`" @update:model-value="chooseModel(String($event))">
+                  <UiDirectoryOption v-for="model in models" :key="model.id" :model-value="currentAssignment?.model_id || ''" :value="model.id" :title="model.name" :description="model.vendor" name="agent-model" :external-href="`/settings/models?model=${encodeURIComponent(model.id)}`" @update:model-value="chooseModel(String($event))">
                     <template #media>
                       <img v-if="modelLogo(model)" :src="modelLogo(model)" :alt="`${model.vendor} logo`">
                       <span v-else>{{ modelInitials(model) }}</span>

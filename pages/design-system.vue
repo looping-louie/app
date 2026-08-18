@@ -995,7 +995,7 @@ onBeforeUnmount(() => {
                     title="Product Manager"
                     description="What problem does this solve?"
                     selection-type="checkbox"
-                    external-href="/app/personas/builtin%3Apersona%3Aproduct_manager"
+                    external-href="/personas/builtin%3Apersona%3Aproduct_manager"
                   >
                     <template #media>
                       <svg viewBox="0 0 256 256" fill="currentColor"><path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A24,24,0,0,0,32,72V192a24,24,0,0,0,24,24H200a24,24,0,0,0,24-24V72A24,24,0,0,0,200,48Zm8,144a8,8,0,0,1-8,8H56a8,8,0,0,1-8-8V72a8,8,0,0,1,8-8H200a8,8,0,0,1,8,8ZM80,112a12,12,0,1,1,12,12A12,12,0,0,1,80,112Zm72,12a12,12,0,1,1,12,12A12,12,0,0,1,152,124Zm8.68,48a48.35,48.35,0,0,1-65.36,0,8,8,0,0,1,10.68-11.92,32.35,32.35,0,0,0,44,0A8,8,0,1,1,160.68,172Z" /></svg>
@@ -1006,7 +1006,7 @@ onBeforeUnmount(() => {
                     value="deepseek-v4-pro"
                     title="DeepSeek V4 Pro"
                     description="DeepSeek"
-                    external-href="/app/settings/models?model=deepseek-v4-pro"
+                    external-href="/settings/models?model=deepseek-v4-pro"
                   >
                     <template #media><img src="/images/models/deepseek.webp" alt=""></template>
                   </UiDirectoryOption>
@@ -1519,9 +1519,9 @@ onBeforeUnmount(() => {
               <div class="ds-stage">
                 <UiBreadcrumb
                   :items="[
-                    { label: 'Agents', to: '/app/personas' },
-                    { label: 'Engineering', to: '/app/skills' },
-                    { label: 'Code review', to: '/app/skills?category=code-review' },
+                    { label: 'Agents', to: '/personas' },
+                    { label: 'Engineering', to: '/skills' },
+                    { label: 'Code review', to: '/skills?category=code-review' },
                   ]"
                 />
               </div>
@@ -1569,7 +1569,7 @@ onBeforeUnmount(() => {
                       layout="centered"
                       size="hero"
                       eyebrow="Agent observability / Code"
-                      eyebrow-to="/app/personas"
+                      eyebrow-to="/personas"
                     >
                       <template #title>
                         <h2>Every loop, fully visible in production</h2>
