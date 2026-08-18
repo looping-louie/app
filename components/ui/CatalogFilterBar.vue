@@ -24,7 +24,7 @@ const props = withDefaults(defineProps<{
   searchEmptyDescription?: string
   statusOptions?: FilterOption[]
   thirdLabel?: string
-  thirdIcon?: 'department' | 'labs' | 'task' | 'scribble-loop' | 'calendar-blank'
+  thirdIcon?: 'department' | 'labs' | 'task' | 'scribble-loop' | 'calendar-blank' | 'user-circle'
   thirdOptions?: FilterOption[]
   thirdSelectionType?: SelectionType
 }>(), {
@@ -117,6 +117,9 @@ const sortOptions = [
           </svg>
           <svg v-else-if="thirdIcon === 'calendar-blank'" viewBox="0 0 256 256" fill="currentColor" focusable="false">
             <path d="M208,32H184V24a8,8,0,0,0-16,0v8H88V24a8,8,0,0,0-16,0v8H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V88H208V208ZM48,72V48H72v8a8,8,0,0,0,16,0V48h80v8a8,8,0,0,0,16,0V48h24V72Z" />
+          </svg>
+          <svg v-else-if="thirdIcon === 'user-circle'" viewBox="0 0 256 256" fill="currentColor" focusable="false">
+            <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24ZM74.08,197.5a64,64,0,0,1,107.84,0,87.83,87.83,0,0,1-107.84,0ZM96,120a32,32,0,1,1,32,32A32,32,0,0,1,96,120Zm97.76,66.41a79.66,79.66,0,0,0-36.06-28.75,48,48,0,1,0-59.4,0,79.66,79.66,0,0,0-36.06,28.75,88,88,0,1,1,131.52,0Z" />
           </svg>
           <svg v-else viewBox="0 0 256 256" fill="currentColor" focusable="false">
             <path d="M76,152a36,36,0,1,0,36,36A36,36,0,0,0,76,152Zm0,56a20,20,0,1,1,20-20A20,20,0,0,1,76,208ZM42.34,106.34,56.69,92,42.34,77.66A8,8,0,0,1,53.66,66.34L68,80.69,82.34,66.34A8,8,0,0,1,93.66,77.66L79.31,92l14.35,14.34a8,8,0,0,1-11.32,11.32L68,103.31,53.66,117.66a8,8,0,0,1-11.32-11.32Zm187.32,96a8,8,0,0,1-11.32,11.32L204,199.31l-14.34,14.35a8,8,0,0,1-11.32-11.32L192.69,188l-14.35-14.34a8,8,0,0,1,11.32-11.32L204,176.69l14.34-14.35a8,8,0,0,1,11.32,11.32L215.31,188Zm-45.19-89.51c-6.18,22.33-25.32,41.63-46.53,46.93A8.13,8.13,0,0,1,136,160a8,8,0,0,1-1.93-15.76c15.63-3.91,30.35-18.91,35-35.68,3.19-11.5,3.22-29-14.71-46.9L152,59.31V80a8,8,0,0,1-16,0V40a8,8,0,0,1,8-8h40a8,8,0,0,1,0,16H163.31l2.35,2.34C183.9,68.59,190.58,90.78,184.47,112.83Z" />
