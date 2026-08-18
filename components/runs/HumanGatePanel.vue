@@ -58,7 +58,7 @@ function decide(status: GateDecisionRequest['status']) {
 </template>
 
 <style scoped>
-.human-gate { display: grid; gap: var(--ll-space-4); padding: var(--ll-space-5); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); }
+.human-gate { display: grid; gap: var(--ll-space-4); padding: var(--ll-space-5); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ui-surface-radius, var(--ll-radius-structural)); }
 .human-gate__header { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-3); }
 .human-gate p { margin: 0; color: var(--ll-color-text-muted); line-height: 1.55; }
 .human-gate__hint { font-size: var(--ll-text-xs); }

@@ -87,7 +87,7 @@ withDefaults(defineProps<{
 }
 
 .ui-breadcrumb__link:focus-visible {
-  border-radius: 0.125rem;
+  border-radius: var(--ll-radius-xs);
   outline: 2px solid currentColor;
   outline-offset: 0.25rem;
 }

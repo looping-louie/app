@@ -1982,11 +1982,11 @@ onBeforeUnmount(() => {
                     <code>--ui-section-stage-shell-padding</code>
                   </div>
                   <p class="ds-property__copy">
-                    The shell owns the thin padding band and the corner geometry. Its structural
-                    radius is shared with cards and the main navigation dropdown: 30px on small
-                    screens and 40px from 640px upwards, following Mastra’s antigrid radius. The
-                    stage adds its shell inset to the outer SVG curve so its inner visual radius
-                    remains identical.
+                    The shell owns the thin padding band and the corner geometry. Its 24px
+                    <code>--ll-radius-stage</code> radius is also inherited by cards and data
+                    surfaces inside the stage, while surfaces elsewhere keep the larger structural
+                    radius. The stage adds its shell inset to the outer SVG curve so its inner
+                    visual radius remains identical.
                   </p>
                 </div>
               </div>
@@ -3313,7 +3313,7 @@ onBeforeUnmount(() => {
   padding: 0.3rem 0.45rem;
   color: var(--ll-color-text-muted);
   background: var(--ll-color-highlight);
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   font: 500 0.6875rem / 1 var(--ll-font-mono);
 }
 
@@ -3638,7 +3638,7 @@ onBeforeUnmount(() => {
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
   background: var(--ll-color-highlight);
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   font: 500 0.625rem / 1 var(--ll-font-mono);
   white-space: nowrap;
 }
@@ -3802,7 +3802,7 @@ onBeforeUnmount(() => {
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
   background: var(--ll-color-highlight);
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   font: 500 0.625rem / 1 var(--ll-font-mono);
   white-space: nowrap;
 }
@@ -3920,7 +3920,7 @@ onBeforeUnmount(() => {
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
   background: var(--ll-color-highlight);
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   font-size: 0.625rem;
 }
 

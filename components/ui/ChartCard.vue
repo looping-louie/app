@@ -49,7 +49,7 @@ withDefaults(defineProps<{
   color: var(--ll-color-ink);
   background: var(--ll-color-card);
   border: 1px solid var(--ll-color-divider);
-  border-radius: var(--ll-radius-structural);
+  border-radius: var(--ui-surface-radius, var(--ll-radius-structural));
 }
 
 .ui-chart-card__header {

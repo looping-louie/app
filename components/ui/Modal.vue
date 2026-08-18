@@ -148,10 +148,10 @@ onBeforeUnmount(() => {
 .ui-modal__panel {
   --ui-modal-radius: var(--ll-radius-modal);
   --ui-modal-close-size: 2rem;
-  --ui-modal-close-radius: 1rem;
+  --ui-modal-close-radius: calc(var(--ui-modal-close-size) * 0.5);
   --ui-modal-close-inset: calc(var(--ui-modal-radius) - var(--ui-modal-close-radius) - 1px);
   --ui-modal-action-height: 2.125rem;
-  --ui-modal-action-radius: 1.0625rem;
+  --ui-modal-action-radius: calc(var(--ui-modal-action-height) * 0.5);
   --ui-modal-action-inset: calc(var(--ui-modal-radius) - var(--ui-modal-action-radius) - 1px);
 
   position: relative;

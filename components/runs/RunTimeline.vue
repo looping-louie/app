@@ -77,7 +77,7 @@ function eventDetail(event: PipelineRunEventResponse) {
 </template>
 
 <style scoped>
-.run-timeline { display: grid; gap: var(--ll-space-5); padding: var(--ll-space-6); background: var(--ll-color-card); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); }
+.run-timeline { display: grid; gap: var(--ll-space-5); padding: var(--ll-space-6); background: var(--ll-color-card); border: 1px solid var(--ll-color-divider); border-radius: var(--ui-surface-radius, var(--ll-radius-structural)); }
 .run-timeline__heading, .run-timeline__event-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--ll-space-4); }
 .run-timeline h2, .run-timeline p { margin: 0; }
 .run-timeline__heading p, .run-timeline__event p, .run-timeline__empty { color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
