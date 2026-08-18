@@ -52,7 +52,7 @@ const agentSearchItems = computed(() => agents.value.map(agent => ({
 })))
 
 async function selectAgentSearchResult(item: { id: string }) {
-  await router.push(`/app/personas/${encodeURIComponent(item.id)}`)
+  await router.push(`/personas/${encodeURIComponent(item.id)}`)
 }
 
 definePageMeta({
@@ -69,7 +69,7 @@ useHead({
     title="Agents"
     description="Agent roles available to loops and pipelines."
   >
-    <template #actions><UiButton to="/app/personas/new">Create new agent</UiButton></template>
+    <template #actions><UiButton to="/personas/new">Create new agent</UiButton></template>
     <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="agentStatus"
@@ -100,7 +100,7 @@ useHead({
         <UiCard
           v-for="agent in agents"
           :key="agent.id"
-          :to="`/app/personas/${encodeURIComponent(agent.id)}`"
+          :to="`/personas/${encodeURIComponent(agent.id)}`"
           variant="media"
           accent-on-hover
           class="catalog-card"

@@ -29,7 +29,7 @@ useHead(() => ({
     class="skill-page"
     :title="skill?.name"
     :description="skill?.description"
-    :breadcrumbs="skill ? [{ label: 'Skills', to: '/app/skills' }, { label: skill.name }] : []"
+    :breadcrumbs="skill ? [{ label: 'Skills', to: '/skills' }, { label: skill.name }] : []"
     :show-heading="Boolean(skill)"
   >
     <template #actions>

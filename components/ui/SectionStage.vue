@@ -108,7 +108,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 .ui-section-stage {
   --ui-section-stage-shell-padding: 1rem;
   --ui-section-stage-shell-radius: calc(
-    var(--ll-radius-structural) + var(--ui-section-stage-shell-padding)
+    var(--ll-radius-stage) + var(--ui-section-stage-shell-padding)
   );
 
   position: relative;
@@ -143,6 +143,8 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 }
 
 .ui-section-stage__content {
+  --ui-surface-radius: var(--ll-radius-stage);
+
   position: relative;
   z-index: 1;
   padding: var(--ui-section-stage-shell-padding);

@@ -33,7 +33,7 @@ const saveError = ref('')
 const exitModalOpen = ref(false)
 const exitActionPending = ref(false)
 const allowRouteLeave = ref(false)
-const pendingDestination = ref('/app/personas')
+const pendingDestination = ref('/personas')
 const questionRoot = ref<HTMLElement | null>(null)
 const nameField = ref<InstanceType<typeof UiTextField> | null>(null)
 const promptField = ref<InstanceType<typeof UiTextField> | null>(null)
@@ -193,7 +193,7 @@ async function createAgent() {
     localStorage.removeItem(localKey)
     clearNuxtData('agents-catalog')
     allowRouteLeave.value = true
-    await router.push(`/app/personas/${encodeURIComponent(agent.id)}`)
+    await router.push(`/personas/${encodeURIComponent(agent.id)}`)
   } catch (error) {
     saveError.value = apiErrorMessage(error, 'The agent could not be saved. Please try again.')
     saveLocalDraft()
@@ -314,7 +314,7 @@ useHead({ title: 'Create an agent · Looping Louie' })
   <WizardShell :steps="steps" :current="stepIndex" class="agent-builder">
     <div class="agent-builder__layout" :class="{ 'agent-builder__layout--skills': step === 'skills' }">
       <main ref="questionRoot" class="agent-builder__question">
-      <UiBreadcrumb :items="[{ label: 'Agents', to: '/app/personas' }, { label: 'Create new agent' }]" class="agent-builder__breadcrumb" />
+      <UiBreadcrumb :items="[{ label: 'Agents', to: '/personas' }, { label: 'Create new agent' }]" class="agent-builder__breadcrumb" />
 
       <Transition name="builder-question" mode="out-in" @after-enter="focusCurrentStep">
         <section v-if="step === 'details'" key="details" class="builder-panel" @keydown="onPanelKeydown">

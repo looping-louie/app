@@ -63,7 +63,7 @@ function addSkill(item: SkillPaletteItem) {
     <h3 id="persona-skills-title">Skills:</h3>
     <ul class="persona-skills-editor__list">
       <li v-for="skillId in skillIds" :key="skillId">
-        <UiButton :to="editing ? undefined : `/app/skills/${encodeURIComponent(skillId)}`" variant="secondary" size="sm">
+        <UiButton :to="editing ? undefined : `/skills/${encodeURIComponent(skillId)}`" variant="secondary" size="sm">
           {{ skillLabel(skillId) }}
         </UiButton>
         <span v-if="editing" class="persona-skills-editor__remove-control">

@@ -476,7 +476,7 @@ onBeforeUnmount(resetDragState)
   padding: var(--ll-space-2) var(--ll-space-3);
   background: var(--ll-color-metal-025);
   border: 1px solid var(--ll-color-divider);
-  border-radius: 999px;
+  border-radius: var(--ll-radius-pill);
   font: 650 var(--ll-text-xs) / 1 var(--ll-font-control);
   box-shadow: var(--ll-shadow-raised);
 }

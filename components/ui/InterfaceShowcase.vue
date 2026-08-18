@@ -106,13 +106,14 @@ function handleKeydown(event: KeyboardEvent, index: number) {
 <style scoped>
 .ui-interface-showcase {
   --ui-interface-panel: var(--ll-color-card);
+  --ui-interface-shoulder-size: var(--ll-space-5);
 
   position: relative;
   padding: var(--ll-space-5);
   overflow: hidden;
   background: var(--ll-color-canvas);
   border: 1px solid var(--ll-color-divider);
-  border-radius: 2rem;
+  border-radius: var(--ll-radius-structural);
 }
 
 .ui-interface-showcase__tabs {
@@ -177,21 +178,21 @@ function handleKeydown(event: KeyboardEvent, index: number) {
 .ui-interface-showcase__tab.is-active::after {
   position: absolute;
   bottom: -1px;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: var(--ui-interface-shoulder-size);
+  height: var(--ui-interface-shoulder-size);
   pointer-events: none;
   content: '';
 }
 
 .ui-interface-showcase__tab.is-active::before {
-  left: -1.25rem;
-  border-bottom-right-radius: 1.25rem;
+  left: calc(-1 * var(--ui-interface-shoulder-size));
+  border-bottom-right-radius: var(--ui-interface-shoulder-size);
   box-shadow: 0.5rem 0.5rem 0 0.25rem var(--ui-interface-panel);
 }
 
 .ui-interface-showcase__tab.is-active::after {
-  right: -1.25rem;
-  border-bottom-left-radius: 1.25rem;
+  right: calc(-1 * var(--ui-interface-shoulder-size));
+  border-bottom-left-radius: var(--ui-interface-shoulder-size);
   box-shadow: -0.5rem 0.5rem 0 0.25rem var(--ui-interface-panel);
 }
 

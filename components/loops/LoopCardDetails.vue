@@ -45,7 +45,7 @@ function personaLabel(personaId: string) {
         <NuxtLink
           v-for="modelId in uniqueModels"
           :key="modelId"
-          :to="`/app/settings/models?model=${encodeURIComponent(modelId)}`"
+          :to="`/settings/models?model=${encodeURIComponent(modelId)}`"
           class="loop-card-details__model-pill"
           :aria-label="modelId"
         >
@@ -62,7 +62,7 @@ function personaLabel(personaId: string) {
         <NuxtLink
           v-for="(agent, index) in agents"
           :key="`${agent.persona_id}-${index}`"
-          :to="`/app/personas/${encodeURIComponent(agent.persona_id)}`"
+          :to="`/personas/${encodeURIComponent(agent.persona_id)}`"
           class="loop-card-details__avatar loop-card-details__avatar--agent"
           :aria-label="personaLabel(agent.persona_id)"
         >

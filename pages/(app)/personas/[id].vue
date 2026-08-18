@@ -162,7 +162,7 @@ async function deletePersona() {
       if (!['instruction_not_found', 'instruction_not_owned'].includes(apiErrorCode(cause) ?? '')) throw cause
     }
     deleteModalOpen.value = false
-    window.location.replace('/app/personas')
+    window.location.replace('/personas')
   } catch (cause) {
     deleteError.value = apiErrorMessage(cause, 'The agent could not be deleted. Please try again.')
   } finally {
@@ -201,7 +201,7 @@ useHead(() => ({
   <PageShell
     class="persona-page"
     :breadcrumbs="persona ? [
-      { label: 'Agents', to: '/app/personas' },
+      { label: 'Agents', to: '/personas' },
       { label: persona.name },
     ] : []"
     :show-heading="Boolean(persona)"

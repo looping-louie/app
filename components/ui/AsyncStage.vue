@@ -78,7 +78,7 @@ defineEmits<{
   padding: var(--ll-space-6);
   color: var(--ll-color-text-muted);
   background: var(--ll-color-section);
-  border-radius: var(--ll-radius-structural);
+  border-radius: var(--ui-surface-radius, var(--ll-radius-structural));
   font-size: var(--ll-text-sm);
   text-align: center;
 }

@@ -187,7 +187,7 @@ function onPassingScoreInput(event: Event) {
   color: var(--ll-color-ink);
   background: var(--ll-color-card);
   border: 1px solid var(--ll-color-divider);
-  border-radius: 999px;
+  border-radius: var(--ll-radius-pill);
   outline: none;
   font: 600 var(--ll-text-sm) / 1 var(--ll-font-control);
   text-align: center;

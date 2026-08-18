@@ -124,15 +124,15 @@ const navGroups = [
     { to: '/runs', label: 'Runs', icon: iconRuns }
   ],
   [
-    { to: '/app/observability', label: 'Observability', icon: iconObservability }
+    { to: '/observability', label: 'Observability', icon: iconObservability }
   ],
   [
-    { to: '/app/pipelines', label: 'Pipelines', icon: iconPipelines },
-    { to: '/app/personas', label: 'Agents', icon: iconAgents },
-    { to: '/app/skills', label: 'Skills', icon: iconSkills }
+    { to: '/pipelines', label: 'Pipelines', icon: iconPipelines },
+    { to: '/personas', label: 'Agents', icon: iconAgents },
+    { to: '/skills', label: 'Skills', icon: iconSkills }
   ],
   [
-    { to: '/app/settings', label: 'Settings', icon: iconSettings }
+    { to: '/settings', label: 'Settings', icon: iconSettings }
   ]
 ]
 
@@ -145,10 +145,7 @@ const currentLabel = computed(() => {
 
 function isActive(to: string) {
   if (to === '/runs') {
-    return ['/', '/runs', '/app/runs'].includes(route.path)
-  }
-  if (to === '/app') {
-    return route.path === '/app'
+    return ['/', '/runs'].includes(route.path)
   }
   return route.path === to || route.path.startsWith(to + '/')
 }
@@ -203,7 +200,7 @@ function closeMobile() {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 0.75rem;
+  border-radius: var(--ll-radius-sm);
   background: transparent;
   text-decoration: none;
   font-weight: 700;
@@ -226,7 +223,7 @@ function closeMobile() {
   color: var(--ll-color-text-muted);
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   align-items: center;
   justify-content: center;
 }
@@ -267,7 +264,7 @@ function closeMobile() {
   justify-content: center;
   width: 100%;
   height: 44px;
-  border-radius: 0.625rem;
+  border-radius: var(--ll-radius-sm);
   color: var(--ll-color-text-muted);
   text-decoration: none;
   transition: color 0.2s, background 0.2s;
@@ -310,7 +307,7 @@ function closeMobile() {
   padding-inline: var(--ll-space-4);
   color: var(--ll-color-ink);
   background: var(--ll-color-highlight);
-  border-radius: 0.625rem;
+  border-radius: var(--ll-radius-sm);
   font: 600 var(--ll-text-xs) / 1 var(--ll-font-control);
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -410,7 +407,7 @@ function closeMobile() {
   justify-content: center;
   background: transparent;
   border: 1px solid var(--ll-color-divider);
-  border-radius: 0.5rem;
+  border-radius: var(--ll-radius-sm);
   color: var(--ll-color-ink);
   cursor: pointer;
   padding: 0.4rem;

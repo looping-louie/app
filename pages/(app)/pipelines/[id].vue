@@ -70,7 +70,7 @@ const { data: pipeline, status, error, refresh } = await useAsyncData(
 const statusValue = computed(() => pipeline.value?.enabled ? 'active' : 'disabled')
 const editStatusValue = computed(() => editEnabled.value ? 'active' : 'disabled')
 const breadcrumbItems = computed(() => [
-  { label: 'Pipelines', to: '/app/pipelines' },
+  { label: 'Pipelines', to: '/pipelines' },
   { label: statusValue.value === 'active' ? 'Active' : 'Disabled' },
 ])
 const detailItems = computed<DetailRow[]>(() => {
@@ -213,7 +213,7 @@ async function duplicatePipeline() {
       steps: pipelineStepRequestsFromResponse(pipeline.value.steps),
     })
     clearNuxtData('pipelines-catalog')
-    await router.push(`/app/pipelines/${encodeURIComponent(duplicate.id)}`)
+    await router.push(`/pipelines/${encodeURIComponent(duplicate.id)}`)
     pipeline.value = duplicate
   } catch (cause) {
     actionError.value = apiErrorMessage(cause, 'The pipeline could not be duplicated. Please try again.')
@@ -249,7 +249,7 @@ async function deletePipeline() {
   try {
     await api.pipelines.remove(pipelineId.value)
     deleteModalOpen.value = false
-    window.location.replace('/app/pipelines')
+    window.location.replace('/pipelines')
   } catch (cause) {
     deleteError.value = apiErrorMessage(cause, 'The pipeline could not be deleted. Please try again.')
   } finally {

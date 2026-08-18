@@ -87,7 +87,7 @@ useHead({
     title="Pipelines"
     description="Ordered workflows that connect loops with human checkpoints."
   >
-    <template #actions><UiButton to="/app/pipelines/new">Create new pipeline</UiButton></template>
+    <template #actions><UiButton to="/pipelines/new">Create new pipeline</UiButton></template>
     <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="pipelineStatus"
@@ -115,7 +115,7 @@ useHead({
         <UiCard
           v-for="pipeline in displayedPipelines"
           :key="pipeline.id"
-          :to="`/app/pipelines/${encodeURIComponent(pipeline.id)}`"
+          :to="`/pipelines/${encodeURIComponent(pipeline.id)}`"
           variant="editorial"
           accent-on-hover
           class="catalog-card"

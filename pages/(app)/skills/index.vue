@@ -52,7 +52,7 @@ const skillSearchItems = computed(() => skills.value.map(skill => ({
 })))
 
 async function selectSkillSearchResult(item: { id: string }) {
-  await router.push(`/app/skills/${encodeURIComponent(item.id)}`)
+  await router.push(`/skills/${encodeURIComponent(item.id)}`)
 }
 
 definePageMeta({
@@ -69,7 +69,7 @@ useHead({
     title="Skills"
     description="Capabilities available to agents when they participate in a loop."
   >
-    <template #actions><UiButton to="/app/skills/new">Create new skill</UiButton></template>
+    <template #actions><UiButton to="/skills/new">Create new skill</UiButton></template>
     <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="skillStatus"
@@ -100,7 +100,7 @@ useHead({
         <UiCard
           v-for="skill in skills"
           :key="skill.id"
-          :to="`/app/skills/${skill.id}`"
+          :to="`/skills/${skill.id}`"
           variant="editorial"
           accent-on-hover
           class="catalog-card"

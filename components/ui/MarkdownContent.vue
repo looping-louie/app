@@ -131,7 +131,7 @@ defineExpose({ focus: () => root.value?.focus(), readMarkdown })
 .ui-markdown-content :deep(code) {
   padding: 0.125rem 0.3rem;
   background: var(--ll-color-highlight);
-  border-radius: 0.25rem;
+  border-radius: var(--ll-radius-xs);
   font: 500 0.88em / 1.4 var(--ll-font-mono);
 }
 
@@ -142,7 +142,7 @@ defineExpose({ focus: () => root.value?.focus(), readMarkdown })
   color: var(--ll-color-ink);
   background: var(--ll-color-canvas);
   border: 1px solid var(--ll-color-divider);
-  border-radius: 0.625rem;
+  border-radius: var(--ll-radius-sm);
 }
 
 .ui-markdown-content :deep(pre code) {
