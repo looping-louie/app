@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import UiButton from '~/components/ui/Button.vue'
+import UiToggle from '~/components/ui/Toggle.vue'
+
 export interface PillOption {
   value: string
   label: string
@@ -10,6 +13,8 @@ type DropdownAlign = 'left' | 'right'
 type SelectionType = 'radio' | 'checkbox'
 type IconStyle = 'plain' | 'circle'
 type AriaHasPopup = 'dialog' | 'grid' | 'listbox' | 'menu' | 'tree'
+type PillVariant = 'compact' | 'catalog'
+type PillActionVisibility = 'always' | 'hover'
 
 const props = withDefaults(defineProps<{
   src?: string
@@ -25,6 +30,18 @@ const props = withDefaults(defineProps<{
   selectionType?: SelectionType
   options?: PillOption[]
   modelValue?: string | string[]
+  variant?: PillVariant
+  description?: string
+  toggle?: boolean
+  toggleValue?: boolean
+  toggleLabel?: string
+  toggleDisabled?: boolean
+  actionIconPath?: string
+  actionLabel?: string
+  actionHref?: string
+  actionTarget?: string
+  actionRel?: string
+  actionVisibility?: PillActionVisibility
 }>(), {
   src: undefined,
   alt: '',
@@ -39,11 +56,25 @@ const props = withDefaults(defineProps<{
   selectionType: 'radio',
   options: () => [],
   modelValue: undefined,
+  variant: 'compact',
+  description: undefined,
+  toggle: false,
+  toggleValue: false,
+  toggleLabel: 'Toggle item',
+  toggleDisabled: false,
+  actionIconPath: undefined,
+  actionLabel: 'Open action',
+  actionHref: undefined,
+  actionTarget: undefined,
+  actionRel: undefined,
+  actionVisibility: 'always',
 })
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | string[]]
+  'update:toggleValue': [value: boolean]
   click: [event: MouseEvent]
+  action: [event: MouseEvent]
 }>()
 
 const slots = useSlots()
@@ -159,6 +190,7 @@ onBeforeUnmount(() => {
     class="ui-icon-pill"
     :class="[
       `ui-icon-pill--align-${dropdownAlign}`,
+      `ui-icon-pill--${variant}`,
       {
         'ui-icon-pill--text-only': !hasMedia,
         'ui-icon-pill--icon-only': hasMedia && !hasLabel,
@@ -171,8 +203,56 @@ onBeforeUnmount(() => {
       },
     ]"
   >
+    <template v-if="variant === 'catalog'">
+      <span class="ui-icon-pill__catalog-content">
+        <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
+          <img :src="src" :alt="alt" width="44" height="44" loading="lazy">
+        </span>
+        <span
+          v-else-if="$slots.icon"
+          :class="iconStyle === 'circle' ? 'ui-icon-pill__media ui-icon-pill__media--icon' : 'ui-icon-pill__icon'"
+          aria-hidden="true"
+        >
+          <slot name="icon" />
+        </span>
+        <span class="ui-icon-pill__catalog-copy">
+          <strong v-if="hasLabel"><slot /></strong>
+          <span v-if="description">{{ description }}</span>
+        </span>
+      </span>
+
+      <span v-if="actionIconPath || toggle" class="ui-icon-pill__actions">
+        <UiButton
+          v-if="actionIconPath"
+          class="ui-icon-pill__action"
+          :class="`ui-icon-pill__action--${actionVisibility}`"
+          variant="stroke"
+          size="sm"
+          icon-only
+          :href="actionHref"
+          :target="actionTarget"
+          :rel="actionRel || (actionTarget === '_blank' ? 'noopener noreferrer' : undefined)"
+          :aria-label="actionLabel"
+          @click.stop="emit('action', $event)"
+        >
+          <template #leading>
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+              <path :d="actionIconPath" />
+            </svg>
+          </template>
+        </UiButton>
+        <UiToggle
+          v-if="toggle"
+          :model-value="toggleValue"
+          :disabled="toggleDisabled"
+          :aria-label="toggleLabel"
+          @update:model-value="emit('update:toggleValue', $event)"
+        />
+      </span>
+    </template>
+
     <button
-      v-if="clickable"
+      v-else-if="clickable"
       ref="trigger"
       type="button"
       class="ui-icon-pill__trigger"
@@ -197,7 +277,7 @@ onBeforeUnmount(() => {
     </button>
 
     <span
-      v-else
+      v-else-if="variant === 'compact'"
       class="ui-icon-pill__trigger"
       :tabindex="tooltip && focusable ? 0 : undefined"
       :aria-label="ariaLabel || (!hasLabel ? tooltip : undefined)"
@@ -216,12 +296,12 @@ onBeforeUnmount(() => {
       <span v-if="hasLabel" class="ui-icon-pill__label"><slot /></span>
     </span>
 
-    <span v-if="tooltip" :id="tooltipId" class="ui-icon-pill__tooltip" role="tooltip">
+    <span v-if="variant === 'compact' && tooltip" :id="tooltipId" class="ui-icon-pill__tooltip" role="tooltip">
       {{ tooltip }}
     </span>
 
     <svg
-      v-if="hasDropdown && connected"
+      v-if="variant === 'compact' && hasDropdown && connected"
       class="ui-icon-pill__shoulder"
       viewBox="0 0 16 16"
       preserveAspectRatio="none"
@@ -233,7 +313,7 @@ onBeforeUnmount(() => {
 
     <Transition name="ui-icon-pill-dropdown" @after-leave="onDropdownAfterLeave">
       <div
-        v-if="hasDropdown && open"
+        v-if="variant === 'compact' && hasDropdown && open"
         :id="dropdownId"
         class="ui-icon-pill__dropdown"
         :role="options.length && selectionType === 'radio' ? 'radiogroup' : 'group'"
@@ -300,6 +380,88 @@ onBeforeUnmount(() => {
 }
 
 .ui-icon-pill--open { z-index: 10; }
+
+.ui-icon-pill--catalog {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 4.375rem;
+  box-sizing: border-box;
+  align-items: center;
+  gap: var(--ll-space-3);
+  padding: var(--ll-space-3);
+  background: transparent;
+  border: 1px solid var(--ll-color-metal-200);
+  border-radius: var(--ll-radius-structural);
+  transition:
+    border-color var(--ll-duration-normal) var(--ll-ease-out),
+    background var(--ll-duration-normal) var(--ll-ease-out),
+    box-shadow var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-icon-pill--catalog:hover,
+.ui-icon-pill--catalog:focus-within {
+  background: var(--ll-color-card);
+  border-color: var(--ll-color-divider);
+  box-shadow: var(--ll-shadow-raised);
+}
+
+.ui-icon-pill__catalog-content {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--ll-space-3);
+}
+
+.ui-icon-pill__catalog-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.ui-icon-pill__catalog-copy strong,
+.ui-icon-pill__catalog-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-icon-pill__catalog-copy strong {
+  color: var(--ll-color-ink);
+  font: 600 var(--ll-text-sm) / 1.2 var(--ll-font-control);
+}
+
+.ui-icon-pill__catalog-copy > span {
+  color: var(--ll-color-text-muted);
+  font: 400 var(--ll-text-xs) / 1.35 var(--ll-font-control);
+}
+
+.ui-icon-pill__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--ll-space-2);
+}
+
+.ui-icon-pill__action--hover {
+  opacity: 0;
+  transition: opacity var(--ll-duration-fast) var(--ll-ease-out);
+}
+
+.ui-icon-pill--catalog:hover .ui-icon-pill__action--hover,
+.ui-icon-pill__action--hover:focus-visible { opacity: 1; }
+
+.ui-icon-pill--catalog .ui-icon-pill__media {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.ui-icon-pill--catalog .ui-icon-pill__media--icon :deep(svg) {
+  width: 1.125rem;
+  height: 1.125rem;
+}
 
 .ui-icon-pill__trigger {
   position: relative;
@@ -563,5 +725,11 @@ button.ui-icon-pill__trigger:focus-visible {
 
   .ui-icon-pill__option.is-confirming { animation: none; }
   .ui-icon-pill__tooltip { transition: none; }
+  .ui-icon-pill--catalog,
+  .ui-icon-pill__action--hover { transition: none; }
+}
+
+@media (hover: none) {
+  .ui-icon-pill__action--hover { opacity: 1; }
 }
 </style>

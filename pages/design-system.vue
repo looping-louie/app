@@ -58,6 +58,8 @@ const sampleCommandPaletteSelection = ref('No command selected')
 const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
 const pillAreas = ref<string[]>(['software_engineering'])
+const pillCatalogEnabled = ref(true)
+const pillActionIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
 const samplePaginationOffset = ref(24)
 const buttonDropdownSelection = ref('No action selected')
 const copiedCommand = ref<string | null>(null)
@@ -1245,6 +1247,26 @@ onBeforeUnmount(() => {
                     tooltip="deepseek-v4-pro"
                   />
                 </div>
+
+                <div class="ds-icon-pill-example ds-icon-pill-example--catalog">
+                  <span class="ds-stage__caption">Catalog · hover action + persistent toggle</span>
+                  <UiPill
+                    v-model:toggle-value="pillCatalogEnabled"
+                    variant="catalog"
+                    src="/images/models/deepseek.webp"
+                    alt=""
+                    description="deepseek-v4-pro"
+                    toggle
+                    :toggle-label="`${pillCatalogEnabled ? 'Disable' : 'Enable'} deepseek-v4-pro`"
+                    :action-icon-path="pillActionIconPath"
+                    action-label="View official information about deepseek-v4-pro"
+                    action-href="https://api-docs.deepseek.com/quick_start/pricing"
+                    action-target="_blank"
+                    action-visibility="hover"
+                  >
+                    DeepSeek
+                  </UiPill>
+                </div>
               </div>
 
               <div class="ds-stage ds-stage--icon-pills">
@@ -1323,6 +1345,10 @@ onBeforeUnmount(() => {
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Alignment</span><code>dropdownAlign</code></div>
                   <p class="ds-property__copy"><strong>left</strong> is the default connected geometry. <strong>right</strong> mirrors the shoulder and anchors the wider dropdown to the pill’s right edge.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Catalog actions</span><code>variant="catalog" · toggle · actionIconPath · actionVisibility</code></div>
+                  <p class="ds-property__copy">Catalog pills can append an optional icon-only Stroke action and an optional UiToggle. The toggle remains visible; the action can remain visible or appear on hover while staying keyboard accessible.</p>
                 </div>
               </div>
 
@@ -3382,6 +3408,8 @@ onBeforeUnmount(() => {
   justify-items: start;
   gap: var(--ll-space-3);
 }
+
+.ds-icon-pill-example--catalog { width: min(100%, 28rem); }
 
 .ds-pill-dropdown {
   display: grid;
