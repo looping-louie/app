@@ -10,9 +10,8 @@ import UiModal from '~/components/ui/Modal.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import type {
-  LoopActivityConfig,
+  ActivityLoopConfig,
   PipelineActivityStepRequest,
-  QuizActivityConfig,
 } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
@@ -94,7 +93,7 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
   pipeline.value?.steps.forEach((activity, index) => {
     const instanceId = `pipeline-detail-step-${index}`
     if (activity.type.endsWith('_loop')) {
-      const config = activity.config as LoopActivityConfig
+      const config = activity.config as ActivityLoopConfig
       result.push({
         instanceId,
         type: 'loop',
@@ -110,17 +109,11 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
     }
 
     const isQuiz = activity.type === 'quiz'
-    const quiz = isQuiz ? (activity.config as QuizActivityConfig).quiz : undefined
-    const passingScore = typeof quiz?.minimum_correct_answers === 'number'
-      ? quiz.minimum_correct_answers
-      : undefined
     result.push({
       instanceId,
       type: 'human-gate',
       gate: isQuiz ? 'multiple-choice-quiz' : 'human-review',
       title: activity.name,
-      teamMembers: isQuiz ? undefined : ['any-person'],
-      passingScore,
     })
   })
   return result

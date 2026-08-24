@@ -1,9 +1,8 @@
 <script lang="ts">
-export type PipelineCanvasHumanGateKind = 'human-review' | 'four-eye-review' | 'multiple-choice-quiz'
+export type PipelineCanvasHumanGateKind = 'human-review' | 'multiple-choice-quiz'
 
 export interface PipelineCanvasLoopAgent {
   persona_id: string
-  model_id: string
   role: string
 }
 
@@ -32,8 +31,6 @@ export interface PipelineCanvasHumanGateActivity {
   type: 'human-gate'
   gate: PipelineCanvasHumanGateKind
   title: string
-  teamMembers?: Array<'any-person' | null>
-  passingScore?: number | null
 }
 
 export type PipelineCanvasActivity = PipelineCanvasLoopActivity | PipelineCanvasHumanGateActivity
@@ -67,8 +64,6 @@ const emit = defineEmits<{
   'edit-loop': [instanceId: string]
   'remove': [instanceId: string]
   'move': [sourceId: string, targetId: string]
-  'choose-member': [instanceId: string, slotIndex: number]
-  'update-passing-score': [instanceId: string, value: number | null]
 }>()
 
 const canvasRoot = ref<HTMLElement | null>(null)
@@ -89,7 +84,6 @@ function previousLoopDepth(index: number) {
 
 function failureModeFor(activity: PipelineCanvasActivity, index: number) {
   if (activity.type === 'loop') return 'stop' as const
-  if (activity.gate === 'multiple-choice-quiz') return 'retry' as const
   return previousLoopDepth(index) ? 'previous' as const : 'stop' as const
 }
 
@@ -103,14 +97,6 @@ function closeMenuAndEmit(event: 'add-loop' | 'add-human-gate' | 'add-hook') {
 function removeActivity(instanceId: string) {
   addMenuOpen.value = false
   emit('remove', instanceId)
-}
-
-function chooseMember(instanceId: string, slotIndex: number) {
-  emit('choose-member', instanceId, slotIndex)
-}
-
-function updatePassingScore(instanceId: string, value: number | null) {
-  emit('update-passing-score', instanceId, value)
 }
 
 function resetDragState() {
@@ -262,12 +248,8 @@ onBeforeUnmount(resetDragState)
             :title="activity.title"
             :instance-id="activity.instanceId"
             :gate="activity.gate"
-            :team-members="activity.teamMembers"
-            :passing-score="activity.passingScore"
             :readonly="readonly"
             @remove="removeActivity"
-            @choose-member="chooseMember"
-            @update-passing-score="updatePassingScore"
           />
 
           <div v-if="!readonly" class="pipeline-canvas__drop-cue" aria-hidden="true">

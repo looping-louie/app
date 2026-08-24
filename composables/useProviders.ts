@@ -1,56 +1,87 @@
 import type { Ref } from 'vue'
-import type { ProviderPatchRequest, ProviderResponse } from '~/types/api'
+import type {
+  LinkedServiceCreateRequest,
+  LinkedServicePatchRequest,
+  LinkedServiceResponse,
+  ProviderId,
+} from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 
-export interface Provider {
-  id: string
-  provider: string
+export interface ProviderCatalogItem {
+  id: ProviderId
   name: string
   description: string
-  logo: string
-  enabled: boolean
+  logoUrl: string
   requiresApiKey: boolean
-  keyTrimmed?: string
-  baseUrl?: string
-  modelCount: number
+  defaultBaseUrl: string | null
+  modelCatalogNote: string | null
+  linkedServices: LinkedServiceResponse[]
 }
 
 export function useProviders() {
   const api = useApiClient()
-  const providers: Ref<Provider[]> = ref([])
+  const providers: Ref<ProviderCatalogItem[]> = ref([])
   const pending = ref(true)
   const error = ref<string | null>(null)
 
   async function fetchProviders() {
     pending.value = true
     error.value = null
+
     try {
-      const data = await api.providers.list()
-      providers.value = data.map(provider => ({
-        id: provider.provider,
-        provider: provider.provider,
+      const [catalog, linkedServices] = await Promise.all([
+        api.catalog.listProviders(),
+        api.linkedServices.list(),
+      ])
+
+      providers.value = catalog.map(provider => ({
+        id: provider.id,
         name: provider.name,
         description: provider.description,
-        logo: provider.logo_url,
-        enabled: provider.enabled,
+        logoUrl: provider.logo_url,
         requiresApiKey: provider.requires_api_key,
-        keyTrimmed: provider.key_trimmed ?? undefined,
-        baseUrl: provider.base_url ?? undefined,
-        modelCount: provider.model_count,
+        defaultBaseUrl: provider.default_base_url,
+        modelCatalogNote: provider.model_catalog_note,
+        linkedServices: linkedServices.filter(service => service.provider_type === provider.id),
       }))
-    } catch (err) {
-      error.value = apiErrorMessage(err, 'Unable to load providers.')
+    } catch (cause) {
+      error.value = apiErrorMessage(cause, 'Unable to load providers.')
     } finally {
       pending.value = false
     }
   }
 
-  async function saveCredential(id: string, body: ProviderPatchRequest): Promise<ProviderResponse> {
-    return await api.providers.patch(id, body)
+  function upsertLinkedService(service: LinkedServiceResponse) {
+    const provider = providers.value.find(item => item.id === service.provider_type)
+    if (!provider) return
+
+    const index = provider.linkedServices.findIndex(item => item.id === service.id)
+    if (index === -1) provider.linkedServices.push(service)
+    else provider.linkedServices[index] = service
   }
 
-  async function setEnabled(id: string, enabled: boolean): Promise<ProviderResponse> {
-    return await api.providers.patch(id, { enabled })
+  async function createLinkedService(body: LinkedServiceCreateRequest) {
+    const service = await api.linkedServices.create(body)
+    upsertLinkedService(service)
+    return service
+  }
+
+  async function patchLinkedService(id: string, body: LinkedServicePatchRequest) {
+    const service = await api.linkedServices.patch(id, body)
+    upsertLinkedService(service)
+    return service
+  }
+
+  async function deleteLinkedService(id: string) {
+    await api.linkedServices.remove(id)
+
+    for (const provider of providers.value) {
+      const index = provider.linkedServices.findIndex(service => service.id === id)
+      if (index !== -1) {
+        provider.linkedServices.splice(index, 1)
+        return
+      }
+    }
   }
 
   return {
@@ -58,7 +89,8 @@ export function useProviders() {
     pending,
     error,
     fetchProviders,
-    saveCredential,
-    setEnabled
+    createLinkedService,
+    patchLinkedService,
+    deleteLinkedService,
   }
 }

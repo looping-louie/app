@@ -1,5 +1,5 @@
-import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
-import { eventLatency, eventTokenCount } from '~/utils/pipelineRuns'
+import type { PipelineRunEventResponse } from '~/types/api'
+import { eventLatency, eventTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 export interface ObservabilityChart {
   title: string
@@ -10,10 +10,11 @@ export interface ObservabilityChart {
   line: string
 }
 
-export function observabilityMetrics(runs: PipelineRunResponse[]) {
+export function observabilityMetrics(snapshots: PipelineRunSnapshot[]) {
+  const runs = snapshots.map(snapshot => snapshot.run)
   const completed = runs.filter(run => run.status === 'completed')
   const terminal = runs.filter(run => ['completed', 'failed'].includes(run.status))
-  const latencies = runs.flatMap(run => run.events.map(eventLatency)).filter(Boolean)
+  const latencies = snapshots.flatMap(snapshot => snapshot.events.map(eventLatency)).filter(Boolean)
   return [
     { label: 'Completed runs', value: completed.length, trend: 'neutral' as const },
     { label: 'Success rate', value: terminal.length ? ((completed.length / terminal.length) * 100).toFixed(1) : '0.0', suffix: '%', trend: 'neutral' as const },
@@ -22,11 +23,11 @@ export function observabilityMetrics(runs: PipelineRunResponse[]) {
   ]
 }
 
-export function observabilityCharts(runs: PipelineRunResponse[]): ObservabilityChart[] {
+export function observabilityCharts(snapshots: PipelineRunSnapshot[]): ObservabilityChart[] {
   const buckets = weekBuckets()
-  const tokens = bucketEvents(runs, buckets, eventTokenCount)
-  const latency = bucketEvents(runs, buckets, eventLatency)
-  const volume = buckets.map(day => runs.filter(run => dayKey(run.created_at) === day).length)
+  const tokens = bucketEvents(snapshots, buckets, eventTokenCount)
+  const latency = bucketEvents(snapshots, buckets, eventLatency)
+  const volume = buckets.map(day => snapshots.filter(snapshot => dayKey(snapshot.run.created_at) === day).length)
   return [
     chart('Token usage', 'Codex token consumption reported by the execution ledger.', sum(tokens).toLocaleString(), 'Total tokens', 'Tokens', tokens),
     chart('Model latency', 'Time spent waiting for Codex responses.', `${(sum(latency) / 1000).toFixed(2)}s`, 'Total latency', 'Milliseconds', latency),
@@ -34,30 +35,30 @@ export function observabilityCharts(runs: PipelineRunResponse[]): ObservabilityC
   ]
 }
 
-export function observabilityLogs(runs: PipelineRunResponse[]) {
-  return runs.flatMap(run => run.events.map(event => ({
+export function observabilityLogs(snapshots: PipelineRunSnapshot[]) {
+  return snapshots.flatMap(({ run, events }) => events.map(event => ({
     id: event.id,
     created: new Date(event.created_at).toLocaleString(),
     createdValue: event.created_at,
-    type: event.type.replaceAll('_', ' '),
+    type: event.event_type.replaceAll('_', ' '),
     run: run.id,
-    activity: event.step_id ?? '—',
+    activity: event.activity_id ?? '—',
     error: errorMessage(event),
   }))).sort((first, second) => Date.parse(second.createdValue) - Date.parse(first.createdValue))
 }
 
 function bucketEvents(
-  runs: PipelineRunResponse[],
+  snapshots: PipelineRunSnapshot[],
   buckets: string[],
   value: (event: PipelineRunEventResponse) => number,
 ) {
-  return buckets.map(day => sum(runs.flatMap(run => run.events)
+  return buckets.map(day => sum(snapshots.flatMap(snapshot => snapshot.events)
     .filter(event => dayKey(event.created_at) === day)
     .map(value)))
 }
 
 function errorMessage(event: PipelineRunEventResponse) {
-  return event.type === 'step_failed' ? String(event.payload.message || 'Activity failed') : '—'
+  return event.event_type === 'step_failed' ? String(event.payload.message || 'Activity failed') : '—'
 }
 
 function chart(title: string, description: string, total: string, totalLabel: string, legend: string, values: number[]): ObservabilityChart {

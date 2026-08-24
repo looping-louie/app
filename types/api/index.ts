@@ -1,7 +1,6 @@
 export * from './activities'
 export * from './common'
 export * from './instructions'
-export * from './loops'
 export * from './models'
 export * from './pipelines'
 export * from './providers'

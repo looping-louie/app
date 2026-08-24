@@ -5,7 +5,6 @@ import UiCard from '~/components/ui/Card.vue'
 
 interface PipelineLoopAgent {
   persona_id: string
-  model_id: string
   role: string
 }
 

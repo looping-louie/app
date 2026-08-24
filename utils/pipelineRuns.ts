@@ -1,12 +1,16 @@
 import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
 
-export function runPrompt(run: PipelineRunResponse) {
-  const prompt = run.input.prompt
-  return typeof prompt === 'string' && prompt.trim() ? prompt.trim() : run.id
+export interface PipelineRunSnapshot {
+  run: PipelineRunResponse
+  events: PipelineRunEventResponse[]
 }
 
-export function runTokenCount(run: PipelineRunResponse) {
-  return run.events.reduce((total, event) => total + eventTokenCount(event), 0)
+export function runPrompt(run: PipelineRunResponse) {
+  return run.input.trim() || run.id
+}
+
+export function runTokenCount(events: PipelineRunEventResponse[]) {
+  return events.reduce((total, event) => total + eventTokenCount(event), 0)
 }
 
 export function eventTokenCount(event: PipelineRunEventResponse) {
@@ -18,12 +22,6 @@ export function eventTokenCount(event: PipelineRunEventResponse) {
 
 export function eventLatency(event: PipelineRunEventResponse) {
   return numberValue(event.payload.latency_ms) ?? 0
-}
-
-export function runDuration(run: PipelineRunResponse) {
-  const start = Date.parse(run.started_at ?? run.created_at)
-  const finish = Date.parse(run.finished_at ?? run.updated_at)
-  return Number.isFinite(start) && Number.isFinite(finish) ? Math.max(0, finish - start) : 0
 }
 
 export function eventLabel(type: string) {

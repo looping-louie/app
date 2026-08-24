@@ -13,19 +13,27 @@ interface Persona {
   name: string
   description?: string
   source_instruction_id?: string | null
+  linked_service: {
+    type: 'LinkedServiceReference'
+    reference_id: string
+  } | null
+  config: {
+    model: string
+  } | null
 }
 
-interface Model {
+interface LinkedService {
   id: string
-  name: string
-  vendor: string
-  family: string
+  enabled: boolean
+  config: {
+    configured: boolean
+    available_models: string[]
+  }
 }
 
 interface Assignment {
   key: string
   persona_id: string
-  model_id: string
   role: Role
 }
 
@@ -58,7 +66,7 @@ interface CommandPaletteItem {
 const props = withDefaults(defineProps<{
   open: boolean
   personas: Persona[]
-  models: Model[]
+  linkedServices: LinkedService[]
   loading?: boolean
   loop?: LoopDraft | null
 }>(), { loading: false, loop: null })
@@ -70,7 +78,7 @@ const emit = defineEmits<{
 }>()
 
 const { personaIcon } = usePersonaIcon()
-const { providerLogo } = useModelLogo()
+const { modelLogo } = useModelLogo()
 const name = ref('')
 const flow = ref<Flow>('direct')
 const assignments = ref<Assignment[]>([])
@@ -79,9 +87,7 @@ const maxTokens = ref('')
 const timeoutSeconds = ref('')
 const paletteOpen = ref(false)
 const paletteQuery = ref('')
-const paletteMode = ref<'agent' | 'model'>('agent')
 const targetRole = ref<Role>('generator')
-const targetAssignmentKey = ref<string | null>(null)
 
 const flowOptions = [
   { value: 'direct', label: 'Direct' },
@@ -106,39 +112,44 @@ const roleGroups = computed(() => {
 })
 
 const personaById = computed(() => new Map(props.personas.map(persona => [persona.id, persona])))
-const modelById = computed(() => new Map(props.models.map(model => [model.id, model])))
-const thinkingMachinesModel = computed(() => props.models.find((model) => {
-  const identity = `${model.vendor} ${model.family} ${model.name} ${model.id}`.toLocaleLowerCase()
-  return identity.includes('thinking machines') || identity.includes('thinkingmachines') || identity.includes('thinking-machines')
-}) ?? props.models[0])
+const linkedServiceById = computed(() => new Map(props.linkedServices.map(service => [service.id, service])))
 
-const paletteItems = computed<CommandPaletteItem[]>(() => {
-  if (paletteMode.value === 'model') {
-    return props.models.map(model => ({
-      id: model.id,
-      label: model.name,
-      description: model.vendor,
-      group: 'Models',
-      keywords: [model.family, model.vendor, model.id],
-      imageSrc: providerLogo(model.vendor, model.family),
-      imageAlt: '',
-    }))
+function personaExecution(persona: Persona) {
+  if (!persona.linked_service || !persona.config) {
+    return { available: false, model: '', reason: 'Execution setup required' }
   }
 
+  const service = linkedServiceById.value.get(persona.linked_service.reference_id)
+  if (!service) return { available: false, model: persona.config.model, reason: 'Connection not found' }
+  if (!service.enabled) return { available: false, model: persona.config.model, reason: 'Connection disabled' }
+  if (!service.config.configured) return { available: false, model: persona.config.model, reason: 'Connection not configured' }
+  if (!service.config.available_models.includes(persona.config.model)) {
+    return { available: false, model: persona.config.model, reason: 'Model unavailable on this connection' }
+  }
+  return { available: true, model: persona.config.model, reason: '' }
+}
+
+const paletteItems = computed<CommandPaletteItem[]>(() => {
   const selectedInRole = new Set(assignments.value.filter(item => item.role === targetRole.value).map(item => item.persona_id))
-  return props.personas.map(persona => ({
-    id: persona.id,
-    label: persona.name,
-    description: persona.description,
-    group: 'Agents',
-    keywords: [persona.id],
-    iconPath: personaIcon(persona),
-    disabled: selectedInRole.has(persona.id),
-  }))
+  return props.personas.map((persona) => {
+    const execution = personaExecution(persona)
+    return {
+      id: persona.id,
+      label: persona.name,
+      description: execution.available
+        ? `${persona.description ?? ''} · ${execution.model}`
+        : execution.reason,
+      group: execution.available ? 'Agents' : 'Unavailable agents',
+      keywords: [persona.id, execution.model],
+      iconPath: personaIcon(persona),
+      disabled: selectedInRole.has(persona.id) || !execution.available,
+    }
+  })
 })
 
 const canAdd = computed(() => {
   if (!name.value.trim() || !positiveInteger(maxIterations.value)) return false
+  if (assignments.value.some(assignment => !assignmentExecution(assignment).available)) return false
   return roleGroups.value.every((group) => {
     const count = assignments.value.filter(item => item.role === group.role).length
     return flow.value === 'roundtable' && group.role === 'generator' ? count >= 2 : count >= 1
@@ -171,16 +182,6 @@ function updateStopCondition(field: 'maxIterations' | 'maxTokens' | 'timeoutSeco
   else timeoutSeconds.value = formatted
 }
 
-function modelInitials(model: Model | undefined) {
-  return (model?.vendor || 'AI')
-    .split(/[\s.]+/)
-    .filter(Boolean)
-    .map(part => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
-}
-
 function resetForm(loop: LoopDraft | null = null) {
   name.value = loop?.title ?? ''
   flow.value = loop?.flow ?? 'direct'
@@ -190,7 +191,6 @@ function resetForm(loop: LoopDraft | null = null) {
   timeoutSeconds.value = formatIntegerInput(loop?.stop_conditions.timeout_seconds)
   paletteOpen.value = false
   paletteQuery.value = ''
-  targetAssignmentKey.value = null
 }
 
 function closeDrawer() {
@@ -201,35 +201,26 @@ function assignmentsFor(role: Role) {
   return assignments.value.filter(assignment => assignment.role === role)
 }
 
-function openAgentPalette(role: Role) {
-  targetRole.value = role
-  targetAssignmentKey.value = null
-  paletteMode.value = 'agent'
-  paletteQuery.value = ''
-  paletteOpen.value = true
+function assignmentExecution(assignment: Assignment) {
+  const persona = personaById.value.get(assignment.persona_id)
+  return persona
+    ? personaExecution(persona)
+    : { available: false, model: '', reason: 'Agent not found' }
 }
 
-function openModelPalette(assignment: Assignment) {
-  targetAssignmentKey.value = assignment.key
-  paletteMode.value = 'model'
+function openAgentPalette(role: Role) {
+  targetRole.value = role
   paletteQuery.value = ''
   paletteOpen.value = true
 }
 
 function selectPaletteItem(item: CommandPaletteItem) {
-  if (paletteMode.value === 'model') {
-    const assignment = assignments.value.find(candidate => candidate.key === targetAssignmentKey.value)
-    if (assignment) assignment.model_id = item.id
-    return
-  }
-
   const group = roleGroups.value.find(candidate => candidate.role === targetRole.value)
   if (!group || item.disabled) return
   if (!group.multiple) assignments.value = assignments.value.filter(candidate => candidate.role !== targetRole.value)
   assignments.value.push({
     key: createId('assignment-'),
     persona_id: item.id,
-    model_id: thinkingMachinesModel.value?.id ?? '',
     role: targetRole.value,
   })
 }
@@ -246,7 +237,7 @@ function submitLoop() {
     description: props.loop?.description ?? 'Configured inside this pipeline draft.',
     flow: flow.value,
     status: props.loop?.status ?? 'draft',
-    agents: assignments.value.map(({ persona_id, model_id, role }) => ({ persona_id, model_id, role })),
+    agents: assignments.value.map(({ persona_id, role }) => ({ persona_id, role })),
     stop_conditions: {
       max_iterations: positiveInteger(maxIterations.value),
       max_tokens: positiveInteger(maxTokens.value),
@@ -331,24 +322,23 @@ watch(() => props.open, (open) => {
                   </template>
                   {{ personaById.get(assignment.persona_id)?.name ?? assignment.persona_id }}
                 </UiPill>
-                <button
-                  type="button"
-                  class="pipeline-loop-drawer__model-target"
-                  :title="modelById.get(assignment.model_id)?.name || 'Choose model'"
-                  :aria-label="`Change model for ${personaById.get(assignment.persona_id)?.name ?? 'agent'}`"
-                  @click="openModelPalette(assignment)"
+                <span
+                  class="pipeline-loop-drawer__execution"
+                  :class="{ 'pipeline-loop-drawer__execution--unavailable': !assignmentExecution(assignment).available }"
+                  :title="assignmentExecution(assignment).available ? assignmentExecution(assignment).model : assignmentExecution(assignment).reason"
                 >
                   <UiPill
-                    v-if="modelById.get(assignment.model_id) && providerLogo(modelById.get(assignment.model_id)!.vendor, modelById.get(assignment.model_id)!.family)"
-                    :src="providerLogo(modelById.get(assignment.model_id)!.vendor, modelById.get(assignment.model_id)!.family)"
+                    v-if="assignmentExecution(assignment).model"
+                    :src="modelLogo(assignmentExecution(assignment).model)"
                     alt=""
-                    :tooltip="modelById.get(assignment.model_id)?.name || 'Choose model'"
+                    :tooltip="assignmentExecution(assignment).model"
                     :focusable="false"
                   />
-                  <UiPill v-else icon-style="circle" :tooltip="modelById.get(assignment.model_id)?.name || 'Choose model'" :focusable="false">
-                    <template #icon><span class="pipeline-loop-drawer__model-initials">{{ modelInitials(modelById.get(assignment.model_id)) }}</span></template>
+                  <UiPill v-else icon-style="circle" :tooltip="assignmentExecution(assignment).reason" :focusable="false">
+                    <template #icon><span class="pipeline-loop-drawer__execution-warning">!</span></template>
                   </UiPill>
-                </button>
+                  <small>{{ assignmentExecution(assignment).available ? assignmentExecution(assignment).model : assignmentExecution(assignment).reason }}</small>
+                </span>
                 <span class="pipeline-loop-drawer__remove-control">
                   <UiButton
                     class="pipeline-loop-drawer__remove"
@@ -400,9 +390,9 @@ watch(() => props.open, (open) => {
     :items="paletteItems"
     :keyboard-shortcut="false"
     option-style="card"
-    :placeholder="paletteMode === 'agent' ? 'Search agents…' : 'Search models…'"
-    :aria-label="paletteMode === 'agent' ? 'Choose an agent' : 'Choose a model'"
-    :empty-title="paletteMode === 'agent' ? 'No agents found' : 'No models found'"
+    placeholder="Search agents…"
+    aria-label="Choose an agent"
+    empty-title="No agents found"
     empty-description="Try another name or search term."
     @select="selectPaletteItem"
   />
@@ -433,10 +423,11 @@ watch(() => props.open, (open) => {
 .pipeline-loop-drawer__agents li { display: flex; min-width: 0; align-items: center; gap: var(--ll-space-2); }
 .pipeline-loop-drawer__agents :deep(.ui-icon-pill) { min-width: 0; }
 
-.pipeline-loop-drawer__model-target { display: block; width: 2rem; height: 2rem; flex: 0 0 2rem; padding: 0; color: inherit; background: transparent; border: 0; border-radius: var(--ll-radius-pill); cursor: pointer; }
-.pipeline-loop-drawer__model-target:focus-visible { outline: 2px solid var(--ll-color-primary); outline-offset: 2px; }
-.pipeline-loop-drawer__model-target :deep(.ui-icon-pill) { display: block; }
-.pipeline-loop-drawer__model-initials { font: 650 0.625rem / 1 var(--ll-font-mono); }
+.pipeline-loop-drawer__execution { display: flex; min-width: 0; flex: 1; align-items: center; gap: var(--ll-space-2); color: var(--ll-color-text-muted); }
+.pipeline-loop-drawer__execution :deep(.ui-icon-pill) { display: block; flex: none; }
+.pipeline-loop-drawer__execution small { overflow: hidden; font: 500 var(--ll-text-xs) / 1.3 var(--ll-font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.pipeline-loop-drawer__execution--unavailable { color: var(--ll-color-brand-ink); }
+.pipeline-loop-drawer__execution-warning { font: 700 var(--ll-text-xs) / 1 var(--ll-font-control); }
 .pipeline-loop-drawer__remove-control { position: relative; display: block; width: 1.75rem; height: 1.75rem; flex: 0 0 1.75rem; align-self: center; }
 .pipeline-loop-drawer__remove {
   --ui-button-height: 1.75rem;

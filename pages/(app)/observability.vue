@@ -10,6 +10,7 @@ import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTable from '~/components/ui/Table.vue'
 import { collectApiPages } from '~/utils/apiPagination'
 import { observabilityCharts, observabilityLogs, observabilityMetrics } from '~/utils/observability'
+import type { PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 const activeView = ref('metrics')
 const api = useApiClient()
@@ -26,25 +27,31 @@ const logColumns = [
   { key: 'error', label: 'Error', width: '25%' },
 ]
 
-const { data: runs, status, refresh } = await useAsyncData('observability-runs', async () => {
-  const pipelines = await collectApiPages(offset => api.pipelines.list({ offset }))
-  const pages = await Promise.all(pipelines.map(pipeline => (
-    collectApiPages(offset => api.pipelines.listRuns(pipeline.id, { offset }))
-  )))
-  const summaries = pages.flat()
-  return Promise.all(summaries.map(run => api.pipelines.getRun(run.pipeline_id, run.id)))
+const { data: snapshots, status, refresh } = await useAsyncData('observability-runs', async () => {
+  const createdFrom = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const runs = await collectApiPages(offset => api.pipelineRuns.list({
+    offset,
+    created_from: createdFrom,
+  }))
+  return Promise.all(runs.map(loadSnapshot))
 })
 usePipelineRunPolling(
-  () => runs.value ?? [],
-  (updates) => {
-    const byId = new Map(updates.map(run => [run.id, run]))
-    runs.value = (runs.value ?? []).map(run => byId.get(run.id) ?? run)
+  () => snapshots.value?.map(snapshot => snapshot.run) ?? [],
+  async (updates) => {
+    const refreshed = await Promise.all(updates.map(loadSnapshot))
+    const byId = new Map(refreshed.map(snapshot => [snapshot.run.id, snapshot]))
+    snapshots.value = (snapshots.value ?? []).map(snapshot => byId.get(snapshot.run.id) ?? snapshot)
   },
 )
 
-const metrics = computed(() => observabilityMetrics(runs.value ?? []))
-const charts = computed(() => observabilityCharts(runs.value ?? []))
-const logs = computed(() => observabilityLogs(runs.value ?? []))
+async function loadSnapshot(run: PipelineRunSnapshot['run']): Promise<PipelineRunSnapshot> {
+  const events = await api.pipelines.listRunEvents(run.pipeline_id, run.id)
+  return { run, events: events.items }
+}
+
+const metrics = computed(() => observabilityMetrics(snapshots.value ?? []))
+const charts = computed(() => observabilityCharts(snapshots.value ?? []))
+const logs = computed(() => observabilityLogs(snapshots.value ?? []))
 
 definePageMeta({ layout: 'app' })
 useHead({ title: 'Observability · Looping Louie' })

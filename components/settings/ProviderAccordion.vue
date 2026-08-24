@@ -1,33 +1,25 @@
 <script setup lang="ts">
-import type { Provider } from '~/composables/useProviders'
+import type { LinkedServiceResponse } from '~/types/api'
+import type { ProviderCatalogItem } from '~/composables/useProviders'
 import UiButton from '~/components/ui/Button.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
 
 const props = withDefaults(defineProps<{
-  providers: Provider[]
-  togglingId?: string | null
-  savingId?: string | null
+  providers: ProviderCatalogItem[]
+  mutatingId?: string | null
 }>(), {
-  togglingId: null,
-  savingId: null,
+  mutatingId: null,
 })
 
 const emit = defineEmits<{
-  toggle: [provider: Provider, enabled: boolean]
-  save: [provider: Provider, apiKey: string]
+  connect: [provider: ProviderCatalogItem]
+  manage: [provider: ProviderCatalogItem, service: LinkedServiceResponse]
+  toggle: [service: LinkedServiceResponse, enabled: boolean]
+  delete: [provider: ProviderCatalogItem, service: LinkedServiceResponse]
 }>()
 
 const instanceId = useId().replaceAll(':', '')
 const openIds = ref(new Set<string>())
-const apiKeys = reactive<Record<string, string>>({})
-
-watch(
-  () => props.providers.map(provider => [provider.id, provider.keyTrimmed] as const),
-  providers => {
-    for (const [id, keyTrimmed] of providers) apiKeys[id] = keyTrimmed ?? ''
-  },
-  { immediate: true },
-)
 
 function isOpen(id: string) {
   return openIds.value.has(id)
@@ -40,14 +32,16 @@ function togglePanel(id: string) {
   openIds.value = next
 }
 
-function hasStoredKey(provider: Provider) {
-  return Boolean(provider.keyTrimmed)
+function providerLogo(provider: ProviderCatalogItem) {
+  return provider.logoUrl.replace(/\.(?:jpe?g|png)$/i, '.webp')
 }
 
-function save(provider: Provider) {
-  const apiKey = apiKeys[provider.id]?.trim() ?? ''
-  if (!apiKey || props.savingId) return
-  emit('save', provider, apiKey)
+function connectionLabel(count: number) {
+  return `${count} ${count === 1 ? 'connection' : 'connections'}`
+}
+
+function modelLabel(count: number) {
+  return `${count} ${count === 1 ? 'model' : 'models'}`
 }
 </script>
 
@@ -69,31 +63,22 @@ function save(provider: Provider) {
             :aria-controls="`${instanceId}-${provider.id}-panel`"
             @click="togglePanel(provider.id)"
           >
-            <span class="provider-accordion__brand">
-              <img
-                :src="`/images/providers/${provider.provider}-icon.webp`"
-                alt=""
-                class="provider-accordion__brand-icon"
-                width="24"
-                height="24"
-              >
-              <img
-                :src="`/images/providers/${provider.provider}-text.webp`"
-                :alt="provider.name"
-                class="provider-accordion__brand-text"
-                height="18"
-              >
+            <img
+              :src="providerLogo(provider)"
+              alt=""
+              class="provider-accordion__brand-icon"
+              width="32"
+              height="32"
+            >
+            <span class="provider-accordion__title-copy">
+              <span class="provider-accordion__provider-name">{{ provider.name }}</span>
+              <span class="provider-accordion__connection-count">{{ connectionLabel(provider.linkedServices.length) }}</span>
             </span>
           </button>
         </h3>
 
         <div class="provider-accordion__controls">
-          <UiToggle
-            :model-value="provider.enabled"
-            :disabled="togglingId === provider.id"
-            :aria-label="`${provider.enabled ? 'Disable' : 'Enable'} ${provider.name}`"
-            @update:model-value="emit('toggle', provider, $event)"
-          />
+          <UiButton size="sm" variant="stroke" @click="emit('connect', provider)">Connect</UiButton>
           <button
             type="button"
             class="provider-accordion__chevron"
@@ -118,42 +103,76 @@ function save(provider: Provider) {
       >
         <div class="provider-accordion__panel-clip">
           <div class="provider-accordion__content">
-            <p class="provider-accordion__description">{{ provider.description }}</p>
+            <div class="provider-accordion__catalog-copy">
+              <p class="provider-accordion__description">{{ provider.description }}</p>
+              <p v-if="provider.modelCatalogNote" class="provider-accordion__catalog-note">{{ provider.modelCatalogNote }}</p>
+            </div>
 
-            <form
-              v-if="provider.requiresApiKey"
-              class="provider-accordion__credential"
-              @submit.prevent="save(provider)"
-            >
-              <label :for="`${instanceId}-${provider.id}-key`">Enter API Key</label>
-              <input
-                :id="`${instanceId}-${provider.id}-key`"
-                v-model="apiKeys[provider.id]"
-                type="text"
-                :readonly="hasStoredKey(provider)"
-                :disabled="savingId === provider.id"
-                :autocomplete="hasStoredKey(provider) ? 'off' : 'new-password'"
-                :aria-label="`${provider.name} API key`"
+            <div v-if="provider.linkedServices.length" class="provider-accordion__connections">
+              <article
+                v-for="service in provider.linkedServices"
+                :key="service.id"
+                class="provider-accordion__connection"
               >
-              <UiButton
-                v-if="hasStoredKey(provider)"
-                type="button"
-                variant="metal"
-                size="sm"
-              >
-                Delete
-              </UiButton>
-              <UiButton
-                v-else
-                type="submit"
-                variant="primary"
-                size="sm"
-                :disabled="!apiKeys[provider.id]?.trim()"
-                :loading="savingId === provider.id"
-              >
-                Save
-              </UiButton>
-            </form>
+                <div class="provider-accordion__connection-main">
+                  <div class="provider-accordion__connection-heading">
+                    <h4>{{ service.name }}</h4>
+                    <span
+                      class="provider-accordion__status"
+                      :class="{ 'provider-accordion__status--ready': service.config.configured }"
+                    >
+                      {{ service.config.configured ? 'Configured' : 'Needs setup' }}
+                    </span>
+                  </div>
+
+                  <dl class="provider-accordion__facts">
+                    <div>
+                      <dt>Credential</dt>
+                      <dd>{{ service.config.key_trimmed ?? (provider.requiresApiKey ? 'Not set' : 'Not required') }}</dd>
+                    </div>
+                    <div>
+                      <dt>Base URL</dt>
+                      <dd>{{ service.config.base_url ?? provider.defaultBaseUrl ?? 'Provider default' }}</dd>
+                    </div>
+                    <div>
+                      <dt>Availability</dt>
+                      <dd>{{ modelLabel(service.config.available_models.length) }}</dd>
+                    </div>
+                  </dl>
+                </div>
+
+                <div class="provider-accordion__connection-actions">
+                  <UiToggle
+                    :model-value="service.enabled"
+                    :disabled="mutatingId === service.id"
+                    :aria-label="`${service.enabled ? 'Disable' : 'Enable'} ${service.name}`"
+                    @update:model-value="emit('toggle', service, $event)"
+                  />
+                  <UiButton size="sm" variant="metal" :disabled="mutatingId === service.id" @click="emit('manage', provider, service)">
+                    Manage
+                  </UiButton>
+                  <UiButton
+                    size="sm"
+                    variant="coral"
+                    :disabled="mutatingId === service.id"
+                    icon-only
+                    :aria-label="`Delete ${service.name}`"
+                    @click="emit('delete', provider, service)"
+                  >
+                    <template #leading>
+                      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                        <path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z" />
+                      </svg>
+                    </template>
+                  </UiButton>
+                </div>
+              </article>
+            </div>
+
+            <div v-else class="provider-accordion__empty">
+              <p>No workspace connections yet.</p>
+              <UiButton size="sm" @click="emit('connect', provider)">Connect {{ provider.name }}</UiButton>
+            </div>
           </div>
         </div>
       </div>
@@ -162,9 +181,9 @@ function save(provider: Provider) {
 </template>
 
 <style scoped>
-.provider-accordion {
-  background: var(--ll-color-metal-025);
-}
+.provider-accordion { background: var(--ll-color-metal-025); }
+
+.provider-accordion__item + .provider-accordion__item { border-top: 1px solid var(--ll-color-divider); }
 
 .provider-accordion__header {
   display: flex;
@@ -176,59 +195,28 @@ function save(provider: Provider) {
 }
 
 .provider-accordion__item:not(.provider-accordion__item--open) .provider-accordion__header:hover,
-.provider-accordion__item:not(.provider-accordion__item--open) .provider-accordion__header:focus-within {
-  background: var(--ll-color-card);
-}
+.provider-accordion__item:not(.provider-accordion__item--open) .provider-accordion__header:focus-within { background: var(--ll-color-card); }
 
-.provider-accordion__heading {
-  min-width: 0;
-  flex: 1;
-  margin: 0;
-}
+.provider-accordion__heading { min-width: 0; flex: 1; margin: 0; }
 
 .provider-accordion__title-trigger {
   display: flex;
   width: 100%;
   align-items: center;
+  gap: var(--ll-space-3);
   padding: var(--ll-space-5) 0;
   color: var(--ll-color-ink);
   background: transparent;
   border: 0;
-  font-size: 1.25rem;
-  font-weight: 650;
-  line-height: 1.15;
-  letter-spacing: -0.025em;
   text-align: left;
   cursor: pointer;
 }
 
-.provider-accordion__brand {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--ll-space-2);
-}
-
-.provider-accordion__brand-icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  flex: none;
-  object-fit: contain;
-}
-
-.provider-accordion__brand-text {
-  width: auto;
-  max-width: min(12rem, 100%);
-  height: 1.125rem;
-  object-fit: contain;
-}
-
-.provider-accordion__controls {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--ll-space-4);
-}
+.provider-accordion__brand-icon { width: 2rem; height: 2rem; flex: none; object-fit: contain; border-radius: var(--ll-radius-md); }
+.provider-accordion__title-copy { display: grid; min-width: 0; gap: 0.1rem; }
+.provider-accordion__provider-name { font-size: 1.125rem; font-weight: 650; line-height: 1.2; letter-spacing: -0.02em; }
+.provider-accordion__connection-count { color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); font-weight: 500; }
+.provider-accordion__controls { display: flex; flex: none; align-items: center; gap: var(--ll-space-3); }
 
 .provider-accordion__chevron {
   display: grid;
@@ -243,107 +231,71 @@ function save(provider: Provider) {
   cursor: pointer;
 }
 
-.provider-accordion__chevron svg {
-  width: 1rem;
-  height: 1rem;
-  transition: transform var(--ll-duration-normal) var(--ll-ease-out);
-}
-
-.provider-accordion__chevron[aria-expanded="true"] svg {
-  transform: rotate(90deg);
-}
-
+.provider-accordion__chevron svg { width: 1rem; height: 1rem; transition: transform var(--ll-duration-normal) var(--ll-ease-out); }
+.provider-accordion__chevron[aria-expanded="true"] svg { transform: rotate(90deg); }
 .provider-accordion__title-trigger:focus-visible,
-.provider-accordion__chevron:focus-visible {
-  outline: 2px solid var(--ll-color-primary);
-  outline-offset: 3px;
-}
+.provider-accordion__chevron:focus-visible { outline: 2px solid var(--ll-color-primary); outline-offset: 3px; }
+.provider-accordion__panel { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--ll-duration-normal) var(--ll-ease-out); }
+.provider-accordion__panel--open { grid-template-rows: 1fr; }
+.provider-accordion__panel-clip { min-height: 0; overflow: hidden; }
+.provider-accordion__content { padding: 0 var(--ll-space-6) var(--ll-space-6); }
+.provider-accordion__catalog-copy { display: grid; max-width: 52rem; gap: var(--ll-space-2); }
+.provider-accordion__description,
+.provider-accordion__catalog-note { margin: 0; color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); line-height: 1.5; }
+.provider-accordion__catalog-note { font-style: italic; }
+.provider-accordion__connections { display: grid; gap: var(--ll-space-3); margin-top: var(--ll-space-5); }
 
-.provider-accordion__panel {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows var(--ll-duration-normal) var(--ll-ease-out);
-}
-
-.provider-accordion__panel--open {
-  grid-template-rows: 1fr;
-}
-
-.provider-accordion__panel-clip {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.provider-accordion__content {
-  padding: 0 var(--ll-space-6) var(--ll-space-6);
-}
-
-.provider-accordion__description {
-  max-width: 48rem;
-  margin: 0;
-  color: var(--ll-color-text-muted);
-  font-size: var(--ll-text-sm);
-  line-height: 1.5;
-}
-
-.provider-accordion__credential {
-  display: grid;
-  grid-template-columns: auto minmax(10rem, 1fr) auto;
+.provider-accordion__connection {
+  display: flex;
   align-items: center;
-  gap: var(--ll-space-3);
-  max-width: 48rem;
-  margin-top: var(--ll-space-5);
-}
-
-.provider-accordion__credential label {
-  color: var(--ll-color-ink);
-  font-size: var(--ll-text-sm);
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.provider-accordion__credential input {
-  min-width: 0;
-  height: 1.75rem;
-  box-sizing: border-box;
-  padding: 0 var(--ll-space-3);
-  color: var(--ll-color-ink);
+  gap: var(--ll-space-5);
+  padding: var(--ll-space-4);
   background: var(--ll-color-canvas);
   border: 1px solid var(--ll-color-divider);
-  border-radius: var(--ll-radius-pill);
-  font: 500 var(--ll-text-sm) / 1 var(--ll-font-mono);
+  border-radius: var(--ll-radius-structural);
 }
 
-.provider-accordion__credential input:focus-visible {
-  border-color: var(--ll-color-primary);
-  outline: 2px solid var(--ll-color-primary);
-  outline-offset: 1px;
+.provider-accordion__connection-main { min-width: 0; flex: 1; }
+.provider-accordion__connection-heading { display: flex; align-items: center; gap: var(--ll-space-2); }
+.provider-accordion__connection-heading h4 { margin: 0; font-size: 0.95rem; font-weight: 650; }
+.provider-accordion__status { padding: 0.15rem 0.5rem; color: var(--ll-color-text-muted); background: var(--ll-color-metal-100); border-radius: var(--ll-radius-pill); font-size: var(--ll-text-xs); font-weight: 600; }
+.provider-accordion__status--ready { color: var(--ll-color-primary); background: var(--ll-color-primary-highlight); }
+.provider-accordion__facts { display: flex; flex-wrap: wrap; gap: var(--ll-space-3) var(--ll-space-6); margin: var(--ll-space-3) 0 0; }
+.provider-accordion__facts div { display: grid; min-width: 8rem; gap: 0.1rem; }
+.provider-accordion__facts div:nth-child(2) { min-width: min(20rem, 100%); }
+.provider-accordion__facts dt { color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); }
+.provider-accordion__facts dd { overflow: hidden; margin: 0; font: 500 var(--ll-text-xs) / 1.4 var(--ll-font-mono); text-overflow: ellipsis; white-space: nowrap; }
+.provider-accordion__connection-actions { display: flex; flex: none; align-items: center; gap: var(--ll-space-2); }
+
+.provider-accordion__empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ll-space-4);
+  margin-top: var(--ll-space-5);
+  padding: var(--ll-space-4);
+  background: var(--ll-color-canvas);
+  border: 1px dashed var(--ll-color-divider);
+  border-radius: var(--ll-radius-structural);
 }
 
-.provider-accordion__credential input[readonly] {
-  color: var(--ll-color-text-muted);
-  cursor: default;
+.provider-accordion__empty p { margin: 0; color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
+
+@media (max-width: 49.99rem) {
+  .provider-accordion__connection { align-items: stretch; flex-direction: column; }
+  .provider-accordion__connection-actions { justify-content: flex-end; }
 }
 
 @media (max-width: 39.99rem) {
   .provider-accordion__header,
-  .provider-accordion__content {
-    padding-inline: var(--ll-space-4);
-  }
-
-  .provider-accordion__credential {
-    grid-template-columns: 1fr auto;
-  }
-
-  .provider-accordion__credential label {
-    grid-column: 1 / -1;
-  }
+  .provider-accordion__content { padding-inline: var(--ll-space-4); }
+  .provider-accordion__controls > :first-child { display: none; }
+  .provider-accordion__empty { align-items: stretch; flex-direction: column; }
+  .provider-accordion__connection-actions { flex-wrap: wrap; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .provider-accordion__chevron svg,
-  .provider-accordion__panel {
-    transition: none;
-  }
+  .provider-accordion__panel { transition: none; }
 }
 </style>

@@ -3,7 +3,6 @@ import UiPill from '~/components/ui/Pill.vue'
 
 interface PipelineLoopAgent {
   persona_id: string
-  model_id: string
   role: string
 }
 
@@ -33,7 +32,6 @@ const props = withDefaults(defineProps<{
 })
 
 const { personaIcon } = usePersonaIcon()
-const { modelLogo } = useModelLogo()
 
 interface AgentRoleGroup {
   id: string
@@ -132,7 +130,7 @@ function flowLabel(value: string | null) {
         <span v-if="group.agents.length === 0" class="pipeline-loop-summary__empty">None</span>
         <span
           v-for="(agent, index) in group.agents"
-          :key="`${group.id}-${agent.persona_id}-${agent.model_id}-${index}`"
+          :key="`${group.id}-${agent.persona_id}-${index}`"
           class="pipeline-loop-summary__agent-pair"
         >
           <UiPill
@@ -147,13 +145,6 @@ function flowLabel(value: string | null) {
               </svg>
             </template>
           </UiPill>
-          <UiPill
-            :src="modelLogo(agent.model_id)"
-            alt=""
-            :tooltip="agent.model_id"
-            :aria-label="agent.model_id"
-            :focusable="false"
-          />
         </span>
       </span>
     </span>
