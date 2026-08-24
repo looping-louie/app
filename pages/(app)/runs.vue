@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import PageShell from '~/components/layout/PageShell.vue'
+import HumanDecisionPanel from '~/components/runs/HumanDecisionPanel.vue'
 import RunTimeline from '~/components/runs/RunTimeline.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { PipelineRunResponse, PipelineRunStatus } from '~/types/api'
+import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 import { runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
@@ -57,7 +58,17 @@ const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
 const runSort = ref('newest')
 const startingRun = ref(false)
+const continuingRun = ref(false)
 const runActionError = ref('')
+
+interface HumanDecisionAttempt {
+  activityRunId: string
+  idempotencyKey: string
+  decision: ActivityRunHumanDecision
+  comment: string | null
+}
+
+const humanDecisionAttempt = ref<HumanDecisionAttempt | null>(null)
 
 const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'Last 24 hours'
@@ -70,6 +81,10 @@ usePipelineRunPolling(
   updateRunDetails,
 )
 const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
+const selectedActivity = computed<ActivityResponse | null>(() => {
+  const activityId = selectedSnapshot.value?.run.current_activity_run?.activity_id
+  return activityId ? data.value?.activitiesById.get(activityId) ?? null : null
+})
 const displayedRuns = computed(() => {
   const cutoff = Date.now() - rangeDuration(dateRange.value)
   const rows = (data.value?.snapshots ?? [])
@@ -104,6 +119,7 @@ async function loadRuns() {
   return {
     snapshots: await Promise.all(discoveredRuns.map(loadSnapshot)),
     pipelineNames: new Map(pipelines.map(pipeline => [pipeline.id, pipeline.name])),
+    activitiesById: new Map(pipelines.flatMap(pipeline => pipeline.steps.map(step => [step.id, step] as const))),
   }
 }
 
@@ -129,6 +145,90 @@ async function startPreparedRun() {
     runActionError.value = apiErrorMessage(cause, 'This prepared run could not be started. Please try again.')
   } finally {
     startingRun.value = false
+  }
+}
+
+function newIdempotencyKey() {
+  if (import.meta.client && typeof crypto.randomUUID === 'function') return `human-decision-${crypto.randomUUID()}`
+  return `human-decision-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+async function submitHumanDecision(decision: ActivityRunHumanDecision, comment: string | null) {
+  const run = selectedSnapshot.value?.run
+  const activityRun = run?.current_activity_run
+  if (!run || !activityRun || continuingRun.value) return
+
+  const previousAttempt = humanDecisionAttempt.value
+  const attempt = previousAttempt?.activityRunId === activityRun.id
+    && previousAttempt.decision === decision
+    && previousAttempt.comment === comment
+    ? previousAttempt
+    : {
+        activityRunId: activityRun.id,
+        idempotencyKey: newIdempotencyKey(),
+        decision,
+        comment,
+      }
+  humanDecisionAttempt.value = attempt
+  continuingRun.value = true
+  runActionError.value = ''
+
+  let decisionRecorded = activityRun.next_action !== 'submit_human_decision'
+  try {
+    if (!decisionRecorded) {
+      if (!activityRun.continuation_token) throw new Error('The activity continuation token is missing.')
+      const continuedActivity = await api.activities.continueRun(activityRun.activity_id, activityRun.id, {
+        continuation_token: activityRun.continuation_token,
+        idempotency_key: attempt.idempotencyKey,
+        result: {
+          action: 'submit_human_decision',
+          decision,
+          comment,
+        },
+      })
+      decisionRecorded = true
+      replaceCurrentActivity(run.id, continuedActivity)
+    }
+
+    await continueSelectedPipeline()
+    humanDecisionAttempt.value = null
+  } catch (cause) {
+    runActionError.value = decisionRecorded
+      ? 'The decision was recorded, but the pipeline could not be resumed. Use “Continue pipeline” to retry.'
+      : apiErrorMessage(cause, 'The human decision could not be recorded. Please try again.')
+  } finally {
+    continuingRun.value = false
+  }
+}
+
+async function retryPipelineContinuation() {
+  if (continuingRun.value) return
+  continuingRun.value = true
+  runActionError.value = ''
+  try {
+    await continueSelectedPipeline()
+    humanDecisionAttempt.value = null
+  } catch (cause) {
+    runActionError.value = apiErrorMessage(cause, 'The decision is recorded, but the pipeline still could not be resumed.')
+  } finally {
+    continuingRun.value = false
+  }
+}
+
+async function continueSelectedPipeline() {
+  const run = selectedSnapshot.value?.run
+  if (!run) return
+  const continued = await api.pipelines.continueRun(run.pipeline_id, run.id, { lease_token: null })
+  await updateRunDetails([continued])
+}
+
+function replaceCurrentActivity(runId: string, activityRun: NonNullable<PipelineRunResponse['current_activity_run']>) {
+  if (!data.value) return
+  data.value = {
+    ...data.value,
+    snapshots: data.value.snapshots.map(snapshot => snapshot.run.id === runId
+      ? { ...snapshot, run: { ...snapshot.run, current_activity_run: activityRun } }
+      : snapshot),
   }
 }
 
@@ -216,6 +316,14 @@ useHead({ title: 'Runs · Looping Louie' })
           <p>This run is prepared and will not execute until it is started.</p>
           <UiButton :loading="startingRun" @click="startPreparedRun">Start run</UiButton>
         </div>
+        <HumanDecisionPanel
+          v-if="selectedSnapshot?.run.status === 'waiting'"
+          :activity="selectedActivity"
+          :activity-run="selectedSnapshot.run.current_activity_run"
+          :loading="continuingRun"
+          @decide="submitHumanDecision"
+          @continue="retryPipelineContinuation"
+        />
         <p v-if="runActionError" class="runs-error" role="alert">{{ runActionError }}</p>
         <RunTimeline
           v-if="selectedSnapshot"
