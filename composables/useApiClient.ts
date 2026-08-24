@@ -1,5 +1,7 @@
 import type {
   ActivityCreateRequest,
+  ActivityRunContinueRequest,
+  ActivityRunResponse,
   ActivityListResponse,
   ActivityPatchRequest,
   ActivityResponse,
@@ -24,6 +26,7 @@ import type {
   PipelinePatchRequest,
   PipelineResponse,
   PipelineRunCreateRequest,
+  PipelineRunContinueRequest,
   PipelineRunEventListResponse,
   PipelineRunListQuery,
   PipelineRunListResponse,
@@ -49,6 +52,7 @@ export function useApiClient() {
       patch: (id: string, body: ActivityPatchRequest) => $fetch<ActivityResponse>(resourcePath('activities', id), { method: 'PATCH', body }),
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('activities', id), { method: 'DELETE' }),
       listRuns: (id: string, query: ApiListQuery = {}) => $fetch<LoopRunListResponse>(`${resourcePath('activities', id)}/runs`, { query }),
+      continueRun: (activityId: string, runId: string, body: ActivityRunContinueRequest) => $fetch<ActivityRunResponse>(`${resourcePath('activities', activityId)}/runs/${encodeURIComponent(runId)}/continue`, { method: 'POST', body }),
     },
     loops: {
       list: (query: ApiListQuery = {}) => $fetch<LoopListResponse>('/api/v1/loops', { query }),
@@ -66,6 +70,7 @@ export function useApiClient() {
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('pipelines', id), { method: 'DELETE' }),
       createRun: (id: string, body: PipelineRunCreateRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', id)}/runs`, { method: 'POST', body }),
       startRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { method: 'POST' }),
+      continueRun: (pipelineId: string, runId: string, body: PipelineRunContinueRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/continue`, { method: 'POST', body }),
       getRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`),
       listRunEvents: (pipelineId: string, runId: string) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`),
     },

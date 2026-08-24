@@ -24,6 +24,22 @@ export type ActivityRunListResponse = ApiListResponse<ActivityRunResponse>
 export type LoopRunResponse = ActivityRunResponse
 export type LoopRunListResponse = ActivityRunListResponse
 
+export type ActivityRunHumanDecision = 'approved' | 'rejected' | 'cancelled'
+
+export interface ActivityRunHumanDecisionResult {
+  action: 'submit_human_decision'
+  decision: ActivityRunHumanDecision
+  comment?: string | null
+}
+
+export interface ActivityRunContinueRequest {
+  pipeline_run_id?: string | null
+  lease_token?: string | null
+  continuation_token: string
+  idempotency_key: string
+  result: ActivityRunHumanDecisionResult
+}
+
 export type PipelineRunStatus = 'prepared' | 'queued' | 'claimed' | 'in_progress' | 'waiting' | 'failed' | 'completed'
 export type PipelineRunCommitMode = 'allow' | 'forbid'
 export type PipelineRunStepStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'skipped'
@@ -59,6 +75,10 @@ export interface PipelineRunResponse {
 export interface PipelineRunCreateRequest {
   input: string
   commit_mode?: PipelineRunCommitMode
+}
+
+export interface PipelineRunContinueRequest {
+  lease_token: string | null
 }
 
 export interface PipelineRunListQuery extends ApiListQuery {
