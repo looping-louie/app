@@ -3,7 +3,7 @@ export type PipelineCanvasHumanGateKind = 'human-review' | 'four-eye-review' | '
 
 export interface PipelineCanvasLoopAgent {
   persona_id: string
-  model_id: string
+  model_id?: string | null
   role: string
 }
 

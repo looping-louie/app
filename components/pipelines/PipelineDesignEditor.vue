@@ -12,7 +12,7 @@ export interface PipelineEditorLoop {
   description: string
   flow: 'direct' | 'refinement' | 'roundtable'
   status: string
-  agents: LoopAgentInput[]
+  agents: Array<LoopAgentInput & { model_id: string }>
   stop_conditions: LoopStopConditions
   output_contract?: LoopOutputContract
 }
@@ -235,7 +235,7 @@ function activityRequest(activity: PipelineEditorActivity): ActivityCreateReques
       description: loop.description,
       type,
       config: {
-        agents: loop.agents,
+        agents: loop.agents.map(({ persona_id, role }) => ({ persona_id, role })),
         stop_conditions: loop.stop_conditions,
         output_contract: loop.output_contract ?? {
           type: 'text',
@@ -310,7 +310,7 @@ function replaceSteps(steps: InitialStep[]) {
         description: step.description,
         flow: step.type.replace('_loop', '') as PipelineEditorLoop['flow'],
         status: 'active',
-        agents: cloneValue(config.agents),
+        agents: config.agents.map(agent => ({ ...cloneValue(agent), model_id: agent.model_id ?? '' })),
         stop_conditions: cloneValue(config.stop_conditions),
         output_contract: cloneValue(config.output_contract),
       })

@@ -3,7 +3,7 @@ import UiPill from '~/components/ui/Pill.vue'
 
 interface PipelineLoopAgent {
   persona_id: string
-  model_id: string
+  model_id?: string | null
   role: string
 }
 
@@ -148,6 +148,7 @@ function flowLabel(value: string | null) {
             </template>
           </UiPill>
           <UiPill
+            v-if="agent.model_id"
             :src="modelLogo(agent.model_id)"
             alt=""
             :tooltip="agent.model_id"

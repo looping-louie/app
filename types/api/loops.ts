@@ -13,7 +13,7 @@ export interface LoopStopConditions {
 
 export interface LoopAgentInput {
   id?: string | null
-  model_id: string
+  model_id?: string | null
   persona_id: string
   role: LoopRole
 }
