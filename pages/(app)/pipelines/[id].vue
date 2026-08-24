@@ -12,7 +12,6 @@ import UiSectionStage from '~/components/ui/SectionStage.vue'
 import type {
   LoopActivityConfig,
   PipelineActivityStepRequest,
-  QuizActivityConfig,
 } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
@@ -110,17 +109,11 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
     }
 
     const isQuiz = activity.type === 'quiz'
-    const quiz = isQuiz ? (activity.config as QuizActivityConfig).quiz : undefined
-    const passingScore = typeof quiz?.minimum_correct_answers === 'number'
-      ? quiz.minimum_correct_answers
-      : undefined
     result.push({
       instanceId,
       type: 'human-gate',
       gate: isQuiz ? 'multiple-choice-quiz' : 'human-review',
       title: activity.name,
-      teamMembers: isQuiz ? undefined : ['any-person'],
-      passingScore,
     })
   })
   return result
