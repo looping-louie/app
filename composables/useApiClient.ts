@@ -32,8 +32,6 @@ import type {
   LinkedServiceCreateRequest,
   LinkedServicePatchRequest,
   LinkedServiceResponse,
-  ProviderPatchRequest,
-  ProviderResponse,
   SkillListResponse,
   SkillListQuery,
   SkillCreateRequest,
@@ -96,12 +94,6 @@ export function useApiClient() {
       create: (body: LinkedServiceCreateRequest) => $fetch<LinkedServiceResponse>('/api/v1/linked-services', { method: 'POST', body }),
       patch: (id: string, body: LinkedServicePatchRequest) => $fetch<LinkedServiceResponse>(resourcePath('linked-services', id), { method: 'PATCH', body }),
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('linked-services', id), { method: 'DELETE' }),
-    },
-    providers: {
-      list: () => $fetch<ProviderResponse[]>('/api/v1/providers'),
-      get: (id: string) => $fetch<ProviderResponse>(resourcePath('providers', id)),
-      patch: (id: string, body: ProviderPatchRequest) => $fetch<ProviderResponse>(resourcePath('providers', id), { method: 'PATCH', body }),
-      remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('providers', id), { method: 'DELETE' }),
     },
   }
 }
