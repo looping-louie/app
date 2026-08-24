@@ -21,6 +21,15 @@ export type PersonaCategory = InstructionCategory
 export type PersonaStatus = InstructionStatus
 export type PersonaSort = InstructionSort
 
+export interface LinkedServiceReference {
+  type: 'LinkedServiceReference'
+  reference_id: string
+}
+
+export interface PersonaLinkedServiceConfig {
+  model: string
+}
+
 export interface PersonaListQuery {
   status?: PersonaStatus
   category?: PersonaCategory[]
@@ -30,6 +39,8 @@ export interface PersonaListQuery {
 }
 
 export interface PersonaSummary extends ApiInstructionSummary {
+  linked_service: LinkedServiceReference | null
+  config: PersonaLinkedServiceConfig | null
   category: PersonaCategory | null
 }
 
@@ -38,6 +49,8 @@ export interface PersonaResponse extends ApiInstructionCapabilities {
   name: string
   description: string
   instructions: string
+  linked_service: LinkedServiceReference | null
+  config: PersonaLinkedServiceConfig | null
   skill_ids: string[]
   metadata: Record<string, unknown>
   version: number
