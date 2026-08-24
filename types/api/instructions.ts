@@ -62,6 +62,8 @@ export interface PersonaCreateRequest {
   name: string
   description: string
   instructions: string
+  linked_service: LinkedServiceReference
+  config: PersonaLinkedServiceConfig
   skill_ids: string[]
   metadata: {
     category: PersonaCategory
@@ -73,6 +75,8 @@ export interface PersonaPatchRequest {
   name?: string
   description?: string
   instructions?: string
+  linked_service?: LinkedServiceReference
+  config?: PersonaLinkedServiceConfig
   skill_ids?: string[]
 }
 
