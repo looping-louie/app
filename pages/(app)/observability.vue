@@ -28,9 +28,11 @@ const logColumns = [
 ]
 
 const { data: snapshots, status, refresh } = await useAsyncData('observability-runs', async () => {
-  const pipelines = await collectApiPages(offset => api.pipelines.list({ offset }))
-  const pages = await Promise.all(pipelines.map(pipeline => api.pipelines.listClaimableRuns(pipeline.id)))
-  const runs = pages.flatMap(page => page.items.map(candidate => candidate.run))
+  const createdFrom = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const runs = await collectApiPages(offset => api.pipelineRuns.list({
+    offset,
+    created_from: createdFrom,
+  }))
   return Promise.all(runs.map(loadSnapshot))
 })
 usePipelineRunPolling(
@@ -83,9 +85,6 @@ useHead({ title: 'Observability · Looping Louie' })
     </template>
 
     <UiAsyncStage :status="status" loading-label="Loading execution ledger…" error-label="Observability could not be loaded." @retry="refresh">
-      <p class="observability-scope">
-        Metrics currently cover claimable runs only. Historical observability requires a backend Pipeline Run listing endpoint.
-      </p>
       <div v-if="activeView === 'metrics'" class="observability-metrics">
         <UiCollectionGroupTitle heading-as="h2" title="Metrics" />
         <UiSectionStage inverse="bottom" class="observability-stage">
@@ -125,7 +124,6 @@ useHead({ title: 'Observability · Looping Louie' })
 
 <style scoped>
 .observability-controls { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-5); }
-.observability-scope { margin: 0 0 var(--ll-space-5); color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
 .observability-metrics { display: grid; min-width: 0; background: var(--ll-color-canvas); }
 .observability-stage :deep(.ui-section-stage__shell) { width: 100%; }
 .observability-grid { display: grid; min-width: 0; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--ll-space-5); }

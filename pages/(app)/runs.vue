@@ -5,7 +5,7 @@ import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { PipelineRunResponse } from '~/types/api'
+import type { PipelineRunResponse, PipelineRunStatus } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 import { runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
@@ -64,6 +64,7 @@ const selectedDateRangeLabel = computed(() => (
 ))
 
 const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
+watch([runStatus, dateRange], () => void refresh())
 usePipelineRunPolling(
   () => data.value?.snapshots.map(snapshot => snapshot.run) ?? [],
   updateRunDetails,
@@ -83,12 +84,18 @@ const displayedRuns = computed(() => {
 })
 
 async function loadRuns() {
-  const pipelines = await collectApiPages(offset => api.pipelines.list({ offset }))
-  const candidates = await Promise.all(pipelines.map(async pipeline => ({
-    pipeline,
-    runs: (await api.pipelines.listClaimableRuns(pipeline.id)).items.map(candidate => candidate.run),
-  })))
-  const discoveredRuns = candidates.flatMap(item => item.runs)
+  const cutoff = new Date(Date.now() - rangeDuration(dateRange.value)).toISOString()
+  const statusFilter = runStatus.value === 'all'
+    ? undefined
+    : runStatus.value as PipelineRunStatus
+  const [pipelines, discoveredRuns] = await Promise.all([
+    collectApiPages(offset => api.pipelines.list({ offset })),
+    collectApiPages(offset => api.pipelineRuns.list({
+      offset,
+      status: statusFilter,
+      created_from: cutoff,
+    })),
+  ])
   const selectedPipeline = typeof route.query.pipeline === 'string' ? route.query.pipeline : ''
   const selectedId = typeof route.query.run === 'string' ? route.query.run : ''
   if (selectedPipeline && selectedId && !discoveredRuns.some(run => run.id === selectedId)) {
@@ -199,9 +206,6 @@ useHead({ title: 'Runs · Looping Louie' })
 
     <UiAsyncStage :status="status" loading-label="Loading runs…" error-label="Runs could not be loaded." @retry="refresh">
       <div class="runs-content">
-        <p class="runs-scope">
-          The API currently exposes claimable runs and runs opened by ID; a complete historical catalog requires a backend listing endpoint.
-        </p>
         <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
           <template #cell-name="{ row }">
             <button type="button" class="runs-link" @click="selectRun(row as RunTableRow)">{{ row.name }}</button>
@@ -225,7 +229,6 @@ useHead({ title: 'Runs · Looping Louie' })
 
 <style scoped>
 .runs-content { display: grid; gap: var(--ll-space-6); }
-.runs-scope { margin: 0; color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
 .runs-link { padding: 0; color: var(--ll-color-ink); background: transparent; border: 0; font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
 .runs-link:hover, .runs-link:focus-visible { color: var(--ll-color-primary); text-decoration: underline; }
 .runs-action { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-4); padding: var(--ll-space-4); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ui-surface-radius, var(--ll-radius-structural)); }
