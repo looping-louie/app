@@ -5,10 +5,10 @@ import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { GateDecisionRequest, PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
+import type { PipelineRunResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
-import { runPrompt, runTokenCount } from '~/utils/pipelineRuns'
+import { runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
@@ -17,8 +17,8 @@ interface RunTableRow extends Record<string, unknown> {
   pipeline: string
   status: string
   statusValue: PipelineRunResponse['status']
-  started: string
-  startedValue: string
+  created: string
+  createdValue: string
   tokens: string
   runBy: string
 }
@@ -27,16 +27,18 @@ const tableColumns = [
   { key: 'name', label: 'Initial prompt', width: '30%' },
   { key: 'pipeline', label: 'Pipeline', width: '18%' },
   { key: 'status', label: 'Status', type: 'option' as const },
-  { key: 'started', label: 'Started' },
+  { key: 'created', label: 'Created' },
   { key: 'tokens', label: 'Tokens', align: 'end' as const },
   { key: 'runBy', label: 'Run by' },
 ]
 
 const runStatusOptions = [
   { value: 'all', label: 'All' },
-  { value: 'pending', label: 'Pending' },
+  { value: 'prepared', label: 'Prepared' },
+  { value: 'queued', label: 'Queued' },
   { value: 'claimed', label: 'Claimed' },
-  { value: 'running', label: 'Running' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'waiting', label: 'Waiting' },
   { value: 'completed', label: 'Completed' },
   { value: 'failed', label: 'Failed' },
 ]
@@ -54,92 +56,106 @@ const api = useApiClient()
 const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
 const runSort = ref('newest')
-const resolvedGates = ref(new Set<string>())
-const decidingGate = ref('')
-const decisionError = ref('')
+const startingRun = ref(false)
+const runActionError = ref('')
 
 const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'Last 24 hours'
 ))
 
 const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
-const runPolling = usePipelineRunPolling(
-  () => data.value?.runs ?? [],
+usePipelineRunPolling(
+  () => data.value?.snapshots.map(snapshot => snapshot.run) ?? [],
   updateRunDetails,
 )
-const selectedRun = computed(() => data.value?.runs.find(run => run.id === route.query.run) ?? null)
+const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
 const displayedRuns = computed(() => {
   const cutoff = Date.now() - rangeDuration(dateRange.value)
-  const rows = (data.value?.runs ?? [])
-    .filter(run => (runStatus.value === 'all' || run.status === runStatus.value) && Date.parse(run.created_at) >= cutoff)
-    .map(run => toTableRow(run, data.value?.pipelineNames.get(run.pipeline_id) ?? run.pipeline_id))
+  const rows = (data.value?.snapshots ?? [])
+    .filter(({ run }) => (runStatus.value === 'all' || run.status === runStatus.value) && Date.parse(run.created_at) >= cutoff)
+    .map(snapshot => toTableRow(snapshot, data.value?.pipelineNames.get(snapshot.run.pipeline_id) ?? snapshot.run.pipeline_id))
   return rows.sort((first, second) => {
     if (runSort.value === 'alphabetical-desc') return second.name.localeCompare(first.name)
-    if (runSort.value === 'oldest') return Date.parse(first.startedValue) - Date.parse(second.startedValue)
-    if (runSort.value === 'newest') return Date.parse(second.startedValue) - Date.parse(first.startedValue)
+    if (runSort.value === 'oldest') return Date.parse(first.createdValue) - Date.parse(second.createdValue)
+    if (runSort.value === 'newest') return Date.parse(second.createdValue) - Date.parse(first.createdValue)
     return first.name.localeCompare(second.name)
   })
 })
 
 async function loadRuns() {
   const pipelines = await collectApiPages(offset => api.pipelines.list({ offset }))
-  const pages = await Promise.all(pipelines.map(async pipeline => ({
+  const candidates = await Promise.all(pipelines.map(async pipeline => ({
     pipeline,
-    runs: await collectApiPages(offset => api.pipelines.listRuns(pipeline.id, { offset })),
+    runs: (await api.pipelines.listClaimableRuns(pipeline.id)).items.map(candidate => candidate.run),
   })))
-  const summaries = pages.flatMap(item => item.runs)
-  const details = await Promise.all(summaries.map(run => api.pipelines.getRun(run.pipeline_id, run.id)))
+  const discoveredRuns = candidates.flatMap(item => item.runs)
   const selectedPipeline = typeof route.query.pipeline === 'string' ? route.query.pipeline : ''
   const selectedId = typeof route.query.run === 'string' ? route.query.run : ''
-  if (selectedPipeline && selectedId && !details.some(run => run.id === selectedId)) {
-    details.push(await api.pipelines.getRun(selectedPipeline, selectedId))
+  if (selectedPipeline && selectedId && !discoveredRuns.some(run => run.id === selectedId)) {
+    discoveredRuns.push(await api.pipelines.getRun(selectedPipeline, selectedId))
   }
   return {
-    runs: details,
+    snapshots: await Promise.all(discoveredRuns.map(loadSnapshot)),
     pipelineNames: new Map(pipelines.map(pipeline => [pipeline.id, pipeline.name])),
   }
 }
 
+async function loadSnapshot(run: PipelineRunResponse): Promise<PipelineRunSnapshot> {
+  const events = await api.pipelines.listRunEvents(run.pipeline_id, run.id)
+  return { run, events: events.items }
+}
+
 function selectRun(row: RunTableRow) {
-  decisionError.value = ''
+  runActionError.value = ''
   void router.replace({ query: { ...route.query, pipeline: row.pipelineId, run: row.id } })
 }
 
-async function decideGate(event: PipelineRunEventResponse, decision: GateDecisionRequest) {
-  if (!selectedRun.value || !event.step_id || decidingGate.value) return
-  decidingGate.value = event.step_id
-  decisionError.value = ''
+async function startPreparedRun() {
+  const run = selectedSnapshot.value?.run
+  if (!run || run.status !== 'prepared' || startingRun.value) return
+  startingRun.value = true
+  runActionError.value = ''
   try {
-    await api.pipelines.decideGate(selectedRun.value.pipeline_id, selectedRun.value.id, event.step_id, decision)
-    resolvedGates.value = new Set([...resolvedGates.value, event.id])
-    await runPolling.refreshRun(selectedRun.value)
+    const started = await api.pipelines.startRun(run.pipeline_id, run.id)
+    await updateRunDetails([started])
   } catch (cause) {
-    decisionError.value = apiErrorMessage(cause, 'This gate could not be resolved. Please try again.')
+    runActionError.value = apiErrorMessage(cause, 'This prepared run could not be started. Please try again.')
   } finally {
-    decidingGate.value = ''
+    startingRun.value = false
   }
 }
 
-function updateRunDetails(updates: PipelineRunResponse[]) {
+async function updateRunDetails(updates: PipelineRunResponse[]) {
   if (!data.value) return
-  const byId = new Map(updates.map(run => [run.id, run]))
+  const snapshots = await Promise.all(updates.map(async (run) => {
+    try {
+      return await loadSnapshot(run)
+    } catch {
+      return {
+        run,
+        events: data.value?.snapshots.find(snapshot => snapshot.run.id === run.id)?.events ?? [],
+      }
+    }
+  }))
+  const byId = new Map(snapshots.map(snapshot => [snapshot.run.id, snapshot]))
   data.value = {
     ...data.value,
-    runs: data.value.runs.map(run => byId.get(run.id) ?? run),
+    snapshots: data.value.snapshots.map(snapshot => byId.get(snapshot.run.id) ?? snapshot),
   }
 }
 
-function toTableRow(run: PipelineRunResponse, pipeline: string): RunTableRow {
+function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRow {
+  const { run, events } = snapshot
   return {
     id: run.id,
     pipelineId: run.pipeline_id,
     name: runPrompt(run).split('\n')[0]!.slice(0, 90),
     pipeline,
-    status: run.status.replace(/^./, first => first.toUpperCase()),
+    status: run.status.replaceAll('_', ' ').replace(/^./, first => first.toUpperCase()),
     statusValue: run.status,
-    started: formatDateTime(run.started_at ?? run.created_at),
-    startedValue: run.started_at ?? run.created_at,
-    tokens: runTokenCount(run).toLocaleString(),
+    created: formatDateTime(run.created_at),
+    createdValue: run.created_at,
+    tokens: runTokenCount(events).toLocaleString(),
     runBy: run.created_by,
   }
 }
@@ -183,19 +199,24 @@ useHead({ title: 'Runs · Looping Louie' })
 
     <UiAsyncStage :status="status" loading-label="Loading runs…" error-label="Runs could not be loaded." @retry="refresh">
       <div class="runs-content">
+        <p class="runs-scope">
+          The API currently exposes claimable runs and runs opened by ID; a complete historical catalog requires a backend listing endpoint.
+        </p>
         <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
           <template #cell-name="{ row }">
             <button type="button" class="runs-link" @click="selectRun(row as RunTableRow)">{{ row.name }}</button>
           </template>
           <template #empty>No runs match these filters.</template>
         </UiTable>
-        <p v-if="decisionError" class="runs-error" role="alert">{{ decisionError }}</p>
+        <div v-if="selectedSnapshot?.run.status === 'prepared'" class="runs-action">
+          <p>This run is prepared and will not execute until it is started.</p>
+          <UiButton :loading="startingRun" @click="startPreparedRun">Start run</UiButton>
+        </div>
+        <p v-if="runActionError" class="runs-error" role="alert">{{ runActionError }}</p>
         <RunTimeline
-          v-if="selectedRun"
-          :run="selectedRun"
-          :resolved-gates="resolvedGates"
-          :deciding-gate="decidingGate"
-          @decide="decideGate"
+          v-if="selectedSnapshot"
+          :run="selectedSnapshot.run"
+          :events="selectedSnapshot.events"
         />
       </div>
     </UiAsyncStage>
@@ -204,7 +225,10 @@ useHead({ title: 'Runs · Looping Louie' })
 
 <style scoped>
 .runs-content { display: grid; gap: var(--ll-space-6); }
+.runs-scope { margin: 0; color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
 .runs-link { padding: 0; color: var(--ll-color-ink); background: transparent; border: 0; font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
 .runs-link:hover, .runs-link:focus-visible { color: var(--ll-color-primary); text-decoration: underline; }
+.runs-action { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-4); padding: var(--ll-space-4); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ui-surface-radius, var(--ll-radius-structural)); }
+.runs-action p { margin: 0; color: var(--ll-color-text-muted); }
 .runs-error { margin: 0; color: var(--ll-color-brand-ink); }
 </style>

@@ -10,6 +10,7 @@ import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTable from '~/components/ui/Table.vue'
 import { collectApiPages } from '~/utils/apiPagination'
 import { observabilityCharts, observabilityLogs, observabilityMetrics } from '~/utils/observability'
+import type { PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 const activeView = ref('metrics')
 const api = useApiClient()
@@ -26,25 +27,29 @@ const logColumns = [
   { key: 'error', label: 'Error', width: '25%' },
 ]
 
-const { data: runs, status, refresh } = await useAsyncData('observability-runs', async () => {
+const { data: snapshots, status, refresh } = await useAsyncData('observability-runs', async () => {
   const pipelines = await collectApiPages(offset => api.pipelines.list({ offset }))
-  const pages = await Promise.all(pipelines.map(pipeline => (
-    collectApiPages(offset => api.pipelines.listRuns(pipeline.id, { offset }))
-  )))
-  const summaries = pages.flat()
-  return Promise.all(summaries.map(run => api.pipelines.getRun(run.pipeline_id, run.id)))
+  const pages = await Promise.all(pipelines.map(pipeline => api.pipelines.listClaimableRuns(pipeline.id)))
+  const runs = pages.flatMap(page => page.items.map(candidate => candidate.run))
+  return Promise.all(runs.map(loadSnapshot))
 })
 usePipelineRunPolling(
-  () => runs.value ?? [],
-  (updates) => {
-    const byId = new Map(updates.map(run => [run.id, run]))
-    runs.value = (runs.value ?? []).map(run => byId.get(run.id) ?? run)
+  () => snapshots.value?.map(snapshot => snapshot.run) ?? [],
+  async (updates) => {
+    const refreshed = await Promise.all(updates.map(loadSnapshot))
+    const byId = new Map(refreshed.map(snapshot => [snapshot.run.id, snapshot]))
+    snapshots.value = (snapshots.value ?? []).map(snapshot => byId.get(snapshot.run.id) ?? snapshot)
   },
 )
 
-const metrics = computed(() => observabilityMetrics(runs.value ?? []))
-const charts = computed(() => observabilityCharts(runs.value ?? []))
-const logs = computed(() => observabilityLogs(runs.value ?? []))
+async function loadSnapshot(run: PipelineRunSnapshot['run']): Promise<PipelineRunSnapshot> {
+  const events = await api.pipelines.listRunEvents(run.pipeline_id, run.id)
+  return { run, events: events.items }
+}
+
+const metrics = computed(() => observabilityMetrics(snapshots.value ?? []))
+const charts = computed(() => observabilityCharts(snapshots.value ?? []))
+const logs = computed(() => observabilityLogs(snapshots.value ?? []))
 
 definePageMeta({ layout: 'app' })
 useHead({ title: 'Observability · Looping Louie' })
@@ -78,6 +83,9 @@ useHead({ title: 'Observability · Looping Louie' })
     </template>
 
     <UiAsyncStage :status="status" loading-label="Loading execution ledger…" error-label="Observability could not be loaded." @retry="refresh">
+      <p class="observability-scope">
+        Metrics currently cover claimable runs only. Historical observability requires a backend Pipeline Run listing endpoint.
+      </p>
       <div v-if="activeView === 'metrics'" class="observability-metrics">
         <UiCollectionGroupTitle heading-as="h2" title="Metrics" />
         <UiSectionStage inverse="bottom" class="observability-stage">
@@ -117,6 +125,7 @@ useHead({ title: 'Observability · Looping Louie' })
 
 <style scoped>
 .observability-controls { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-5); }
+.observability-scope { margin: 0 0 var(--ll-space-5); color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
 .observability-metrics { display: grid; min-width: 0; background: var(--ll-color-canvas); }
 .observability-stage :deep(.ui-section-stage__shell) { width: 100%; }
 .observability-grid { display: grid; min-width: 0; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--ll-space-5); }

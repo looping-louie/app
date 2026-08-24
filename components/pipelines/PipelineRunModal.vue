@@ -82,6 +82,7 @@ async function submit() {
         multiline
         :rows="7"
         required
+        :disabled="Boolean(preparedRunId)"
         data-autofocus
         placeholder="Describe the outcome you want from this pipeline…"
         :error="error"
