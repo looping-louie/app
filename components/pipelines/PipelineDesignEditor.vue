@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { LoopAgentInput, LoopOutputContract, LoopStopConditions } from '~/types/api'
+import type { ActivityLoopAgentInput, ActivityLoopFlow, ActivityLoopOutputContract, ActivityLoopStopConditions } from '~/types/api'
 
 export interface PipelineDesignDraft {
   activities: PipelineEditorActivity[]
@@ -10,11 +10,11 @@ export interface PipelineEditorLoop {
   id: string
   title: string
   description: string
-  flow: 'direct' | 'refinement' | 'roundtable'
+  flow: ActivityLoopFlow
   status: string
-  agents: LoopAgentInput[]
-  stop_conditions: LoopStopConditions
-  output_contract?: LoopOutputContract
+  agents: ActivityLoopAgentInput[]
+  stop_conditions: ActivityLoopStopConditions
+  output_contract?: ActivityLoopOutputContract
 }
 
 export interface PipelineEditorLoopActivity {
@@ -41,8 +41,8 @@ import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import type {
   ActivityCreateRequest,
-  LoopActivityConfig,
-  LoopActivityType,
+  ActivityLoopConfig,
+  ActivityLoopType,
   PipelineActivityStepRequest,
   PipelineActivityStepResponse,
 } from '~/types/api'
@@ -190,7 +190,7 @@ function activityRequest(activity: PipelineEditorActivity): ActivityCreateReques
   if (activity.type === 'loop') {
     const loop = loopById.value.get(activity.loopId)
     if (!loop) throw new Error(`Loop ${activity.loopId} is no longer available.`)
-    const type: LoopActivityType = `${loop.flow}_loop`
+    const type: ActivityLoopType = `${loop.flow}_loop`
     return {
       name: loop.title,
       description: loop.description,
@@ -257,7 +257,7 @@ function replaceSteps(steps: InitialStep[]) {
   steps.forEach((step, index) => {
     const instanceId = createInstanceId('persisted-step-')
     if (step.type.endsWith('_loop')) {
-      const config = step.config as LoopActivityConfig
+      const config = step.config as ActivityLoopConfig
       const loopId = createInstanceId('persisted-loop-')
       localLoops.value.push({
         id: loopId,

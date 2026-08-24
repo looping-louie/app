@@ -10,7 +10,7 @@ import UiModal from '~/components/ui/Modal.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import type {
-  LoopActivityConfig,
+  ActivityLoopConfig,
   PipelineActivityStepRequest,
 } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
@@ -93,7 +93,7 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
   pipeline.value?.steps.forEach((activity, index) => {
     const instanceId = `pipeline-detail-step-${index}`
     if (activity.type.endsWith('_loop')) {
-      const config = activity.config as LoopActivityConfig
+      const config = activity.config as ActivityLoopConfig
       result.push({
         instanceId,
         type: 'loop',

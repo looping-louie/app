@@ -1,16 +1,16 @@
 import type { ApiListQuery, ApiListResponse } from './common'
 
-export type LoopRunStatus = 'in_progress' | 'failed' | 'completed' | 'stopped'
-export type LoopRunState = 'awaiting_snapshot' | 'awaiting_generation' | 'awaiting_apply' | 'awaiting_review_input' | 'awaiting_commit' | 'awaiting_human_decision' | 'completed' | 'failed'
-export type LoopRunAction = 'collect_snapshot' | 'apply_operations' | 'submit_review_input' | 'commit_if_allowed' | 'submit_human_decision' | 'none'
+export type ActivityRunStatus = 'in_progress' | 'failed' | 'completed' | 'stopped'
+export type ActivityRunState = 'awaiting_snapshot' | 'awaiting_generation' | 'awaiting_apply' | 'awaiting_review_input' | 'awaiting_commit' | 'awaiting_human_decision' | 'completed' | 'failed'
+export type ActivityRunAction = 'collect_snapshot' | 'apply_operations' | 'submit_review_input' | 'commit_if_allowed' | 'submit_human_decision' | 'none'
 
 export interface ActivityRunResponse {
   id: string
   activity_id: string
   input: string
-  status: LoopRunStatus
-  state: LoopRunState
-  next_action: LoopRunAction
+  status: ActivityRunStatus
+  state: ActivityRunState
+  next_action: ActivityRunAction
   iteration: number
   token_revision: number
   continuation_token: string | null
@@ -21,8 +21,6 @@ export interface ActivityRunResponse {
 }
 
 export type ActivityRunListResponse = ApiListResponse<ActivityRunResponse>
-export type LoopRunResponse = ActivityRunResponse
-export type LoopRunListResponse = ActivityRunListResponse
 
 export type ActivityRunHumanDecision = 'approved' | 'rejected' | 'cancelled'
 
