@@ -121,11 +121,12 @@ let stageResizeObserver: ResizeObserver | undefined
 const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
   'pipeline-design-editor-options',
   async () => {
-    const [personas, models] = await Promise.all([
+    const [personas, models, linkedServices] = await Promise.all([
       api.personas.list(),
       api.models.list({ available: true }),
+      api.linkedServices.list(),
     ])
-    return { personas: personas.items, models: models.items }
+    return { personas: personas.items, models: models.items, linkedServices }
   },
 )
 
@@ -167,7 +168,7 @@ const valid = computed(() => (
     Boolean(loop.flow)
     && Boolean(loop.stop_conditions?.max_iterations || loop.stop_conditions?.max_tokens || loop.stop_conditions?.timeout_seconds)
     && loop.agents.length > 0
-    && loop.agents.every(agent => Boolean(agent.persona_id && agent.model_id && agent.role))
+    && loop.agents.every(agent => Boolean(agent.persona_id && agent.role))
   ))
 ))
 const validationMessage = computed(() => {
@@ -504,6 +505,7 @@ defineExpose({ getDraft, getSteps, restoreDraft })
     :loop="editingLoop"
     :personas="loopOptionsData?.personas ?? []"
     :models="loopOptionsData?.models ?? []"
+    :linked-services="loopOptionsData?.linkedServices ?? []"
     :loading="loopOptionsStatus === 'pending'"
     @add="addLocalLoop"
     @update="updateLocalLoop"

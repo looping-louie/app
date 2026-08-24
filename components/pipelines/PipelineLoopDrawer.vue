@@ -13,6 +13,13 @@ interface Persona {
   name: string
   description?: string
   source_instruction_id?: string | null
+  linked_service: {
+    type: 'LinkedServiceReference'
+    reference_id: string
+  } | null
+  config: {
+    model: string
+  } | null
 }
 
 interface Model {
@@ -20,6 +27,15 @@ interface Model {
   name: string
   vendor: string
   family: string
+}
+
+interface LinkedService {
+  id: string
+  enabled: boolean
+  config: {
+    configured: boolean
+    available_models: string[]
+  }
 }
 
 interface Assignment {
@@ -59,6 +75,7 @@ const props = withDefaults(defineProps<{
   open: boolean
   personas: Persona[]
   models: Model[]
+  linkedServices: LinkedService[]
   loading?: boolean
   loop?: LoopDraft | null
 }>(), { loading: false, loop: null })
@@ -106,11 +123,27 @@ const roleGroups = computed(() => {
 })
 
 const personaById = computed(() => new Map(props.personas.map(persona => [persona.id, persona])))
+const linkedServiceById = computed(() => new Map(props.linkedServices.map(service => [service.id, service])))
 const modelById = computed(() => new Map(props.models.map(model => [model.id, model])))
 const thinkingMachinesModel = computed(() => props.models.find((model) => {
   const identity = `${model.vendor} ${model.family} ${model.name} ${model.id}`.toLocaleLowerCase()
   return identity.includes('thinking machines') || identity.includes('thinkingmachines') || identity.includes('thinking-machines')
 }) ?? props.models[0])
+
+function personaExecution(persona: Persona) {
+  if (!persona.linked_service || !persona.config) {
+    return { available: false, model: '', reason: 'Execution setup required' }
+  }
+
+  const service = linkedServiceById.value.get(persona.linked_service.reference_id)
+  if (!service) return { available: false, model: persona.config.model, reason: 'Connection not found' }
+  if (!service.enabled) return { available: false, model: persona.config.model, reason: 'Connection disabled' }
+  if (!service.config.configured) return { available: false, model: persona.config.model, reason: 'Connection not configured' }
+  if (!service.config.available_models.includes(persona.config.model)) {
+    return { available: false, model: persona.config.model, reason: 'Model unavailable on this connection' }
+  }
+  return { available: true, model: persona.config.model, reason: '' }
+}
 
 const paletteItems = computed<CommandPaletteItem[]>(() => {
   if (paletteMode.value === 'model') {
@@ -126,15 +159,20 @@ const paletteItems = computed<CommandPaletteItem[]>(() => {
   }
 
   const selectedInRole = new Set(assignments.value.filter(item => item.role === targetRole.value).map(item => item.persona_id))
-  return props.personas.map(persona => ({
-    id: persona.id,
-    label: persona.name,
-    description: persona.description,
-    group: 'Agents',
-    keywords: [persona.id],
-    iconPath: personaIcon(persona),
-    disabled: selectedInRole.has(persona.id),
-  }))
+  return props.personas.map((persona) => {
+    const execution = personaExecution(persona)
+    return {
+      id: persona.id,
+      label: persona.name,
+      description: execution.available
+        ? `${persona.description ?? ''} · ${execution.model}`
+        : execution.reason,
+      group: execution.available ? 'Agents' : 'Unavailable agents',
+      keywords: [persona.id, execution.model],
+      iconPath: personaIcon(persona),
+      disabled: selectedInRole.has(persona.id) || !execution.available,
+    }
+  })
 })
 
 const canAdd = computed(() => {
