@@ -28,6 +28,10 @@ import type {
   PipelineRunResponse,
   GateDecisionRequest,
   GateDecisionResponse,
+  CatalogProviderResponse,
+  LinkedServiceCreateRequest,
+  LinkedServicePatchRequest,
+  LinkedServiceResponse,
   ProviderPatchRequest,
   ProviderResponse,
   SkillListResponse,
@@ -82,6 +86,16 @@ export function useApiClient() {
     models: {
       list: (query: ModelListQuery = {}) => $fetch<ModelListResponse>('/api/v1/models', { query }),
       get: (id: string) => $fetch<ModelResponse>(resourcePath('models', id)),
+    },
+    catalog: {
+      listProviders: () => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers'),
+    },
+    linkedServices: {
+      list: () => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services'),
+      get: (id: string) => $fetch<LinkedServiceResponse>(resourcePath('linked-services', id)),
+      create: (body: LinkedServiceCreateRequest) => $fetch<LinkedServiceResponse>('/api/v1/linked-services', { method: 'POST', body }),
+      patch: (id: string, body: LinkedServicePatchRequest) => $fetch<LinkedServiceResponse>(resourcePath('linked-services', id), { method: 'PATCH', body }),
+      remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('linked-services', id), { method: 'DELETE' }),
     },
     providers: {
       list: () => $fetch<ProviderResponse[]>('/api/v1/providers'),
