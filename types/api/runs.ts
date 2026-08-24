@@ -86,11 +86,5 @@ export interface PipelineRunListQuery extends ApiListQuery {
   created_to?: string
 }
 
-export interface PipelineRunClaimableResponse {
-  run: PipelineRunResponse
-  etag: string
-}
-
 export type PipelineRunEventListResponse = ApiListResponse<PipelineRunEventResponse>
-export type PipelineRunClaimableListResponse = ApiListResponse<PipelineRunClaimableResponse>
 export type PipelineRunListResponse = ApiListResponse<PipelineRunResponse>
