@@ -4,6 +4,7 @@ import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiPagination from '~/components/ui/Pagination.vue'
 import UiPill from '~/components/ui/Pill.vue'
+import UiStatusText from '~/components/ui/StatusText.vue'
 import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
 
 const api = useApiClient()
@@ -16,7 +17,6 @@ const modelLabs = ref<string[]>([])
 const modelSort = ref('alphabetical-asc')
 const modelOffset = ref(0)
 const modelPageSize = 24
-const modelEnabledState = reactive<Record<string, boolean>>({})
 const arrowSquareOutIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
 
 const officialModelPages: Record<string, string> = {
@@ -70,12 +70,6 @@ const modelSearchItems = computed(() => models.value.map(model => ({
   imageAlt: '',
 })))
 
-watch(models, (currentModels) => {
-  currentModels.forEach((model) => {
-    if (!(model.id in modelEnabledState)) modelEnabledState[model.id] = model.available
-  })
-}, { immediate: true })
-
 watch([modelStatus, modelLabs, modelSort, modelSearchTerm], () => {
   modelOffset.value = 0
 }, { deep: true })
@@ -111,14 +105,6 @@ function vendorInitials(vendor: string) {
     .join('')
     .slice(0, 2)
     .toUpperCase()
-}
-
-function modelEnabled(model: ModelSummary) {
-  return typeof modelEnabledState[model.id] === 'boolean' ? modelEnabledState[model.id] : model.available
-}
-
-function setModelEnabled(model: ModelSummary, enabled: boolean) {
-  modelEnabledState[model.id] = enabled
 }
 
 function officialModelPage(model: ModelSummary) {
@@ -162,6 +148,10 @@ useHead({
 <template>
   <section aria-labelledby="models-heading">
     <h2 id="models-heading" class="visually-hidden">Models</h2>
+    <p class="models-availability-note">
+      Availability is read-only and comes from enabled, configured connections in
+      <NuxtLink to="/settings/providers">Providers</NuxtLink>.
+    </p>
 
     <UiCatalogFilterBar
       v-model:status="modelStatus"
@@ -199,9 +189,6 @@ useHead({
           :src="providerLogo(model.vendor, model.family) || undefined"
           alt=""
           :description="model.name"
-          toggle
-          :toggle-value="modelEnabled(model)"
-          :toggle-label="`${modelEnabled(model) ? 'Disable' : 'Enable'} ${model.name}`"
           :action-icon-path="arrowSquareOutIconPath"
           :action-href="officialModelPage(model)"
           :action-label="`View official information about ${model.name}`"
@@ -209,12 +196,19 @@ useHead({
           action-visibility="hover"
           class="model-item"
           :class="{ 'model-item--focused': focusedModelId() === model.id }"
-          @update:toggle-value="setModelEnabled(model, $event)"
         >
           <template v-if="!providerLogo(model.vendor, model.family)" #icon>
             <span class="model-item__fallback">{{ vendorInitials(model.vendor) }}</span>
           </template>
-          {{ model.vendor }}
+          <span class="model-item__label">
+            <span>{{ model.vendor }}</span>
+            <UiStatusText
+              :tone="model.available ? 'enabled' : 'disabled'"
+              class="model-item__availability"
+            >
+              {{ model.available ? 'available' : 'unavailable' }}
+            </UiStatusText>
+          </span>
         </UiPill>
       </UiGrid>
     </UiAsyncStage>
@@ -234,6 +228,14 @@ useHead({
   margin-bottom: var(--ll-space-10);
 }
 
+.models-availability-note {
+  margin: 0 0 var(--ll-space-5);
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-sm);
+}
+
+.models-availability-note a { color: var(--ll-color-ink); }
+
 .models-grid { column-gap: var(--ll-space-20); }
 
 .model-item {
@@ -249,6 +251,24 @@ useHead({
 .model-item__fallback {
   color: var(--ll-color-ink);
   font: 600 0.6875rem / 1 var(--ll-font-mono);
+}
+
+.model-item__label {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: baseline;
+  gap: var(--ll-space-2);
+}
+
+.model-item__label > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-item__availability {
+  flex: none;
+  font-size: var(--ll-text-xs);
+  font-weight: 500;
 }
 
 .visually-hidden {
