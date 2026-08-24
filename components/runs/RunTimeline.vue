@@ -55,7 +55,7 @@ function eventDetail(event: PipelineRunEventResponse) {
         </div>
       </li>
     </ol>
-    <p v-else class="run-timeline__empty">The worker has not reported any events yet.</p>
+    <p v-else class="run-timeline__empty">No execution events have been recorded yet.</p>
   </section>
 </template>
 

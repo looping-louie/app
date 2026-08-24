@@ -316,6 +316,18 @@ useHead({ title: 'Runs · Looping Louie' })
           <p>This run is prepared and will not execute until it is started.</p>
           <UiButton :loading="startingRun" @click="startPreparedRun">Start run</UiButton>
         </div>
+        <div v-else-if="selectedSnapshot?.run.status === 'queued'" class="runs-action runs-action--informative" role="status">
+          <div>
+            <strong>Waiting for a runtime worker</strong>
+            <p>This run will remain queued until the runtime claims it. Worker availability is managed outside the web app.</p>
+          </div>
+        </div>
+        <div v-else-if="selectedSnapshot?.run.status === 'claimed'" class="runs-action runs-action--informative" role="status">
+          <div>
+            <strong>Claimed by the runtime</strong>
+            <p>The runtime has claimed this run and may still be preparing it before execution begins.</p>
+          </div>
+        </div>
         <HumanDecisionPanel
           v-if="selectedSnapshot?.run.status === 'waiting'"
           :activity="selectedActivity"
@@ -340,6 +352,8 @@ useHead({ title: 'Runs · Looping Louie' })
 .runs-link { padding: 0; color: var(--ll-color-ink); background: transparent; border: 0; font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
 .runs-link:hover, .runs-link:focus-visible { color: var(--ll-color-primary); text-decoration: underline; }
 .runs-action { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-4); padding: var(--ll-space-4); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ui-surface-radius, var(--ll-radius-structural)); }
+.runs-action--informative { justify-content: flex-start; }
+.runs-action--informative > div { display: grid; gap: var(--ll-space-2); }
 .runs-action p { margin: 0; color: var(--ll-color-text-muted); }
 .runs-error { margin: 0; color: var(--ll-color-brand-ink); }
 </style>
