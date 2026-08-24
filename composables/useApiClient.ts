@@ -82,10 +82,10 @@ export function useApiClient() {
       get: (id: string) => $fetch<ModelResponse>(resourcePath('models', id)),
     },
     catalog: {
-      listProviders: () => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers'),
+      listProviders: (signal?: AbortSignal) => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers', { signal }),
     },
     linkedServices: {
-      list: () => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services'),
+      list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),
       get: (id: string) => $fetch<LinkedServiceResponse>(resourcePath('linked-services', id)),
       create: (body: LinkedServiceCreateRequest) => $fetch<LinkedServiceResponse>('/api/v1/linked-services', { method: 'POST', body }),
       patch: (id: string, body: LinkedServicePatchRequest) => $fetch<LinkedServiceResponse>(resourcePath('linked-services', id), { method: 'PATCH', body }),

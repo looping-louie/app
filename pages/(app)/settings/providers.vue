@@ -11,9 +11,6 @@ import { useProviders } from '~/composables/useProviders'
 import { apiErrorMessage } from '~/utils/api/errors'
 
 const {
-  providers,
-  pending,
-  error,
   fetchProviders,
   createLinkedService,
   patchLinkedService,
@@ -31,13 +28,40 @@ const deleteModalOpen = ref(false)
 const deleteService = ref<LinkedServiceResponse | null>(null)
 const deleting = ref(false)
 const deleteError = ref('')
-const providerStageStatus = computed<'pending' | 'error' | 'success'>(() => {
-  if (pending.value) return 'pending'
-  if (error.value) return 'error'
-  return 'success'
-})
 
-await useAsyncData('settings-providers', () => fetchProviders())
+const {
+  data: providers,
+  status: providerStageStatus,
+  error: providerError,
+  refresh: refreshProviders,
+} = await useAsyncData(
+  'settings-providers',
+  (_nuxtApp, { signal }) => fetchProviders(signal),
+  {
+    default: () => [],
+    timeout: 10_000,
+  },
+)
+
+const providerErrorLabel = computed(() => apiErrorMessage(providerError.value, 'Providers could not be loaded.'))
+
+function upsertLinkedService(service: LinkedServiceResponse) {
+  const provider = providers.value.find(item => item.id === service.provider_type)
+  if (!provider) return
+
+  const index = provider.linkedServices.findIndex(item => item.id === service.id)
+  if (index === -1) provider.linkedServices.push(service)
+  else provider.linkedServices[index] = service
+}
+
+function removeLinkedService(id: string) {
+  for (const provider of providers.value) {
+    const index = provider.linkedServices.findIndex(service => service.id === id)
+    if (index === -1) continue
+    provider.linkedServices.splice(index, 1)
+    return
+  }
+}
 
 function openConnectionModal(provider: ProviderCatalogItem, service: LinkedServiceResponse | null = null) {
   selectedProvider.value = provider
@@ -72,6 +96,7 @@ async function saveConnection(value: LinkedServiceFormValue) {
       if (Object.keys(config).length) body.config = config
 
       const service = await patchLinkedService(selectedService.value.id, body)
+      upsertLinkedService(service)
       feedback.value = `${service.name} updated.`
     } else {
       const service = await createLinkedService({
@@ -82,6 +107,7 @@ async function saveConnection(value: LinkedServiceFormValue) {
           ...(value.baseUrl ? { base_url: value.baseUrl } : {}),
         },
       })
+      upsertLinkedService(service)
       feedback.value = `${service.name} connected to ${provider.name}.`
     }
 
@@ -103,6 +129,7 @@ async function updateConnection(service: LinkedServiceResponse, enabled: boolean
 
   try {
     const result = await patchLinkedService(service.id, { enabled })
+    upsertLinkedService(result)
     feedback.value = `${result.name} ${result.enabled ? 'enabled' : 'disabled'}.`
   } catch (cause) {
     service.enabled = previousValue
@@ -134,6 +161,7 @@ async function confirmDelete() {
 
   try {
     await deleteLinkedService(service.id)
+    removeLinkedService(service.id)
     feedback.value = `${service.name} deleted.`
     deleteModalOpen.value = false
   } catch (cause) {
@@ -160,9 +188,9 @@ useHead({
       :status="providerStageStatus"
       :empty="providers.length === 0"
       loading-label="Loading provider catalog and connections…"
-      :error-label="error || 'Providers could not be loaded.'"
+      :error-label="providerErrorLabel"
       empty-label="No providers found."
-      @retry="fetchProviders"
+      @retry="refreshProviders()"
     >
       <ProviderAccordion
         :providers="providers"
