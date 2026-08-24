@@ -235,7 +235,11 @@ function restoreLocalDraft() {
 }
 
 async function createAgent() {
-  if (!validatePrompt() || saving.value || !category.value || !validateDetails() || !validateExecution()) return
+  if (!validatePrompt() || saving.value || !category.value || !validateDetails()) return
+  if (!validateExecution()) {
+    await goTo('execution')
+    return
+  }
   saving.value = true
   saveError.value = ''
   try {
