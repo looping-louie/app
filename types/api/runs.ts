@@ -4,9 +4,9 @@ export type LoopRunStatus = 'in_progress' | 'failed' | 'completed' | 'stopped'
 export type LoopRunState = 'awaiting_snapshot' | 'awaiting_generation' | 'awaiting_apply' | 'awaiting_review_input' | 'awaiting_commit' | 'awaiting_human_decision' | 'completed' | 'failed'
 export type LoopRunAction = 'collect_snapshot' | 'apply_operations' | 'submit_review_input' | 'commit_if_allowed' | 'submit_human_decision' | 'none'
 
-export interface LoopRunResponse {
+export interface ActivityRunResponse {
   id: string
-  loop_id: string
+  activity_id: string
   input: string
   status: LoopRunStatus
   state: LoopRunState
@@ -20,7 +20,9 @@ export interface LoopRunResponse {
   payload: Record<string, unknown>
 }
 
-export type LoopRunListResponse = ApiListResponse<LoopRunResponse>
+export type ActivityRunListResponse = ApiListResponse<ActivityRunResponse>
+export type LoopRunResponse = ActivityRunResponse
+export type LoopRunListResponse = ActivityRunListResponse
 
 export type PipelineRunStatus = 'prepared' | 'queued' | 'claimed' | 'in_progress' | 'waiting' | 'failed' | 'completed'
 export type PipelineRunCommitMode = 'allow' | 'forbid'
@@ -47,7 +49,7 @@ export interface PipelineRunResponse {
   input: string
   commit_mode: PipelineRunCommitMode
   status: PipelineRunStatus
-  current_activity_run: LoopRunResponse | null
+  current_activity_run: ActivityRunResponse | null
   steps: PipelineRunStepResponse[]
   created_at: string
   created_by: string

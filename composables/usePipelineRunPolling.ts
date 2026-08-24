@@ -1,16 +1,16 @@
 import type { PipelineRunResponse } from '~/types/api'
 
 const LIVE_POLL_DELAY = 2500
-const MAX_PENDING_POLL_DELAY = 30000
+const MAX_PASSIVE_POLL_DELAY = 30000
 
 export function usePipelineRunPolling(
   getRuns: () => PipelineRunResponse[],
-  updateRuns: (runs: PipelineRunResponse[]) => void,
+  updateRuns: (runs: PipelineRunResponse[]) => void | Promise<void>,
 ) {
   const api = useApiClient()
   let timer: ReturnType<typeof setTimeout> | undefined
   let polling = false
-  let pendingPollCount = 0
+  let passivePollCount = 0
 
   function clearTimer() {
     if (timer) clearTimeout(timer)
@@ -19,16 +19,16 @@ export function usePipelineRunPolling(
 
   function nextDelay() {
     const runs = getRuns()
-    if (runs.some(run => run.status === 'claimed' || run.status === 'running')) {
-      pendingPollCount = 0
+    if (runs.some(run => ['queued', 'claimed', 'in_progress'].includes(run.status))) {
+      passivePollCount = 0
       return LIVE_POLL_DELAY
     }
-    if (runs.some(run => run.status === 'pending')) {
-      const delay = Math.min(2500 * 2 ** pendingPollCount, MAX_PENDING_POLL_DELAY)
-      pendingPollCount += 1
+    if (runs.some(run => run.status === 'prepared' || run.status === 'waiting')) {
+      const delay = Math.min(2500 * 2 ** passivePollCount, MAX_PASSIVE_POLL_DELAY)
+      passivePollCount += 1
       return delay
     }
-    pendingPollCount = 0
+    passivePollCount = 0
     return null
   }
 
@@ -46,13 +46,13 @@ export function usePipelineRunPolling(
 
   async function poll() {
     if (polling || document.hidden) return
-    const active = getRuns().filter(run => ['pending', 'claimed', 'running'].includes(run.status))
+    const active = getRuns().filter(run => ['prepared', 'queued', 'claimed', 'in_progress', 'waiting'].includes(run.status))
     if (!active.length) return
     polling = true
     try {
       const results = await Promise.allSettled(active.map(fetchRun))
       const updates = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : [])
-      if (updates.length) updateRuns(updates)
+      if (updates.length) await updateRuns(updates)
     } finally {
       polling = false
       schedule()
@@ -61,7 +61,7 @@ export function usePipelineRunPolling(
 
   async function refreshRun(run: PipelineRunResponse) {
     const refreshed = await fetchRun(run)
-    updateRuns([refreshed])
+    await updateRuns([refreshed])
     schedule()
     return refreshed
   }
