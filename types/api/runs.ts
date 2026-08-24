@@ -1,4 +1,4 @@
-import type { ApiListResponse } from './common'
+import type { ApiListQuery, ApiListResponse } from './common'
 
 export type LoopRunStatus = 'in_progress' | 'failed' | 'completed' | 'stopped'
 export type LoopRunState = 'awaiting_snapshot' | 'awaiting_generation' | 'awaiting_apply' | 'awaiting_review_input' | 'awaiting_commit' | 'awaiting_human_decision' | 'completed' | 'failed'
@@ -61,6 +61,13 @@ export interface PipelineRunCreateRequest {
   commit_mode?: PipelineRunCommitMode
 }
 
+export interface PipelineRunListQuery extends ApiListQuery {
+  pipeline_id?: string
+  status?: PipelineRunStatus
+  created_from?: string
+  created_to?: string
+}
+
 export interface PipelineRunClaimableResponse {
   run: PipelineRunResponse
   etag: string
@@ -68,3 +75,4 @@ export interface PipelineRunClaimableResponse {
 
 export type PipelineRunEventListResponse = ApiListResponse<PipelineRunEventResponse>
 export type PipelineRunClaimableListResponse = ApiListResponse<PipelineRunClaimableResponse>
+export type PipelineRunListResponse = ApiListResponse<PipelineRunResponse>

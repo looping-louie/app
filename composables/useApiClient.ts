@@ -24,8 +24,9 @@ import type {
   PipelinePatchRequest,
   PipelineResponse,
   PipelineRunCreateRequest,
-  PipelineRunClaimableListResponse,
   PipelineRunEventListResponse,
+  PipelineRunListQuery,
+  PipelineRunListResponse,
   PipelineRunResponse,
   CatalogProviderResponse,
   LinkedServiceCreateRequest,
@@ -65,9 +66,11 @@ export function useApiClient() {
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('pipelines', id), { method: 'DELETE' }),
       createRun: (id: string, body: PipelineRunCreateRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', id)}/runs`, { method: 'POST', body }),
       startRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { method: 'POST' }),
-      listClaimableRuns: (id: string) => $fetch<PipelineRunClaimableListResponse>(`${resourcePath('pipelines', id)}/runs`, { query: { claimable: true } }),
       getRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`),
       listRunEvents: (pipelineId: string, runId: string) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`),
+    },
+    pipelineRuns: {
+      list: (query: PipelineRunListQuery = {}) => $fetch<PipelineRunListResponse>('/api/v1/pipeline-runs', { query }),
     },
     personas: {
       list: (query: PersonaListQuery = {}) => $fetch<PersonaListResponse>('/api/v1/personas', { query }),
