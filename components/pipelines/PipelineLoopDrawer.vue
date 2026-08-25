@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
+import ExecutionModelTargetSelector from '~/components/execution/ModelTargetSelector.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiDrawer from '~/components/ui/Drawer.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
-import type { ModelTarget, PersonaSummary } from '~/types/api'
+import type { ExecutionHarness, LinkedServiceResponse, ModelTarget, PersonaSummary } from '~/types/api'
+import { effectiveModelTarget, modelTargetLabel } from '~/utils/executionDefaults'
 
 type Flow = 'direct' | 'refinement' | 'roundtable'
 type Role = 'generator' | 'reviewer' | 'aggregator'
@@ -23,6 +26,8 @@ interface LoopDraft {
   flow: Flow
   status: string
   agents: Array<Omit<Assignment, 'key'>>
+  model_target?: ModelTarget | null
+  harness?: ExecutionHarness | null
   stop_conditions: {
     max_iterations: number | null
     max_tokens: number | null
@@ -45,9 +50,12 @@ interface CommandPaletteItem {
 const props = withDefaults(defineProps<{
   open: boolean
   personas: PersonaSummary[]
+  linkedServices: LinkedServiceResponse[]
+  inheritedModelTarget?: ModelTarget | null
+  inheritedHarness?: ExecutionHarness | null
   loading?: boolean
   loop?: LoopDraft | null
-}>(), { loading: false, loop: null })
+}>(), { inheritedModelTarget: null, inheritedHarness: null, loading: false, loop: null })
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
@@ -60,6 +68,8 @@ const { modelLogo } = useModelLogo()
 const name = ref('')
 const flow = ref<Flow>('direct')
 const assignments = ref<Assignment[]>([])
+const activityModelTarget = ref<ModelTarget | null>(null)
+const activityHarness = ref<ExecutionHarness | null>(null)
 const maxIterations = ref('3')
 const maxTokens = ref('')
 const timeoutSeconds = ref('')
@@ -112,6 +122,11 @@ const canAdd = computed(() => {
     return flow.value === 'roundtable' && group.role === 'generator' ? count >= 2 : count >= 1
   })
 })
+const executionReady = computed(() => assignments.value.every(assignment => Boolean(effectiveModelTarget(
+  assignment.model_target,
+  activityModelTarget.value,
+  props.inheritedModelTarget,
+))))
 
 function createId(prefix: string) {
   if (import.meta.client && typeof crypto.randomUUID === 'function') return `${prefix}${crypto.randomUUID()}`
@@ -143,6 +158,8 @@ function resetForm(loop: LoopDraft | null = null) {
   name.value = loop?.title ?? ''
   flow.value = loop?.flow ?? 'direct'
   assignments.value = loop?.agents.map(agent => ({ ...agent, key: createId('assignment-') })) ?? []
+  activityModelTarget.value = loop?.model_target ?? null
+  activityHarness.value = loop?.harness ?? null
   maxIterations.value = formatIntegerInput(loop?.stop_conditions.max_iterations ?? 3)
   maxTokens.value = formatIntegerInput(loop?.stop_conditions.max_tokens)
   timeoutSeconds.value = formatIntegerInput(loop?.stop_conditions.timeout_seconds)
@@ -179,6 +196,16 @@ function removeAssignment(key: string) {
   assignments.value = assignments.value.filter(assignment => assignment.key !== key)
 }
 
+function updateAssignmentTarget(key: string, modelTarget: ModelTarget | null) {
+  assignments.value = assignments.value.map(assignment => assignment.key === key
+    ? { ...assignment, model_target: modelTarget }
+    : assignment)
+}
+
+function assignmentTarget(assignment: Assignment) {
+  return effectiveModelTarget(assignment.model_target, activityModelTarget.value, props.inheritedModelTarget)
+}
+
 function submitLoop() {
   if (!canAdd.value) return
   const loop: LoopDraft = {
@@ -188,6 +215,8 @@ function submitLoop() {
     flow: flow.value,
     status: props.loop?.status ?? 'draft',
     agents: assignments.value.map(({ persona_id, role, model_target }) => ({ persona_id, role, model_target })),
+    model_target: activityModelTarget.value,
+    harness: activityHarness.value,
     stop_conditions: {
       max_iterations: positiveInteger(maxIterations.value),
       max_tokens: positiveInteger(maxTokens.value),
@@ -241,6 +270,24 @@ watch(() => props.open, (open) => {
         />
       </section>
 
+      <section class="pipeline-loop-drawer__section pipeline-loop-drawer__activity-execution" aria-labelledby="pipeline-loop-drawer-execution-title">
+        <div class="pipeline-loop-drawer__execution-heading">
+          <h3 id="pipeline-loop-drawer-execution-title" class="pipeline-loop-drawer__section-title">Activity execution</h3>
+          <p>These overrides apply to every agent unless an assignment chooses its own model.</p>
+        </div>
+        <ExecutionModelTargetSelector
+          v-model="activityModelTarget"
+          :services="linkedServices"
+          inherit-label="Inherit pipeline model"
+          :inherit-description="inheritedModelTarget ? `Currently ${inheritedModelTarget.model_id}.` : 'No inherited model is currently configured.'"
+        />
+        <ExecutionHarnessSelector
+          v-model="activityHarness"
+          inherit-label="Inherit pipeline"
+          :inherit-description="inheritedHarness ? `Currently ${inheritedHarness.kind} v1.` : 'No pipeline or workspace override is configured; the API will use Louie v1.'"
+        />
+      </section>
+
       <div class="pipeline-loop-drawer__route">
         <template v-for="(group, groupIndex) in roleGroups" :key="group.role">
           <section class="pipeline-loop-drawer__section pipeline-loop-drawer__agent-group">
@@ -266,44 +313,48 @@ watch(() => props.open, (open) => {
             <p v-if="!assignmentsFor(group.role).length" class="pipeline-loop-drawer__empty-role">No agent selected yet.</p>
             <ul v-else class="pipeline-loop-drawer__agents">
               <li v-for="assignment in assignmentsFor(group.role)" :key="assignment.key">
-                <UiPill icon-style="circle">
-                  <template #icon>
-                    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path :d="personaIcon(personaById.get(assignment.persona_id) ?? { id: assignment.persona_id })" /></svg>
-                  </template>
-                  {{ personaById.get(assignment.persona_id)?.name ?? assignment.persona_id }}
-                </UiPill>
-                <span
-                  class="pipeline-loop-drawer__execution"
-                  :title="assignment.model_target?.model_id ?? 'Inherits its execution model'"
-                >
-                  <UiPill
-                    v-if="assignment.model_target"
-                    :src="modelLogo(assignment.model_target.model_id)"
-                    alt=""
-                    :tooltip="assignment.model_target.model_id"
-                    :focusable="false"
-                  />
-                  <small>{{ assignment.model_target?.model_id ?? 'Inherits model' }}</small>
-                </span>
-                <span class="pipeline-loop-drawer__remove-control">
-                  <UiButton
-                    class="pipeline-loop-drawer__remove"
-                    variant="coral"
-                    icon-only
-                    :aria-label="`Delete ${personaById.get(assignment.persona_id)?.name ?? 'agent'}`"
-                    @click="removeAssignment(assignment.key)"
-                  >
-                    <template #leading>
-                      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z" /></svg>
+                <div class="pipeline-loop-drawer__agent-row">
+                  <UiPill icon-style="circle">
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path :d="personaIcon(personaById.get(assignment.persona_id) ?? { id: assignment.persona_id })" /></svg>
                     </template>
-                  </UiButton>
-                  <span class="pipeline-loop-drawer__remove-tooltip" role="tooltip">Delete</span>
-                </span>
+                    {{ personaById.get(assignment.persona_id)?.name ?? assignment.persona_id }}
+                  </UiPill>
+                  <span class="pipeline-loop-drawer__execution" :title="modelTargetLabel(assignmentTarget(assignment))">
+                    <UiPill
+                      v-if="assignmentTarget(assignment)"
+                      :src="modelLogo(assignmentTarget(assignment)!.model_id)"
+                      alt=""
+                      :tooltip="modelTargetLabel(assignmentTarget(assignment))"
+                      :focusable="false"
+                    />
+                    <small>{{ assignment.model_target ? assignment.model_target.model_id : `Inherits · ${modelTargetLabel(assignmentTarget(assignment))}` }}</small>
+                  </span>
+                  <span class="pipeline-loop-drawer__remove-control">
+                    <UiButton class="pipeline-loop-drawer__remove" variant="coral" icon-only :aria-label="`Delete ${personaById.get(assignment.persona_id)?.name ?? 'agent'}`" @click="removeAssignment(assignment.key)">
+                      <template #leading><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z" /></svg></template>
+                    </UiButton>
+                    <span class="pipeline-loop-drawer__remove-tooltip" role="tooltip">Delete</span>
+                  </span>
+                </div>
+                <details class="pipeline-loop-drawer__agent-target">
+                  <summary>Configure agent model override</summary>
+                  <ExecutionModelTargetSelector
+                    :model-value="assignment.model_target ?? null"
+                    :services="linkedServices"
+                    inherit-label="Inherit activity model"
+                    :inherit-description="activityModelTarget ? `Currently ${activityModelTarget.model_id}.` : inheritedModelTarget ? `Currently ${inheritedModelTarget.model_id} from the pipeline or workspace.` : 'No inherited model is currently configured.'"
+                    @update:model-value="updateAssignmentTarget(assignment.key, $event)"
+                  />
+                </details>
               </li>
             </ul>
           </section>
           <i v-if="groupIndex < roleGroups.length - 1" aria-hidden="true">↓</i>
         </template>
+        <p v-if="assignments.length && !executionReady" class="pipeline-loop-drawer__execution-warning">
+          At least one agent still needs a model at agent, activity, pipeline, or workspace scope.
+        </p>
       </div>
 
       <i class="pipeline-loop-drawer__connector" aria-hidden="true">↓</i>
@@ -355,7 +406,8 @@ watch(() => props.open, (open) => {
 .pipeline-loop-drawer__brief input:focus { border-bottom-color: var(--ll-color-primary); outline: none; }
 .pipeline-loop-drawer__section { display: grid; min-width: 0; box-sizing: border-box; padding: var(--ll-space-6) var(--ll-space-8); margin: 0; gap: var(--ll-space-3); background: var(--ll-color-canvas); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); }
 .pipeline-loop-drawer > .pipeline-loop-drawer__brief,
-.pipeline-loop-drawer > .pipeline-loop-drawer__flow { margin-bottom: var(--pipeline-loop-card-gap); }
+.pipeline-loop-drawer > .pipeline-loop-drawer__flow,
+.pipeline-loop-drawer > .pipeline-loop-drawer__activity-execution { margin-bottom: var(--pipeline-loop-card-gap); }
 .pipeline-loop-drawer__flow :deep(.ui-segmented-control) { width: fit-content; }
 .pipeline-loop-drawer__flow { overflow-x: auto; }
 
@@ -366,14 +418,19 @@ watch(() => props.open, (open) => {
 .pipeline-loop-drawer__group-heading :deep(svg) { width: 1rem; height: 1rem; }
 .pipeline-loop-drawer__empty-role { margin: 0; color: var(--ll-color-text-muted); font: 400 var(--ll-text-xs) / 1.4 var(--ll-font-control); }
 .pipeline-loop-drawer__agents { display: grid; padding: 0; margin: 0; gap: var(--ll-space-2); list-style: none; }
-.pipeline-loop-drawer__agents li { display: flex; min-width: 0; align-items: center; gap: var(--ll-space-2); }
+.pipeline-loop-drawer__agents li { display: grid; min-width: 0; gap: var(--ll-space-3); }
+.pipeline-loop-drawer__agent-row { display: flex; min-width: 0; align-items: center; gap: var(--ll-space-2); }
 .pipeline-loop-drawer__agents :deep(.ui-icon-pill) { min-width: 0; }
+.pipeline-loop-drawer__agent-target { padding-top: var(--ll-space-2); border-top: 1px solid var(--ll-color-divider); }
+.pipeline-loop-drawer__agent-target summary { color: var(--ll-color-text-muted); cursor: pointer; font: 550 var(--ll-text-xs) / 1.4 var(--ll-font-control); }
+.pipeline-loop-drawer__agent-target[open] summary { margin-bottom: var(--ll-space-4); color: var(--ll-color-ink); }
+.pipeline-loop-drawer__execution-heading { display: grid; gap: var(--ll-space-2); }
+.pipeline-loop-drawer__execution-heading p { margin: 0; color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
 
 .pipeline-loop-drawer__execution { display: flex; min-width: 0; flex: 1; align-items: center; gap: var(--ll-space-2); color: var(--ll-color-text-muted); }
 .pipeline-loop-drawer__execution :deep(.ui-icon-pill) { display: block; flex: none; }
 .pipeline-loop-drawer__execution small { overflow: hidden; font: 500 var(--ll-text-xs) / 1.3 var(--ll-font-mono); text-overflow: ellipsis; white-space: nowrap; }
-.pipeline-loop-drawer__execution--unavailable { color: var(--ll-color-brand-ink); }
-.pipeline-loop-drawer__execution-warning { font: 700 var(--ll-text-xs) / 1 var(--ll-font-control); }
+.pipeline-loop-drawer__execution-warning { margin: 0; color: var(--ll-color-brand-ink); font: 550 var(--ll-text-xs) / 1.4 var(--ll-font-control); }
 .pipeline-loop-drawer__remove-control { position: relative; display: block; width: 1.75rem; height: 1.75rem; flex: 0 0 1.75rem; align-self: center; }
 .pipeline-loop-drawer__remove {
   --ui-button-height: 1.75rem;

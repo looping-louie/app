@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { ActivityLoopAgentInput, ActivityLoopFlow, ActivityLoopOutputContract, ActivityLoopStopConditions } from '~/types/api'
+import type { ActivityLoopAgentInput, ActivityLoopFlow, ActivityLoopOutputContract, ActivityLoopStopConditions, ExecutionHarness, ModelTarget } from '~/types/api'
 
 export interface PipelineDesignDraft {
   activities: PipelineEditorActivity[]
@@ -13,6 +13,8 @@ export interface PipelineEditorLoop {
   flow: ActivityLoopFlow
   status: string
   agents: ActivityLoopAgentInput[]
+  model_target?: ModelTarget | null
+  harness?: ExecutionHarness | null
   stop_conditions: ActivityLoopStopConditions
   output_contract?: ActivityLoopOutputContract
 }
@@ -64,11 +66,15 @@ const props = withDefaults(defineProps<{
   title?: string
   showTitle?: boolean
   useStage?: boolean
+  inheritedModelTarget?: ModelTarget | null
+  inheritedHarness?: ExecutionHarness | null
 }>(), {
   initialSteps: () => [],
   title: 'Your pipeline',
   showTitle: true,
   useStage: true,
+  inheritedModelTarget: null,
+  inheritedHarness: null,
 })
 
 const emit = defineEmits<{
@@ -110,8 +116,11 @@ let stageResizeObserver: ResizeObserver | undefined
 const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
   'pipeline-design-editor-options',
   async () => {
-    const personas = await api.personas.list({ status: 'enabled' })
-    return { personas: personas.items }
+    const [personas, linkedServices] = await Promise.all([
+      api.personas.list({ status: 'enabled' }),
+      api.linkedServices.list(),
+    ])
+    return { personas: personas.items, linkedServices }
   },
 )
 
@@ -192,6 +201,8 @@ function activityRequest(activity: PipelineEditorActivity): ActivityCreateReques
       name: loop.title,
       description: loop.description,
       type,
+      model_target: loop.model_target ?? null,
+      harness: loop.harness ?? null,
       config: {
         agents: loop.agents.map(({ persona_id, role, model_target }) => ({ persona_id, role, model_target })),
         stop_conditions: loop.stop_conditions,
@@ -263,6 +274,8 @@ function replaceSteps(steps: InitialStep[]) {
         flow: step.type.replace('_loop', '') as PipelineEditorLoop['flow'],
         status: 'active',
         agents: cloneValue(config.agents),
+        model_target: step.model_target,
+        harness: step.harness,
         stop_conditions: cloneValue(config.stop_conditions),
         output_contract: cloneValue(config.output_contract),
       })
@@ -414,6 +427,9 @@ defineExpose({ getDraft, getSteps, restoreDraft })
     v-model:open="loopDrawerOpen"
     :loop="editingLoop"
     :personas="loopOptionsData?.personas ?? []"
+    :linked-services="loopOptionsData?.linkedServices ?? []"
+    :inherited-model-target="inheritedModelTarget"
+    :inherited-harness="inheritedHarness"
     :loading="loopOptionsStatus === 'pending'"
     @add="addLocalLoop"
     @update="updateLocalLoop"

@@ -29,9 +29,14 @@ const selectableServices = computed(() => props.services.filter(service => (
 const selectedService = computed(() => (
   selectableServices.value.find(service => service.id === selectedServiceId.value) ?? null
 ))
+const currentTargetUnavailable = computed(() => {
+  if (!props.modelValue) return false
+  const service = selectableServices.value.find(candidate => candidate.id === props.modelValue?.linked_service_id)
+  return !service || !service.config.available_models.includes(props.modelValue.model_id)
+})
 
 watch(() => props.modelValue, (value) => {
-  if (value) selectedServiceId.value = value.linked_service_id
+  selectedServiceId.value = value?.linked_service_id ?? ''
 })
 
 function selectService(value: string | string[]) {
@@ -118,6 +123,9 @@ function clearSelection() {
       </div>
     </section>
 
+    <p v-if="currentTargetUnavailable" class="execution-model-target__error" role="alert">
+      The saved connection or model is no longer available. Choose another target or use inheritance.
+    </p>
     <p v-if="error" class="execution-model-target__error" role="alert">{{ error }}</p>
   </div>
 </template>

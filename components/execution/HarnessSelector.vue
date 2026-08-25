@@ -5,9 +5,11 @@ import type { ExecutionHarness } from '~/types/api'
 const props = withDefaults(defineProps<{
   modelValue: ExecutionHarness | null
   inheritLabel?: string
+  inheritDescription?: string
   disabled?: boolean
 }>(), {
   inheritLabel: 'Inherit',
+  inheritDescription: 'The next execution scope supplies the harness; if none does, the API uses Louie v1.',
   disabled: false,
 })
 
@@ -36,7 +38,7 @@ const selected = computed({
     <UiSegmentedControl v-model="selected" :options="options" :disabled="disabled" aria-label="Execution harness" />
     <p v-if="modelValue?.kind === 'codex_cli'">Runs require a worker advertising the Codex CLI v1 harness.</p>
     <p v-else-if="modelValue?.kind === 'louie'">Runs require a worker advertising the Louie v1 harness.</p>
-    <p v-else>The next execution scope supplies the harness; if none does, the API uses Louie v1.</p>
+    <p v-else>{{ inheritDescription }}</p>
   </div>
 </template>
 
