@@ -110,11 +110,8 @@ let stageResizeObserver: ResizeObserver | undefined
 const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
   'pipeline-design-editor-options',
   async () => {
-    const [personas, linkedServices] = await Promise.all([
-      api.personas.list(),
-      api.linkedServices.list(),
-    ])
-    return { personas: personas.items, linkedServices }
+    const personas = await api.personas.list({ status: 'enabled' })
+    return { personas: personas.items }
   },
 )
 
@@ -196,7 +193,7 @@ function activityRequest(activity: PipelineEditorActivity): ActivityCreateReques
       description: loop.description,
       type,
       config: {
-        agents: loop.agents.map(({ persona_id, role }) => ({ persona_id, role })),
+        agents: loop.agents.map(({ persona_id, role, model_target }) => ({ persona_id, role, model_target })),
         stop_conditions: loop.stop_conditions,
         output_contract: loop.output_contract ?? {
           type: 'text',
@@ -417,7 +414,6 @@ defineExpose({ getDraft, getSteps, restoreDraft })
     v-model:open="loopDrawerOpen"
     :loop="editingLoop"
     :personas="loopOptionsData?.personas ?? []"
-    :linked-services="loopOptionsData?.linkedServices ?? []"
     :loading="loopOptionsStatus === 'pending'"
     @add="addLocalLoop"
     @update="updateLocalLoop"

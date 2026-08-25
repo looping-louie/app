@@ -4,37 +4,16 @@ import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiDrawer from '~/components/ui/Drawer.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
+import type { ModelTarget, PersonaSummary } from '~/types/api'
 
 type Flow = 'direct' | 'refinement' | 'roundtable'
 type Role = 'generator' | 'reviewer' | 'aggregator'
-
-interface Persona {
-  id: string
-  name: string
-  description?: string
-  source_instruction_id?: string | null
-  linked_service: {
-    type: 'LinkedServiceReference'
-    reference_id: string
-  } | null
-  config: {
-    model: string
-  } | null
-}
-
-interface LinkedService {
-  id: string
-  enabled: boolean
-  config: {
-    configured: boolean
-    available_models: string[]
-  }
-}
 
 interface Assignment {
   key: string
   persona_id: string
   role: Role
+  model_target?: ModelTarget | null
 }
 
 interface LoopDraft {
@@ -65,8 +44,7 @@ interface CommandPaletteItem {
 
 const props = withDefaults(defineProps<{
   open: boolean
-  personas: Persona[]
-  linkedServices: LinkedService[]
+  personas: PersonaSummary[]
   loading?: boolean
   loop?: LoopDraft | null
 }>(), { loading: false, loop: null })
@@ -112,44 +90,23 @@ const roleGroups = computed(() => {
 })
 
 const personaById = computed(() => new Map(props.personas.map(persona => [persona.id, persona])))
-const linkedServiceById = computed(() => new Map(props.linkedServices.map(service => [service.id, service])))
-
-function personaExecution(persona: Persona) {
-  if (!persona.linked_service || !persona.config) {
-    return { available: false, model: '', reason: 'Execution setup required' }
-  }
-
-  const service = linkedServiceById.value.get(persona.linked_service.reference_id)
-  if (!service) return { available: false, model: persona.config.model, reason: 'Connection not found' }
-  if (!service.enabled) return { available: false, model: persona.config.model, reason: 'Connection disabled' }
-  if (!service.config.configured) return { available: false, model: persona.config.model, reason: 'Connection not configured' }
-  if (!service.config.available_models.includes(persona.config.model)) {
-    return { available: false, model: persona.config.model, reason: 'Model unavailable on this connection' }
-  }
-  return { available: true, model: persona.config.model, reason: '' }
-}
-
 const paletteItems = computed<CommandPaletteItem[]>(() => {
   const selectedInRole = new Set(assignments.value.filter(item => item.role === targetRole.value).map(item => item.persona_id))
   return props.personas.map((persona) => {
-    const execution = personaExecution(persona)
     return {
       id: persona.id,
       label: persona.name,
-      description: execution.available
-        ? `${persona.description ?? ''} · ${execution.model}`
-        : execution.reason,
-      group: execution.available ? 'Agents' : 'Unavailable agents',
-      keywords: [persona.id, execution.model],
+      description: persona.description,
+      group: 'Agents',
+      keywords: [persona.id],
       iconPath: personaIcon(persona),
-      disabled: selectedInRole.has(persona.id) || !execution.available,
+      disabled: selectedInRole.has(persona.id),
     }
   })
 })
 
 const canAdd = computed(() => {
   if (!name.value.trim() || !positiveInteger(maxIterations.value)) return false
-  if (assignments.value.some(assignment => !assignmentExecution(assignment).available)) return false
   return roleGroups.value.every((group) => {
     const count = assignments.value.filter(item => item.role === group.role).length
     return flow.value === 'roundtable' && group.role === 'generator' ? count >= 2 : count >= 1
@@ -201,13 +158,6 @@ function assignmentsFor(role: Role) {
   return assignments.value.filter(assignment => assignment.role === role)
 }
 
-function assignmentExecution(assignment: Assignment) {
-  const persona = personaById.value.get(assignment.persona_id)
-  return persona
-    ? personaExecution(persona)
-    : { available: false, model: '', reason: 'Agent not found' }
-}
-
 function openAgentPalette(role: Role) {
   targetRole.value = role
   paletteQuery.value = ''
@@ -237,7 +187,7 @@ function submitLoop() {
     description: props.loop?.description ?? 'Configured inside this pipeline draft.',
     flow: flow.value,
     status: props.loop?.status ?? 'draft',
-    agents: assignments.value.map(({ persona_id, role }) => ({ persona_id, role })),
+    agents: assignments.value.map(({ persona_id, role, model_target }) => ({ persona_id, role, model_target })),
     stop_conditions: {
       max_iterations: positiveInteger(maxIterations.value),
       max_tokens: positiveInteger(maxTokens.value),
@@ -324,20 +274,16 @@ watch(() => props.open, (open) => {
                 </UiPill>
                 <span
                   class="pipeline-loop-drawer__execution"
-                  :class="{ 'pipeline-loop-drawer__execution--unavailable': !assignmentExecution(assignment).available }"
-                  :title="assignmentExecution(assignment).available ? assignmentExecution(assignment).model : assignmentExecution(assignment).reason"
+                  :title="assignment.model_target?.model_id ?? 'Inherits its execution model'"
                 >
                   <UiPill
-                    v-if="assignmentExecution(assignment).model"
-                    :src="modelLogo(assignmentExecution(assignment).model)"
+                    v-if="assignment.model_target"
+                    :src="modelLogo(assignment.model_target.model_id)"
                     alt=""
-                    :tooltip="assignmentExecution(assignment).model"
+                    :tooltip="assignment.model_target.model_id"
                     :focusable="false"
                   />
-                  <UiPill v-else icon-style="circle" :tooltip="assignmentExecution(assignment).reason" :focusable="false">
-                    <template #icon><span class="pipeline-loop-drawer__execution-warning">!</span></template>
-                  </UiPill>
-                  <small>{{ assignmentExecution(assignment).available ? assignmentExecution(assignment).model : assignmentExecution(assignment).reason }}</small>
+                  <small>{{ assignment.model_target?.model_id ?? 'Inherits model' }}</small>
                 </span>
                 <span class="pipeline-loop-drawer__remove-control">
                   <UiButton

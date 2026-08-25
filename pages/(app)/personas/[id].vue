@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import PersonaExecutionPanel from '~/components/personas/PersonaExecutionPanel.vue'
 import PersonaSkillsEditor from '~/components/personas/PersonaSkillsEditor.vue'
 import PageShell from '~/components/layout/PageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
@@ -22,9 +21,6 @@ const editName = ref('')
 const editDescription = ref('')
 const editInstructions = ref('')
 const editSkillIds = ref<string[]>([])
-const editServiceId = ref('')
-const editModelId = ref('')
-const editSelectionError = ref('')
 const editError = ref('')
 const editDirty = ref(false)
 const leaveModalOpen = ref(false)
@@ -43,16 +39,7 @@ const { data: skillsData } = await useAsyncData(
   'persona-edit-skills',
   () => api.skills.list({ status: 'enabled', sort: 'alphabetical-asc', offset: 0 }),
 )
-const {
-  data: linkedServicesData,
-  status: linkedServicesStatus,
-  refresh: refreshLinkedServices,
-} = await useAsyncData(
-  'persona-detail-linked-services',
-  () => api.linkedServices.list(),
-)
 const availableSkills = computed(() => skillsData.value?.items ?? [])
-const linkedServices = computed(() => linkedServicesData.value ?? [])
 const visibleSkillIds = computed(() => editing.value ? editSkillIds.value : persona.value?.skill_ids ?? [])
 const personaActionMenuOptions = computed(() => entityActionMenuOptions.map(option => (
   option.value === 'delete' ? { ...option, disabled: !persona.value?.editable } : option
@@ -68,9 +55,6 @@ function beginEditing() {
   editDescription.value = persona.value.description
   editInstructions.value = persona.value.instructions
   editSkillIds.value = [...persona.value.skill_ids]
-  editServiceId.value = persona.value.linked_service?.reference_id ?? ''
-  editModelId.value = persona.value.config?.model ?? ''
-  editSelectionError.value = ''
   editError.value = ''
   editDirty.value = false
   editing.value = true
@@ -86,37 +70,11 @@ function cancelEditing() {
   }
   editing.value = false
   editError.value = ''
-  editSelectionError.value = ''
 }
 
 function markEditDirty() {
   editDirty.value = true
   editError.value = ''
-}
-
-function updateEditService(serviceId: string) {
-  editServiceId.value = serviceId
-  editSelectionError.value = ''
-  markEditDirty()
-}
-
-function updateEditModel(modelId: string) {
-  editModelId.value = modelId
-  editSelectionError.value = ''
-  markEditDirty()
-}
-
-function validateExecutionSelection() {
-  const service = linkedServices.value.find(item => (
-    item.id === editServiceId.value
-    && item.enabled
-    && item.config.configured
-  ))
-  const valid = Boolean(service?.config.available_models.includes(editModelId.value))
-  editSelectionError.value = valid
-    ? ''
-    : 'Choose an enabled, configured connection and one of its available models.'
-  return valid
 }
 
 async function saveEditing() {
@@ -128,7 +86,6 @@ async function saveEditing() {
     editError.value = !name ? 'Give this agent a name.' : 'Write the instructions for this agent.'
     return false
   }
-  if (!validateExecutionSelection()) return false
   saving.value = true
   editError.value = ''
   try {
@@ -137,11 +94,6 @@ async function saveEditing() {
       name,
       description,
       instructions,
-      linked_service: {
-        type: 'LinkedServiceReference',
-        reference_id: editServiceId.value,
-      },
-      config: { model: editModelId.value },
       skill_ids: editSkillIds.value,
     })
     editing.value = false
@@ -149,12 +101,7 @@ async function saveEditing() {
     clearNuxtData('agents-catalog')
     return true
   } catch (cause) {
-    if (apiErrorCode(cause) === 'linked_service_selection_unavailable') {
-      editSelectionError.value = 'This connection is disabled, unconfigured, or no longer deploys the selected model. Choose another selection.'
-      await refreshLinkedServices()
-    } else {
-      editError.value = apiErrorMessage(cause, 'The agent could not be saved. Please try again.')
-    }
+    editError.value = apiErrorMessage(cause, 'The agent could not be saved. Please try again.')
     return false
   } finally {
     saving.value = false
@@ -170,7 +117,6 @@ async function discardChanges() {
   leaveModalOpen.value = false
   editing.value = false
   editDirty.value = false
-  editSelectionError.value = ''
   if (pendingDestination.value) {
     allowRouteLeave.value = true
     await router.push(pendingDestination.value)
@@ -340,20 +286,6 @@ useHead(() => ({
               <path :d="personaIcon(persona)" />
             </svg>
           </div>
-
-          <PersonaExecutionPanel
-            :services="linkedServices"
-            :service-id="editing ? editServiceId : persona.linked_service?.reference_id"
-            :model-id="editing ? editModelId : persona.config?.model"
-            :editing="editing"
-            :loading="linkedServicesStatus === 'pending'"
-            :load-error="linkedServicesStatus === 'error'"
-            :selection-error="editSelectionError"
-            :disabled="saving"
-            @update:service-id="updateEditService"
-            @update:model-id="updateEditModel"
-            @retry="refreshLinkedServices"
-          />
 
           <PersonaSkillsEditor
             v-if="visibleSkillIds.length || editing"

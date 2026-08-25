@@ -1,5 +1,6 @@
 export * from './activities'
 export * from './common'
+export * from './execution'
 export * from './instructions'
 export * from './models'
 export * from './pipelines'

@@ -119,10 +119,10 @@ useHead({
           </template>
           <template #trailing>
             <UiStatusText
-              :tone="agent.linked_service && agent.config && agent.enabled ? 'enabled' : 'disabled'"
+              :tone="agent.enabled ? 'enabled' : 'disabled'"
               activation="card-hover"
             >
-              {{ !agent.linked_service || !agent.config ? 'setup required' : agent.enabled ? 'enabled' : 'disabled' }}
+              {{ agent.enabled ? 'enabled' : 'disabled' }}
             </UiStatusText>
           </template>
           <template #media>

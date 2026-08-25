@@ -1,4 +1,5 @@
 import type { ApiListResponse } from './common'
+import type { ExecutionHarness, ExecutionOverrides, ModelTarget } from './execution'
 
 export type ActivityStatus = 'active' | 'disabled' | 'archived'
 export type ActivityLoopFlow = 'direct' | 'refinement' | 'roundtable'
@@ -15,7 +16,7 @@ export interface ActivityLoopStopConditions {
 
 export interface ActivityLoopAgentInput {
   id?: string | null
-  model_id?: string | null
+  model_target?: ModelTarget | null
   persona_id: string
   role: ActivityLoopRole
 }
@@ -41,7 +42,7 @@ export interface QuizActivityConfig {
 
 export type ActivityConfig = ActivityLoopConfig | ApprovalActivityConfig | QuizActivityConfig
 
-interface ActivityRequestBase {
+interface ActivityRequestBase extends ExecutionOverrides {
   name: string
   description: string
 }
@@ -57,6 +58,8 @@ export interface ActivityPatchRequest {
   description?: string
   status?: ActivityStatus
   config?: ActivityConfig
+  model_target?: ModelTarget | null
+  harness?: ExecutionHarness | null
 }
 
 interface ActivityResponseMetadata {
@@ -67,6 +70,8 @@ interface ActivityResponseMetadata {
   created_by: string
   updated_at: string
   updated_by: string
+  model_target: ModelTarget | null
+  harness: ExecutionHarness | null
 }
 
 export type ActivityResponse = ActivityCreateRequest & ActivityResponseMetadata
