@@ -116,11 +116,12 @@ let stageResizeObserver: ResizeObserver | undefined
 const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
   'pipeline-design-editor-options',
   async () => {
-    const [personas, linkedServices] = await Promise.all([
+    const [personas, models, linkedServices] = await Promise.all([
       api.personas.list({ status: 'enabled' }),
+      api.models.list({ available: true, sort: 'alphabetical-asc' }),
       api.linkedServices.list(),
     ])
-    return { personas: personas.items, linkedServices }
+    return { personas: personas.items, models: models.items, linkedServices }
   },
 )
 
@@ -427,6 +428,7 @@ defineExpose({ getDraft, getSteps, restoreDraft })
     v-model:open="loopDrawerOpen"
     :loop="editingLoop"
     :personas="loopOptionsData?.personas ?? []"
+    :models="loopOptionsData?.models ?? []"
     :linked-services="loopOptionsData?.linkedServices ?? []"
     :inherited-model-target="inheritedModelTarget"
     :inherited-harness="inheritedHarness"
