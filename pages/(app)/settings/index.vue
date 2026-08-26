@@ -283,6 +283,20 @@ useHead({
   border-bottom: 1px solid var(--ll-color-divider);
 }
 
+@media (min-width: 44.0625rem) {
+  .execution-defaults__toggle-option:nth-child(odd) {
+    padding-right: calc(
+      var(--ui-section-stage-shell-padding) + var(--ll-space-2) + var(--ll-space-5)
+    );
+  }
+
+  .execution-defaults__toggle-option:nth-child(even) {
+    padding-left: calc(
+      var(--ui-section-stage-shell-padding) + var(--ll-space-2) + var(--ll-space-5)
+    );
+  }
+}
+
 .execution-defaults__copy {
   display: grid;
   min-width: 0;
