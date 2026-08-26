@@ -19,6 +19,7 @@ import UiPill from '~/components/ui/Pill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiMetricCard from '~/components/ui/MetricCard.vue'
+import UiNotification from '~/components/ui/Notification.vue'
 import UiPagination from '~/components/ui/Pagination.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
@@ -60,6 +61,7 @@ const pillLabs = ref<string[]>(['openai'])
 const pillAreas = ref<string[]>(['software_engineering'])
 const pillCatalogEnabled = ref(true)
 const pillSelectable = ref('codex')
+const notifications = useNotifications()
 const pillActionIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
 const samplePaginationOffset = ref(24)
 const buttonDropdownSelection = ref('No action selected')
@@ -211,6 +213,7 @@ const designSystemNavItems = [
   { id: 'modal', label: 'Modal', level: 2 },
   { id: 'drawer', label: 'Drawer', level: 2 },
   { id: 'command-palette', label: 'Command palette', level: 2 },
+  { id: 'notification', label: 'Notification', level: 2 },
   { id: 'pill', label: 'Pill', level: 2 },
   { id: 'copy-command', label: 'Copyable command', level: 2 },
   { id: 'segmented-control', label: 'Segmented control', level: 2 },
@@ -534,6 +537,20 @@ function copyButtonLabel(command: string) {
   if (copiedCommand.value === command) return `Copied: ${command}`
   if (copyError.value === command) return `Could not copy: ${command}`
   return `Copy command: ${command}`
+}
+
+function showSuccessNotification() {
+  notifications.success(
+    'Changes saved',
+    'Codex is now the default harness for this workspace.',
+  )
+}
+
+function showErrorNotification() {
+  notifications.error(
+    'Changes weren’t saved',
+    'Claude is not supported by the workspace API yet. Choose Codex and try again.',
+  )
 }
 
 onBeforeUnmount(() => {
@@ -1162,6 +1179,62 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>Geometry</span>
                 <p>Uses the shared modal radius token so both overlays keep the same responsive silhouette.</p>
+              </footer>
+            </article>
+
+            <article id="notification" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Notification</h3>
+                    <code>UiNotification · useNotifications</code>
+                  </div>
+                  <p>Transient, global feedback for completed actions and recoverable errors, without interrupting the current workflow.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage ds-stage--notifications">
+                <div class="ds-notification-samples">
+                  <UiNotification
+                    tone="success"
+                    title="Changes saved"
+                    description="Codex is now the default harness for this workspace."
+                    :dismissible="false"
+                    :announce="false"
+                  />
+                  <UiNotification
+                    tone="error"
+                    title="Changes weren’t saved"
+                    description="Claude is not supported by the workspace API yet. Choose Codex and try again."
+                    :dismissible="false"
+                    :announce="false"
+                  />
+                </div>
+                <div class="ds-notification-actions">
+                  <UiButton variant="stroke" @click="showSuccessNotification">Show success</UiButton>
+                  <UiButton variant="stroke" @click="showErrorNotification">Show error</UiButton>
+                </div>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Feedback</span><code>success · error</code></div>
+                  <p class="ds-property__copy">Use success only after an action is confirmed. Error messages state what failed, include the useful reason, and explain the next available step.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Placement</span><code>UiNotificationViewport</code></div>
+                  <p class="ds-property__copy">The newest message docks flush to the top-right edge; older messages stack below it with breathing room between them. On mobile, the stack remains anchored to the top. Notifications dismiss automatically or through their close control.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Motion</span><code>opacity · scaleY · translateY</code></div>
+                  <p class="ds-property__copy">Entry and exit mirror the compact movement and transform origin of right-aligned Pill dropdowns, with a reduced-motion fallback.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Success uses a polite status announcement; errors use an assertive alert. Every live notification remains manually dismissible.</p>
               </footer>
             </article>
 
@@ -3419,6 +3492,27 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-3);
 }
 
+.ds-stage--notifications {
+  display: grid;
+  justify-items: center;
+  gap: var(--ll-space-6);
+}
+
+.ds-notification-samples {
+  display: grid;
+  width: min(100%, 40rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--ll-space-4);
+}
+
+.ds-notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ll-space-3);
+}
+
 .ds-stage--icon-pills {
   display: flex;
   flex-wrap: wrap;
@@ -4804,6 +4898,10 @@ onBeforeUnmount(() => {
   }
 
   .ds-stage--toggles {
+    grid-template-columns: 1fr;
+  }
+
+  .ds-notification-samples {
     grid-template-columns: 1fr;
   }
 
