@@ -252,7 +252,15 @@ onBeforeUnmount(() => {
     </button>
 
     <template v-else-if="variant === 'catalog'">
-      <span class="ui-icon-pill__catalog-content">
+      <component
+        :is="clickable ? 'button' : 'span'"
+        :type="clickable ? 'button' : undefined"
+        class="ui-icon-pill__catalog-content"
+        :class="{ 'ui-icon-pill__catalog-trigger': clickable }"
+        :aria-label="clickable ? ariaLabel : undefined"
+        :aria-haspopup="clickable ? ariaHaspopup : undefined"
+        @click="clickable && activate($event)"
+      >
         <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
           <img :src="src" :alt="alt" width="44" height="44" loading="lazy">
         </span>
@@ -267,7 +275,7 @@ onBeforeUnmount(() => {
           <strong v-if="hasLabel"><slot /></strong>
           <span v-if="description">{{ description }}</span>
         </span>
-      </span>
+      </component>
 
       <span v-if="actionIconPath || toggle" class="ui-icon-pill__actions">
         <UiButton
@@ -508,6 +516,24 @@ onBeforeUnmount(() => {
   flex: 1 1 auto;
   align-items: center;
   gap: var(--ll-space-3);
+}
+
+.ui-icon-pill__catalog-trigger {
+  width: 100%;
+  padding: 0;
+  appearance: none;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-icon-pill__catalog-trigger:focus-visible {
+  border-radius: calc(var(--ll-radius-structural) - var(--ll-space-2));
+  outline: 2px solid var(--ll-color-primary);
+  outline-offset: 2px;
 }
 
 .ui-icon-pill__catalog-copy {

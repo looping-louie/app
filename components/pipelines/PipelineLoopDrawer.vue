@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
-import ExecutionModelTargetSelector from '~/components/execution/ModelTargetSelector.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiDrawer from '~/components/ui/Drawer.vue'
@@ -8,6 +6,12 @@ import UiPill from '~/components/ui/Pill.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import type { ExecutionHarness, LinkedServiceResponse, ModelSummary, ModelTarget, PersonaSummary } from '~/types/api'
 import { effectiveModelTarget, modelTargetLabel } from '~/utils/executionDefaults'
+import {
+  executionHarnessCatalogId,
+  executionHarnesses,
+  executionHarnessValue,
+} from '~/utils/executionHarnesses'
+import type { ExecutionHarnessCatalogId } from '~/utils/executionHarnesses'
 
 type Flow = 'direct' | 'refinement' | 'roundtable'
 type Role = 'generator' | 'reviewer' | 'aggregator'
@@ -47,6 +51,7 @@ interface CommandPaletteItem {
   disabled?: boolean
   linkedServiceId?: string
   modelId?: string
+  harnessId?: ExecutionHarnessCatalogId
 }
 
 const props = withDefaults(defineProps<{
@@ -78,7 +83,7 @@ const maxTokens = ref('')
 const timeoutSeconds = ref('')
 const paletteOpen = ref(false)
 const paletteQuery = ref('')
-const paletteMode = ref<'persona' | 'model'>('persona')
+const paletteMode = ref<'persona' | 'model' | 'harness'>('persona')
 const targetRole = ref<Role>('generator')
 const targetAssignmentKey = ref<string | null>(null)
 
@@ -105,7 +110,25 @@ const roleGroups = computed(() => {
 })
 
 const personaById = computed(() => new Map(props.personas.map(persona => [persona.id, persona])))
+const inheritedHarnessId = computed(() => executionHarnessCatalogId(props.inheritedHarness))
+const selectedHarnessId = computed(() => executionHarnessCatalogId(activityHarness.value ?? props.inheritedHarness))
+const selectedHarness = computed(() => (
+  executionHarnesses.find(harness => harness.id === selectedHarnessId.value) ?? executionHarnesses[0]!
+))
 const paletteItems = computed<CommandPaletteItem[]>(() => {
+  if (paletteMode.value === 'harness') {
+    return executionHarnesses.map(harness => ({
+      id: harness.id,
+      label: harness.name,
+      description: harness.owner,
+      group: 'Harnesses',
+      keywords: [harness.id, harness.owner],
+      imageSrc: harness.image,
+      imageAlt: '',
+      harnessId: harness.id,
+    }))
+  }
+
   if (paletteMode.value === 'model') {
     const catalogById = new Map(props.models.map(model => [model.id, model]))
     const seenModels = new Set<string>()
@@ -236,7 +259,22 @@ function openModelPalette(assignment: Assignment) {
   paletteOpen.value = true
 }
 
+function openHarnessPalette() {
+  targetAssignmentKey.value = null
+  paletteMode.value = 'harness'
+  paletteQuery.value = ''
+  paletteOpen.value = true
+}
+
 function selectPaletteItem(item: CommandPaletteItem) {
+  if (paletteMode.value === 'harness') {
+    if (!item.harnessId) return
+    activityHarness.value = item.harnessId === inheritedHarnessId.value
+      ? null
+      : executionHarnessValue(item.harnessId)
+    return
+  }
+
   if (paletteMode.value === 'model') {
     if (!item.linkedServiceId || !item.modelId || !targetAssignmentKey.value) return
     updateAssignmentTarget(targetAssignmentKey.value, {
@@ -335,22 +373,19 @@ watch(() => props.open, (open) => {
       </section>
 
       <section class="pipeline-loop-drawer__section pipeline-loop-drawer__activity-execution" aria-labelledby="pipeline-loop-drawer-execution-title">
-        <div class="pipeline-loop-drawer__execution-heading">
-          <h3 id="pipeline-loop-drawer-execution-title" class="pipeline-loop-drawer__section-title">Activity execution</h3>
-          <p>These overrides apply to every persona unless an assignment chooses its own model.</p>
-        </div>
-        <ExecutionModelTargetSelector
-          v-model="activityModelTarget"
-          :services="linkedServices"
-          inherit-label="Inherit pipeline model"
-          :inherit-description="inheritedModelTarget ? `Currently ${inheritedModelTarget.model_id}.` : 'No inherited model is currently configured.'"
-        />
-        <ExecutionHarnessSelector
-          v-model="activityHarness"
-          inherit-label="Inherit pipeline"
-          :inherit-description="inheritedHarness ? `Currently ${inheritedHarness.kind} v1.` : 'No pipeline or workspace override is configured; the API will use Louie v1.'"
+        <h3 id="pipeline-loop-drawer-execution-title" class="pipeline-loop-drawer__section-title">Execution harness</h3>
+        <UiPill
+          variant="catalog"
+          clickable
+          aria-haspopup="dialog"
+          :src="selectedHarness.image"
+          alt=""
+          :description="selectedHarness.owner"
+          :aria-label="`Change execution harness. Currently ${selectedHarness.name} by ${selectedHarness.owner}`"
+          @click="openHarnessPalette"
         >
-        </ExecutionHarnessSelector>
+          {{ selectedHarness.name }}
+        </UiPill>
       </section>
 
       <div class="pipeline-loop-drawer__route">
@@ -447,9 +482,9 @@ watch(() => props.open, (open) => {
     :items="paletteItems"
     :keyboard-shortcut="false"
     option-style="card"
-    :placeholder="paletteMode === 'persona' ? 'Search personas…' : 'Search models…'"
-    :aria-label="paletteMode === 'persona' ? 'Choose a persona' : 'Choose a model'"
-    :empty-title="paletteMode === 'persona' ? 'No personas found' : 'No models found'"
+    :placeholder="paletteMode === 'persona' ? 'Search personas…' : paletteMode === 'model' ? 'Search models…' : 'Search harnesses…'"
+    :aria-label="paletteMode === 'persona' ? 'Choose a persona' : paletteMode === 'model' ? 'Choose a model' : 'Choose an execution harness'"
+    :empty-title="paletteMode === 'persona' ? 'No personas found' : paletteMode === 'model' ? 'No models found' : 'No harnesses found'"
     empty-description="Try another name or search term."
     @select="selectPaletteItem"
   />
@@ -481,8 +516,7 @@ watch(() => props.open, (open) => {
 .pipeline-loop-drawer__agents li { display: flex; min-width: 0; align-items: center; gap: var(--ll-space-2); }
 .pipeline-loop-drawer__agent-row { display: flex; min-width: 0; align-items: center; gap: var(--ll-space-2); }
 .pipeline-loop-drawer__agents :deep(.ui-icon-pill) { min-width: 0; }
-.pipeline-loop-drawer__execution-heading { display: grid; gap: var(--ll-space-2); }
-.pipeline-loop-drawer__execution-heading p { margin: 0; color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
+.pipeline-loop-drawer__activity-execution :deep(.ui-icon-pill--catalog) { width: 100%; }
 
 .pipeline-loop-drawer__model-target { display: block; width: 2rem; height: 2rem; flex: 0 0 2rem; padding: 0; color: inherit; background: transparent; border: 0; border-radius: var(--ll-radius-pill); cursor: pointer; }
 .pipeline-loop-drawer__model-target:focus-visible { outline: 2px solid var(--ll-color-primary); outline-offset: 2px; }

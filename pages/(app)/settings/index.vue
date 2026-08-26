@@ -7,6 +7,7 @@ import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
 import { apiErrorMessage } from '~/utils/api/errors'
+import { executionHarnesses } from '~/utils/executionHarnesses'
 
 interface ExecutionDefaultsForm {
   harness: string
@@ -23,17 +24,6 @@ interface SettingsNavigationState {
   saving: Ref<boolean>
   save: ShallowRef<(() => Promise<void> | void) | null>
 }
-
-const harnesses = [
-  { id: 'codex', name: 'Codex', owner: 'OpenAI', image: '/images/harnesses/codex.webp' },
-  { id: 'pi', name: 'Pi', owner: 'Badlogic', image: '/images/harnesses/pi.webp' },
-  { id: 'cursor', name: 'Cursor', owner: 'SpaceX AI', image: '/images/harnesses/cursor.webp' },
-  { id: 'copilot', name: 'Copilot', owner: 'Microsoft', image: '/images/harnesses/copilot.webp' },
-  { id: 'claude', name: 'Claude', owner: 'Anthropic', image: '/images/harnesses/claude.webp' },
-  { id: 'grok-build', name: 'Grok build', owner: 'SpaceXAI', image: '/images/harnesses/grok-build.webp' },
-  { id: 'hermes', name: 'Hermes', owner: 'Nous Research', image: '/images/harnesses/hermes.webp' },
-  { id: 'openclaw', name: 'OpenClaw', owner: 'OpenAI', image: '/images/harnesses/openclaw.webp' },
-]
 
 const initialDefaults: ExecutionDefaultsForm = {
   harness: 'codex',
@@ -56,7 +46,7 @@ async function saveDefaults() {
   if (!settingsNavigation || settingsNavigation.saving.value) return
 
   if (defaults.harness !== 'codex') {
-    const selectedHarness = harnesses.find(harness => harness.id === defaults.harness)
+    const selectedHarness = executionHarnesses.find(harness => harness.id === defaults.harness)
     notifications.error(
       'Changes weren’t saved',
       `${selectedHarness?.name ?? 'This harness'} is not supported by the workspace API yet. Choose Codex and try again.`,
@@ -128,7 +118,7 @@ useHead({
       <UiSectionStage inverse="bottom">
         <UiGrid :columns="4" gap="md" class="harness-grid" role="radiogroup" aria-label="Default harness">
           <UiPill
-            v-for="harness in harnesses"
+            v-for="harness in executionHarnesses"
             :key="harness.id"
             variant="selectable"
             icon-style="circle"
