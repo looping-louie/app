@@ -212,8 +212,8 @@ function closeMobile() {
 }
 
 .logo-icon {
-  width: 1.875rem;
-  height: 1.875rem;
+  width: 2.25rem;
+  height: 2.25rem;
   object-fit: contain;
 }
 
