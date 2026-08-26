@@ -59,6 +59,7 @@ const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
 const pillAreas = ref<string[]>(['software_engineering'])
 const pillCatalogEnabled = ref(true)
+const pillSelectable = ref('codex')
 const pillActionIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
 const samplePaginationOffset = ref(24)
 const buttonDropdownSelection = ref('No action selected')
@@ -1267,6 +1268,34 @@ onBeforeUnmount(() => {
                     DeepSeek
                   </UiPill>
                 </div>
+
+                <div class="ds-icon-pill-example ds-icon-pill-example--selectable">
+                  <span class="ds-stage__caption">Selectable · mutually exclusive choice</span>
+                  <div class="ds-selectable-pills" role="radiogroup" aria-label="Default coding harness">
+                    <UiPill
+                      variant="selectable"
+                      src="/images/models/openai.webp"
+                      alt=""
+                      description="OpenAI"
+                      :selected="pillSelectable === 'codex'"
+                      aria-label="Select Codex"
+                      @click="pillSelectable = 'codex'"
+                    >
+                      Codex
+                    </UiPill>
+                    <UiPill
+                      variant="selectable"
+                      src="/images/models/anthropic.webp"
+                      alt=""
+                      description="Anthropic"
+                      :selected="pillSelectable === 'claude'"
+                      aria-label="Select Claude"
+                      @click="pillSelectable = 'claude'"
+                    >
+                      Claude
+                    </UiPill>
+                  </div>
+                </div>
               </div>
 
               <div class="ds-stage ds-stage--icon-pills">
@@ -1349,6 +1378,10 @@ onBeforeUnmount(() => {
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Catalog actions</span><code>variant="catalog" · toggle · actionIconPath · actionVisibility</code></div>
                   <p class="ds-property__copy">Catalog pills can append an optional icon-only Stroke action and an optional UiToggle. The toggle remains visible; the action can remain visible or appear on hover while staying keyboard accessible.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Selection</span><code>variant="selectable" · selected · @click</code></div>
+                  <p class="ds-property__copy">Selectable pills retain the catalog hierarchy while exposing a radio state. The selected choice keeps a transparent surface and uses Primary for its border and animated CircleCheck icon; unselected siblings recede until hover or keyboard focus.</p>
                 </div>
               </div>
 
@@ -3410,6 +3443,15 @@ onBeforeUnmount(() => {
 }
 
 .ds-icon-pill-example--catalog { width: min(100%, 28rem); }
+
+.ds-icon-pill-example--selectable { width: min(100%, 40rem); }
+
+.ds-selectable-pills {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ll-space-5);
+}
 
 .ds-pill-dropdown {
   display: grid;

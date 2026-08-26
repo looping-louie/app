@@ -13,7 +13,7 @@ type DropdownAlign = 'left' | 'right'
 type SelectionType = 'radio' | 'checkbox'
 type IconStyle = 'plain' | 'circle'
 type AriaHasPopup = 'dialog' | 'grid' | 'listbox' | 'menu' | 'tree'
-type PillVariant = 'compact' | 'catalog'
+type PillVariant = 'compact' | 'catalog' | 'selectable'
 type PillActionVisibility = 'always' | 'hover'
 
 const props = withDefaults(defineProps<{
@@ -31,6 +31,8 @@ const props = withDefaults(defineProps<{
   options?: PillOption[]
   modelValue?: string | string[]
   variant?: PillVariant
+  selected?: boolean
+  disabled?: boolean
   description?: string
   toggle?: boolean
   toggleValue?: boolean
@@ -57,6 +59,8 @@ const props = withDefaults(defineProps<{
   options: () => [],
   modelValue: undefined,
   variant: 'compact',
+  selected: false,
+  disabled: false,
   description: undefined,
   toggle: false,
   toggleValue: false,
@@ -106,6 +110,11 @@ function toggleDropdown() {
 }
 
 function activate(event: MouseEvent) {
+  if (props.variant === 'selectable') {
+    emit('click', event)
+    return
+  }
+
   if (hasDropdown.value) {
     toggleDropdown()
     return
@@ -197,13 +206,52 @@ onBeforeUnmount(() => {
         'ui-icon-pill--circular-media': circularMedia,
         'ui-icon-pill--image': Boolean(src),
         'ui-icon-pill--has-tooltip': Boolean(tooltip),
-        'ui-icon-pill--clickable': clickable,
+        'ui-icon-pill--clickable': clickable || variant === 'selectable',
+        'ui-icon-pill--selected': selected,
+        'ui-icon-pill--disabled': disabled,
         'ui-icon-pill--open': connected,
         'ui-icon-pill--closing': closing,
       },
     ]"
   >
-    <template v-if="variant === 'catalog'">
+    <button
+      v-if="variant === 'selectable'"
+      ref="trigger"
+      type="button"
+      class="ui-icon-pill__selectable-trigger"
+      :aria-label="ariaLabel"
+      role="radio"
+      :aria-checked="selected"
+      :disabled="disabled"
+      @click="activate"
+    >
+      <span class="ui-icon-pill__catalog-content">
+        <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
+          <img :src="src" :alt="alt" width="44" height="44" loading="lazy">
+        </span>
+        <span
+          v-else-if="$slots.icon"
+          :class="iconStyle === 'circle' ? 'ui-icon-pill__media ui-icon-pill__media--icon' : 'ui-icon-pill__icon'"
+          aria-hidden="true"
+        >
+          <slot name="icon" />
+        </span>
+        <span class="ui-icon-pill__catalog-copy">
+          <strong v-if="hasLabel"><slot /></strong>
+          <span v-if="description">{{ description }}</span>
+        </span>
+      </span>
+      <span class="ui-icon-pill__selection-indicator" aria-hidden="true">
+        <svg class="ui-icon-pill__selection-indicator-circle" viewBox="0 0 256 256" fill="currentColor">
+          <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" />
+        </svg>
+        <svg class="ui-icon-pill__selection-indicator-check" viewBox="0 0 256 256" fill="currentColor">
+          <path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
+        </svg>
+      </span>
+    </button>
+
+    <template v-else-if="variant === 'catalog'">
       <span class="ui-icon-pill__catalog-content">
         <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
           <img :src="src" :alt="alt" width="44" height="44" loading="lazy">
@@ -381,7 +429,8 @@ onBeforeUnmount(() => {
 
 .ui-icon-pill--open { z-index: 10; }
 
-.ui-icon-pill--catalog {
+.ui-icon-pill--catalog,
+.ui-icon-pill__selectable-trigger {
   display: flex;
   width: 100%;
   min-width: 0;
@@ -401,10 +450,56 @@ onBeforeUnmount(() => {
 }
 
 .ui-icon-pill--catalog:hover,
-.ui-icon-pill--catalog:focus-within {
+.ui-icon-pill--catalog:focus-within,
+.ui-icon-pill__selectable-trigger:hover:not(:disabled) {
   background: var(--ll-color-card);
   border-color: var(--ll-color-divider);
   box-shadow: var(--ll-shadow-raised);
+}
+
+.ui-icon-pill--selectable {
+  display: flex;
+  width: 100%;
+  height: auto;
+  opacity: 0.42;
+  transition: opacity var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-icon-pill__selectable-trigger {
+  width: 100%;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-icon-pill--selectable:hover,
+.ui-icon-pill--selectable:focus-within {
+  opacity: 0.78;
+}
+
+.ui-icon-pill--selectable.ui-icon-pill--selected {
+  opacity: 1;
+}
+
+.ui-icon-pill--selected .ui-icon-pill__selectable-trigger {
+  background: transparent;
+  border-color: var(--ll-color-primary);
+  box-shadow: none;
+}
+
+.ui-icon-pill__selectable-trigger:focus-visible {
+  outline: 2px solid var(--ll-color-signal-ink);
+  outline-offset: 3px;
+}
+
+.ui-icon-pill__selectable-trigger:disabled {
+  cursor: not-allowed;
+}
+
+.ui-icon-pill--disabled {
+  opacity: 0.28;
 }
 
 .ui-icon-pill__catalog-content {
@@ -438,6 +533,50 @@ onBeforeUnmount(() => {
   font: 400 var(--ll-text-xs) / 1.35 var(--ll-font-control);
 }
 
+.ui-icon-pill__selection-indicator {
+  position: relative;
+  display: grid;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: none;
+  place-items: center;
+  color: var(--ll-color-text-muted);
+  transition: color var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-icon-pill__selection-indicator svg {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  transition:
+    opacity var(--ll-duration-normal) var(--ll-ease-out),
+    transform var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-icon-pill__selection-indicator-circle {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.ui-icon-pill__selection-indicator-check {
+  opacity: 0;
+  transform: scale(0.65) rotate(-24deg);
+}
+
+.ui-icon-pill--selected .ui-icon-pill__selection-indicator {
+  color: var(--ll-color-primary);
+}
+
+.ui-icon-pill--selected .ui-icon-pill__selection-indicator-circle {
+  opacity: 0;
+  transform: scale(0.65) rotate(24deg);
+}
+
+.ui-icon-pill--selected .ui-icon-pill__selection-indicator-check {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
 .ui-icon-pill__actions {
   display: flex;
   flex: none;
@@ -453,12 +592,14 @@ onBeforeUnmount(() => {
 .ui-icon-pill--catalog:hover .ui-icon-pill__action--hover,
 .ui-icon-pill__action--hover:focus-visible { opacity: 1; }
 
-.ui-icon-pill--catalog .ui-icon-pill__media {
+.ui-icon-pill--catalog .ui-icon-pill__media,
+.ui-icon-pill--selectable .ui-icon-pill__media {
   width: 2.75rem;
   height: 2.75rem;
 }
 
-.ui-icon-pill--catalog .ui-icon-pill__media--icon :deep(svg) {
+.ui-icon-pill--catalog .ui-icon-pill__media--icon :deep(svg),
+.ui-icon-pill--selectable .ui-icon-pill__media--icon :deep(svg) {
   width: 1.125rem;
   height: 1.125rem;
 }
@@ -726,6 +867,10 @@ button.ui-icon-pill__trigger:focus-visible {
   .ui-icon-pill__option.is-confirming { animation: none; }
   .ui-icon-pill__tooltip { transition: none; }
   .ui-icon-pill--catalog,
+  .ui-icon-pill--selectable,
+  .ui-icon-pill__selectable-trigger,
+  .ui-icon-pill__selection-indicator,
+  .ui-icon-pill__selection-indicator svg,
   .ui-icon-pill__action--hover { transition: none; }
 }
 

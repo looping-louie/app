@@ -107,6 +107,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 <style scoped>
 .ui-section-stage {
   --ui-section-stage-shell-padding: 1rem;
+  --ui-section-stage-shell-inset: var(--ui-section-stage-shell-padding);
   --ui-section-stage-shell-radius: calc(
     var(--ll-radius-stage) + var(--ui-section-stage-shell-padding)
   );
@@ -121,7 +122,7 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
 .ui-section-stage__shell {
   position: relative;
   z-index: 1;
-  width: calc(100% - 2 * var(--ui-section-stage-shell-padding));
+  width: calc(100% - 2 * var(--ui-section-stage-shell-inset));
   margin-inline: auto;
   background: var(--ll-color-section);
   border-radius: var(--ui-section-stage-shell-radius);
