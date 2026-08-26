@@ -215,6 +215,7 @@ function closeMobile() {
   width: 2.25rem;
   height: 2.25rem;
   object-fit: contain;
+  transform: scale(1.16);
 }
 
 .sidebar-close {
