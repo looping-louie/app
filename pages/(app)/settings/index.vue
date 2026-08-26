@@ -6,6 +6,7 @@ import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
+import { apiErrorMessage } from '~/utils/api/errors'
 
 interface ExecutionDefaultsForm {
   harness: string
@@ -44,6 +45,8 @@ const initialDefaults: ExecutionDefaultsForm = {
   requireMergeApproval: false,
 }
 
+const api = useApiClient()
+const notifications = useNotifications()
 const defaults = reactive<ExecutionDefaultsForm>({ ...initialDefaults })
 const savedDefaults = ref<ExecutionDefaultsForm>({ ...initialDefaults })
 const isDirty = computed(() => JSON.stringify(defaults) !== JSON.stringify(savedDefaults.value))
@@ -52,10 +55,43 @@ const settingsNavigation = inject<SettingsNavigationState>('settings-navigation'
 async function saveDefaults() {
   if (!settingsNavigation || settingsNavigation.saving.value) return
 
+  if (defaults.harness !== 'codex') {
+    const selectedHarness = harnesses.find(harness => harness.id === defaults.harness)
+    notifications.error(
+      'Changes weren’t saved',
+      `${selectedHarness?.name ?? 'This harness'} is not supported by the workspace API yet. Choose Codex and try again.`,
+    )
+    return
+  }
+
   settingsNavigation.saving.value = true
-  savedDefaults.value = { ...defaults }
-  await nextTick()
-  settingsNavigation.saving.value = false
+  try {
+    const currentDefaults = await api.workspaces.getDefaults()
+    await api.workspaces.replaceDefaults({
+      model_target: currentDefaults.model_target,
+      harness: {
+        kind: 'codex_cli',
+        version: 'v1',
+        config: {},
+      },
+    })
+    savedDefaults.value = { ...defaults }
+    notifications.success(
+      'Changes saved',
+      'Codex is now the default harness for this workspace.',
+    )
+  } catch (cause) {
+    const reason = apiErrorMessage(
+      cause,
+      'The workspace API could not be reached. Check your connection and try again.',
+    )
+    notifications.error(
+      'Changes weren’t saved',
+      `We couldn’t update the workspace defaults. ${reason}`,
+    )
+  } finally {
+    settingsNavigation.saving.value = false
+  }
 }
 
 if (settingsNavigation) {
