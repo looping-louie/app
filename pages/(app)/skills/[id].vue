@@ -2,16 +2,62 @@
 import PageShell from '~/components/layout/PageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiMarkdownContent from '~/components/ui/MarkdownContent.vue'
+import UiModal from '~/components/ui/Modal.vue'
+import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
 
 const route = useRoute()
+const router = useRouter()
 const skillId = computed(() => String(route.params.id))
 const api = useApiClient()
+const notifications = useNotifications()
+const deleteModalOpen = ref(false)
+const deleting = ref(false)
+const deleteError = ref('')
 
 const { data: skill, status, error, refresh } = await useAsyncData(
   () => `skill-${skillId.value}`,
   () => api.skills.get(skillId.value),
 )
+
+const skillActionMenuOptions = computed(() => entityActionMenuOptions.map(option => (
+  option.value === 'delete' ? { ...option, disabled: !skill.value?.editable } : option
+)))
+
+function selectAction(option: { value: string }) {
+  if (option.value !== 'delete' || !skill.value?.editable) return
+  deleteError.value = ''
+  deleteModalOpen.value = true
+}
+
+function updateDeleteModal(open: boolean) {
+  if (!open && deleting.value) return
+  deleteModalOpen.value = open
+  if (!open) deleteError.value = ''
+}
+
+async function deleteSkill() {
+  if (!skill.value?.editable || deleting.value) return
+
+  const skillName = skill.value.name
+  deleting.value = true
+  deleteError.value = ''
+
+  try {
+    await api.skills.remove(skillId.value)
+    deleteModalOpen.value = false
+    clearNuxtData('skills-catalog')
+    notifications.success(
+      'Skill deleted',
+      `${skillName} has been deleted.`,
+    )
+    await router.push('/skills')
+  } catch (cause) {
+    deleteError.value = apiErrorMessage(cause, 'The skill could not be deleted. Please try again.')
+  } finally {
+    deleting.value = false
+  }
+}
 
 definePageMeta({
   layout: 'app',
@@ -43,7 +89,8 @@ useHead(() => ({
           icon-only
           aria-label="More skill actions"
           dropdown-label="Skill actions"
-          :options="entityActionMenuOptions"
+          :options="skillActionMenuOptions"
+          @select="selectAction"
         >
           <template #leading>
             <svg viewBox="0 0 256 256" fill="currentColor">
@@ -67,6 +114,27 @@ useHead(() => ({
         <UiMarkdownContent :content="skill.instructions" strip-first-heading />
       </div>
     </template>
+
+    <UiModal
+      v-if="skill"
+      :open="deleteModalOpen"
+      title="Delete this skill?"
+      :description="`This permanently deletes ${skill.name}. This action cannot be undone.`"
+      :close-on-backdrop="!deleting"
+      :show-close="!deleting"
+      @update:open="updateDeleteModal"
+    >
+      <template #icon>
+        <svg viewBox="0 0 256 256" fill="currentColor">
+          <path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z" />
+        </svg>
+      </template>
+      <p v-if="deleteError" class="skill-delete-error" role="alert">{{ deleteError }}</p>
+      <template #actions>
+        <UiButton data-autofocus variant="secondary" :disabled="deleting" @click="updateDeleteModal(false)">Cancel</UiButton>
+        <UiButton variant="coral" :loading="deleting" @click="deleteSkill">Delete skill</UiButton>
+      </template>
+    </UiModal>
   </PageShell>
 </template>
 
@@ -109,6 +177,12 @@ useHead(() => ({
 
 .skill-state--error {
   color: var(--ll-color-brand-ink);
+}
+
+.skill-delete-error {
+  margin: 0;
+  color: var(--ll-color-brand-ink);
+  font: 500 var(--ll-text-sm) / 1.5 var(--ll-font-control);
 }
 
 @media (max-width: 48rem) {

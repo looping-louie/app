@@ -80,6 +80,7 @@ export function useApiClient() {
       list: (query: SkillListQuery = {}) => $fetch<SkillListResponse>('/api/v1/skills', { query }),
       get: (id: string) => $fetch<SkillResponse>(resourcePath('skills', id)),
       create: (body: SkillCreateRequest) => $fetch<SkillResponse>('/api/v1/skills', { method: 'POST', body }),
+      remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('skills', id), { method: 'DELETE' }),
     },
     models: {
       list: (query: ModelListQuery = {}) => $fetch<ModelListResponse>('/api/v1/models', { query }),
