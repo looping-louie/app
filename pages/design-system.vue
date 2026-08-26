@@ -145,7 +145,7 @@ const buttonDropdownOptions = [
   },
   {
     value: 'agent',
-    label: 'Create agent',
+    label: 'Create persona',
     iconPath: 'M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z',
   },
   {
@@ -159,7 +159,7 @@ const commandPaletteItems = [
   {
     id: 'browse-loops',
     label: 'Browse loops',
-    description: 'Open the catalog of iterative agent workflows.',
+    description: 'Open the catalog of iterative persona workflows.',
     group: 'Navigate',
     keywords: ['workflows', 'automation'],
     iconPath: buttonDropdownOptions[0]!.iconPath,
@@ -167,7 +167,7 @@ const commandPaletteItems = [
   },
   {
     id: 'browse-agents',
-    label: 'Browse agents',
+    label: 'Browse personas',
     description: 'Review the personas available to your teams.',
     group: 'Navigate',
     keywords: ['personas', 'team'],
@@ -186,7 +186,7 @@ const commandPaletteItems = [
   {
     id: 'create-loop',
     label: 'Create new loop',
-    description: 'Start a guided setup for a new agent workflow.',
+    description: 'Start a guided setup for a new persona workflow.',
     group: 'Create',
     keywords: ['new', 'wizard'],
     iconPath: buttonDropdownOptions[0]!.iconPath,
@@ -305,7 +305,7 @@ const mainNavigationMenus = [
       {
         label: 'Open source',
         items: [
-          { label: 'Framework', description: 'Build loops and agent teams', mark: '✣', to: '#site-navigation' },
+          { label: 'Framework', description: 'Build loops and persona teams', mark: '✣', to: '#site-navigation' },
         ],
       },
       {
@@ -347,7 +347,7 @@ const mainNavigationLinks = [
 ]
 
 const interfaceTabs = [
-  { value: 'agents', label: 'Agents', mark: '✣', description: 'Configure specialist agents, tools, models, and instructions in one clear workspace.' },
+  { value: 'agents', label: 'Personas', mark: '✣', description: 'Configure specialist personas, tools, models, and instructions in one clear workspace.' },
   { value: 'workflows', label: 'Workflows', mark: '⌘', description: 'Compose typed steps, branches, retries, and human checkpoints into inspectable flows.' },
   { value: 'harness', label: 'Harness', mark: '⌁', description: 'Coordinate multiple modes and specialists around shared state and a single objective.' },
   { value: 'memory', label: 'Memory', mark: '◌', description: 'Give every loop durable context, semantic recall, and thread-aware storage.' },
@@ -362,10 +362,10 @@ const interfaceScreens: Record<string, {
   status: string
 }> = {
   agents: {
-    file: 'agent.ts',
+    file: 'persona.ts',
     title: 'Weather specialist',
     navigation: ['Chat', 'Tools', 'Review'],
-    code: ['new Agent({', '  model: cockpitModel,', '  tools: { weather },', '})'],
+    code: ['new Persona({', '  model: cockpitModel,', '  tools: { weather },', '})'],
     status: 'Ready for takeoff',
   },
   workflows: {
@@ -414,7 +414,7 @@ const footerLegalLinks = [
 ]
 
 const customerRows = [
-  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding agent', actionLabel: 'Read story', to: '#grid-list' },
+  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding persona', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'airframe', name: 'Airframe', categories: 'AI · Infrastructure', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'runway', name: 'Runway Labs', categories: 'FinTech · Enterprise', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'hangar', name: 'Hangar Cloud', categories: 'AI · Infrastructure', actionLabel: 'Read story', to: '#grid-list' },
@@ -432,7 +432,7 @@ const providerRows = ref([
 
 const keyValueRows = [
   { id: 'status', key: 'Status', actionLabel: 'Edit' },
-  { id: 'agents', key: 'Agents', actionLabel: 'Edit' },
+  { id: 'agents', key: 'Personas', actionLabel: 'Edit' },
   { id: 'prompt', key: 'Prompt', actionLabel: 'Edit' },
 ]
 
@@ -724,7 +724,7 @@ onBeforeUnmount(() => {
                     <span>Instrument Sans</span>
                     <code>Display · Body · UI</code>
                   </div>
-                  <p>Agents that stay on course.</p>
+                  <p>Personas that stay on course.</p>
                   <small>Precise and compact, with just enough personality to keep the interface from looking like a tax return.</small>
                 </div>
 
@@ -751,7 +751,7 @@ onBeforeUnmount(() => {
                     <h3>Markdown content</h3>
                     <code>UiMarkdownContent</code>
                   </div>
-                  <p>Safe, consistent long-form content for agent and skill instructions.</p>
+                  <p>Safe, consistent long-form content for persona and skill instructions.</p>
                 </div>
                 <span class="ds-status"><i /> New</span>
               </header>
@@ -1651,7 +1651,7 @@ onBeforeUnmount(() => {
               <div class="ds-stage">
                 <UiBreadcrumb
                   :items="[
-                    { label: 'Agents', to: '/personas' },
+                    { label: 'Personas', to: '/personas' },
                     { label: 'Engineering', to: '/skills' },
                     { label: 'Code review', to: '/skills?category=code-review' },
                   ]"
@@ -1700,7 +1700,7 @@ onBeforeUnmount(() => {
                     <UiHeadingBlock
                       layout="centered"
                       size="hero"
-                      eyebrow="Agent observability / Code"
+                      eyebrow="Persona observability / Code"
                       eyebrow-to="/personas"
                     >
                       <template #title>
@@ -2322,21 +2322,21 @@ onBeforeUnmount(() => {
                     <UiGrid :columns="3" gap="md">
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Internal agents</h4></template>
+                        <template #title><h4>Internal personas</h4></template>
                         <template #description><p>Automate the work that keeps your team circling the same runway.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--messages" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--messages is-animated" /></template>
                       </UiCard>
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Customer-facing agents</h4></template>
+                        <template #title><h4>Customer-facing personas</h4></template>
                         <template #description><p>Answer, complete tasks, and hand off without losing context.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--signal" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--signal is-animated" /></template>
                       </UiCard>
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Developer platform agents</h4></template>
+                        <template #title><h4>Developer platform personas</h4></template>
                         <template #description><p>Build reliable AI operations on shared primitives.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--console" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--console is-animated" /></template>
@@ -2349,12 +2349,12 @@ onBeforeUnmount(() => {
               <div class="ds-collection-example">
                 <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-example__heading ds-collection-example__heading--outside">
-                    <span>Agent books and latest releases</span>
+                    <span>Persona books and latest releases</span>
                     <code>group titles outside Stage · content inside</code>
                   </div>
                   <div class="ds-grouped-collection">
                     <UiGrid :columns="2" gap="md" collapse="never" class="ds-grouped-collection__titles">
-                      <UiCollectionGroupTitle title="Agent books" />
+                      <UiCollectionGroupTitle title="Persona books" />
                       <UiCollectionGroupTitle title="Latest releases" to="#grid-card" />
                     </UiGrid>
                     <UiSectionStage inverse="bottom" class="ds-collection-stage ds-collection-stage--grouped">
@@ -2363,7 +2363,7 @@ onBeforeUnmount(() => {
                           <UiCard to="#grid-card" variant="editorial">
                             <template #eyebrow>Field manual · Volume 01</template>
                             <template #title><h4>Principles of Building Reliable Loops</h4></template>
-                            <template #description><p>A practical guide to agents that know when to take another lap.</p></template>
+                            <template #description><p>A practical guide to personas that know when to take another lap.</p></template>
                             <template #meta>240K+ copies distributed</template>
                           </UiCard>
                         </div>
@@ -2375,7 +2375,7 @@ onBeforeUnmount(() => {
                           </UiCard>
                           <UiCard to="#grid-card" variant="row">
                             <template #title><h4>Persistent loop memory</h4></template>
-                            <template #description><p>Carry decisions and state across long-running agent workflows.</p></template>
+                            <template #description><p>Carry decisions and state across long-running persona workflows.</p></template>
                             <template #trailing><time datetime="2026-08-03">Aug 3</time></template>
                           </UiCard>
                         </div>
@@ -2395,7 +2395,7 @@ onBeforeUnmount(() => {
                     <UiGrid :columns="2" gap="md">
                       <UiCard to="#grid-card" variant="editorial">
                         <template #eyebrow>Engineering</template>
-                        <template #title><h4>How to review long-running agents without slowing them down</h4></template>
+                        <template #title><h4>How to review long-running personas without slowing them down</h4></template>
                         <template #description><p>Patterns for parallel review, confidence thresholds, and useful retries.</p></template>
                         <template #meta>Aug 1, 2026</template>
                         <template #trailing><span># foundations</span></template>

@@ -214,7 +214,7 @@ async function saveEditing() {
     return
   }
   if (!editExecutionReady.value) {
-    editError.value = 'Every loop agent needs a model from its agent, activity, pipeline, or workspace configuration.'
+    editError.value = 'Every loop persona needs a model configured at the persona, activity, pipeline, or workspace level.'
     return
   }
 
@@ -348,7 +348,7 @@ useHead(() => ({
           <UiButton type="button" variant="secondary" :disabled="saving" @click="cancelEditing">Cancel</UiButton>
         </template>
         <template v-else>
-          <UiButton type="button" :disabled="!pipelineExecutionReady" :title="pipelineExecutionReady ? undefined : 'Configure a model target for every loop agent before running.'" @click="runModalOpen = true">Run</UiButton>
+          <UiButton type="button" :disabled="!pipelineExecutionReady" :title="pipelineExecutionReady ? undefined : 'Configure a model target for every loop persona before running.'" @click="runModalOpen = true">Run</UiButton>
           <UiButton
             type="button"
             variant="stroke"
@@ -441,7 +441,7 @@ useHead(() => ({
                     :inherit-description="executionOptions?.defaults.harness ? `Currently ${executionOptions.defaults.harness.kind} v1.` : 'No workspace override is configured; the API will use Louie v1.'"
                     @update:model-value="markEditDirty"
                   />
-                  <p v-if="!editExecutionReady" class="pipeline-execution__error" role="alert">At least one loop agent has no effective model target.</p>
+                  <p v-if="!editExecutionReady" class="pipeline-execution__error" role="alert">At least one loop persona has no effective model target.</p>
                 </template>
                 <dl v-else>
                   <div><dt>Model</dt><dd>{{ modelTargetLabel(displayedModelTarget) }}</dd></div>

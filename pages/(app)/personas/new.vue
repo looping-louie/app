@@ -87,8 +87,8 @@ function clearError(field: keyof typeof errors) {
 }
 
 function validateDetails() {
-  errors.name = name.value.trim() ? '' : 'Give this agent a name.'
-  errors.description = description.value.trim() ? '' : 'Describe the role this agent should play.'
+  errors.name = name.value.trim() ? '' : 'Give this persona a name.'
+  errors.description = description.value.trim() ? '' : 'Describe the role this persona should play.'
   if (description.value.length > descriptionMaxLength) {
     errors.description = `Keep the description to ${descriptionMaxLength} characters or fewer.`
   }
@@ -96,7 +96,7 @@ function validateDetails() {
 }
 
 function validatePrompt() {
-  errors.prompt = prompt.value.trim() ? '' : 'Write the instructions for this agent.'
+  errors.prompt = prompt.value.trim() ? '' : 'Write the instructions for this persona.'
   return !errors.prompt
 }
 
@@ -198,7 +198,7 @@ async function createAgent() {
     allowRouteLeave.value = true
     await router.push(`/personas/${encodeURIComponent(agent.id)}`)
   } catch (error) {
-    saveError.value = apiErrorMessage(error, 'The agent could not be saved. Please try again.')
+    saveError.value = apiErrorMessage(error, 'The persona could not be saved. Please try again.')
     saveLocalDraft()
   } finally {
     saving.value = false
@@ -310,30 +310,30 @@ onBeforeUnmount(() => {
 })
 
 definePageMeta({ layout: 'app' })
-useHead({ title: 'Create an agent · Looping Louie' })
+useHead({ title: 'Create a persona · Looping Louie' })
 </script>
 
 <template>
   <WizardShell :steps="steps" :current="stepIndex" class="agent-builder">
     <div class="agent-builder__layout" :class="{ 'agent-builder__layout--skills': step === 'skills' }">
       <main ref="questionRoot" class="agent-builder__question">
-      <UiBreadcrumb :items="[{ label: 'Agents', to: '/personas' }, { label: 'Create new agent' }]" class="agent-builder__breadcrumb" />
+      <UiBreadcrumb :items="[{ label: 'Personas', to: '/personas' }, { label: 'Create new persona' }]" class="agent-builder__breadcrumb" />
 
       <Transition name="builder-question" mode="out-in" @after-enter="focusCurrentStep">
         <section v-if="step === 'details'" key="details" class="builder-panel" @keydown="onPanelKeydown">
-          <div class="builder-panel__heading"><h1>Tell us about this agent</h1><p>Give it a clear name and a concise description of the role it should play.</p></div>
+          <div class="builder-panel__heading"><h1>Tell us about this persona</h1><p>Give it a clear name and a concise description of the role it should play.</p></div>
           <div class="builder-field-stage">
             <UiCollectionGroupTitle title="Name *" heading-as="h2" />
             <UiSectionStage inverse="bottom"><UiTextField ref="nameField" v-model="name" label="Name" hide-label required placeholder="e.g. API reviewer" :error="errors.name" @input="clearError('name')" /></UiSectionStage>
           </div>
           <div class="builder-field-stage">
             <UiCollectionGroupTitle title="Description *" heading-as="h2" />
-            <UiSectionStage inverse="bottom"><UiTextField v-model="description" label="Description" hide-label multiline :rows="5" :maxlength="descriptionMaxLength" required placeholder="Explain what this agent is responsible for…" :hint="descriptionHint" :error="errors.description" @input="clearError('description')" /></UiSectionStage>
+            <UiSectionStage inverse="bottom"><UiTextField v-model="description" label="Description" hide-label multiline :rows="5" :maxlength="descriptionMaxLength" required placeholder="Explain what this persona is responsible for…" :hint="descriptionHint" :error="errors.description" @input="clearError('description')" /></UiSectionStage>
           </div>
         </section>
 
         <section v-else-if="step === 'category'" key="category" class="builder-panel">
-          <div class="builder-panel__heading"><h1>Where does this agent belong?</h1><p>Choose one category. Selecting it will take you directly to skills.</p></div>
+          <div class="builder-panel__heading"><h1>Where does this persona belong?</h1><p>Choose one category. Selecting it will take you directly to skills.</p></div>
           <div class="builder-field-stage">
             <UiCollectionGroupTitle title="Category" heading-as="h2" />
             <UiSectionStage inverse="bottom">
@@ -344,7 +344,7 @@ useHead({ title: 'Create an agent · Looping Louie' })
         </section>
 
         <section v-else-if="step === 'skills'" key="skills" class="builder-panel">
-          <div class="builder-panel__heading"><h1>Which skills should it use?</h1><p>Select any reusable capabilities this agent needs, or continue without adding one.</p></div>
+          <div class="builder-panel__heading"><h1>Which skills should it use?</h1><p>Select any reusable capabilities this persona needs, or continue without adding one.</p></div>
           <div class="builder-field-stage">
             <UiCollectionGroupTitle :title="selectedSkillIds.length ? `${selectedSkillIds.length} selected` : 'Skills · Optional'" heading-as="h2" />
             <UiSectionStage inverse="bottom">
@@ -357,10 +357,10 @@ useHead({ title: 'Create an agent · Looping Louie' })
         </section>
 
         <section v-else key="prompt" class="builder-panel" @keydown="onPanelKeydown">
-          <div class="builder-panel__heading"><h1>How should this agent behave?</h1><p>Write the role, perspective and instructions it should follow whenever it participates.</p></div>
+          <div class="builder-panel__heading"><h1>How should this persona behave?</h1><p>Write the role, perspective and instructions it should follow whenever it participates.</p></div>
           <div ref="promptStage" class="builder-field-stage builder-field-stage--prompt">
             <UiCollectionGroupTitle title="Prompt *" heading-as="h2" />
-            <UiSectionStage inverse="bottom"><UiTextField ref="promptField" v-model="prompt" label="Prompt" hide-label multiline :rows="14" required placeholder="Write clear, actionable instructions for the agent…" hint="Markdown is supported. Press Ctrl or Cmd + Enter to save." :error="errors.prompt" @input="clearError('prompt')" /></UiSectionStage>
+            <UiSectionStage inverse="bottom"><UiTextField ref="promptField" v-model="prompt" label="Prompt" hide-label multiline :rows="14" required placeholder="Write clear, actionable instructions for the persona…" hint="Markdown is supported. Press Ctrl or Cmd + Enter to save." :error="errors.prompt" @input="clearError('prompt')" /></UiSectionStage>
           </div>
           <p v-if="saveError" class="builder-save-error" role="alert">{{ saveError }}</p>
         </section>
@@ -368,7 +368,7 @@ useHead({ title: 'Create an agent · Looping Louie' })
 
       <nav ref="navigationRoot" class="builder-navigation" :style="navigationStyle" aria-label="Form steps">
         <UiButton class="builder-navigation__back" variant="secondary" :disabled="stepIndex === 0" @click="goBack">Back <kbd aria-hidden="true">↑</kbd></UiButton>
-        <UiButton class="builder-navigation__continue" :disabled="!canContinue" :loading="saving" @click="continueCurrentStep">{{ step === 'prompt' ? 'Save agent' : 'Continue' }}<kbd aria-hidden="true">{{ step === 'prompt' ? 'Ctrl/⌘ ↵' : '↓' }}</kbd></UiButton>
+        <UiButton class="builder-navigation__continue" :disabled="!canContinue" :loading="saving" @click="continueCurrentStep">{{ step === 'prompt' ? 'Save persona' : 'Continue' }}<kbd aria-hidden="true">{{ step === 'prompt' ? 'Ctrl/⌘ ↵' : '↓' }}</kbd></UiButton>
       </nav>
       </main>
 
@@ -390,7 +390,7 @@ useHead({ title: 'Create an agent · Looping Louie' })
       </Transition>
     </div>
 
-    <UiModal v-model:open="exitModalOpen" title="Leave this agent unfinished?" description="Save your progress as a draft so you can continue later, or discard it permanently." :close-on-backdrop="!exitActionPending" :show-close="!exitActionPending">
+    <UiModal v-model:open="exitModalOpen" title="Leave this persona unfinished?" description="Save your progress as a draft so you can continue later, or discard it permanently." :close-on-backdrop="!exitActionPending" :show-close="!exitActionPending">
       <template #icon><svg viewBox="0 0 256 256" fill="currentColor"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" /></svg></template>
       <template #actions><UiButton variant="coral" :disabled="exitActionPending" @click="discardDraftAndLeave">Discard draft</UiButton><UiButton data-autofocus :loading="exitActionPending" @click="saveDraftAndLeave">Save draft</UiButton></template>
     </UiModal>

@@ -84,7 +84,7 @@ async function saveEditing() {
   const description = editableText(editDescriptionElement.value)
   const instructions = editBody.value?.readMarkdown().trim() ?? ''
   if (!name || !instructions) {
-    editError.value = !name ? 'Give this agent a name.' : 'Write the instructions for this agent.'
+    editError.value = !name ? 'Give this persona a name.' : 'Write the instructions for this persona.'
     return false
   }
   saving.value = true
@@ -102,7 +102,7 @@ async function saveEditing() {
     clearNuxtData('agents-catalog')
     return true
   } catch (cause) {
-    editError.value = apiErrorMessage(cause, 'The agent could not be saved. Please try again.')
+    editError.value = apiErrorMessage(cause, 'The persona could not be saved. Please try again.')
     return false
   } finally {
     saving.value = false
@@ -168,12 +168,12 @@ async function deletePersona() {
     deleteModalOpen.value = false
     clearNuxtData('agents-catalog')
     notifications.success(
-      'Agent deleted',
+      'Persona deleted',
       `${personaName} has been deleted.`,
     )
     await router.push('/personas')
   } catch (cause) {
-    deleteError.value = apiErrorMessage(cause, 'The agent could not be deleted. Please try again.')
+    deleteError.value = apiErrorMessage(cause, 'The persona could not be deleted. Please try again.')
   } finally {
     deleting.value = false
   }
@@ -201,8 +201,8 @@ definePageMeta({
 
 useHead(() => ({
   title: persona.value
-    ? `${persona.value.name} · Agents · Looping Louie`
-    : 'Agent · Looping Louie',
+    ? `${persona.value.name} · Personas · Looping Louie`
+    : 'Persona · Looping Louie',
 }))
 </script>
 
@@ -210,7 +210,7 @@ useHead(() => ({
   <PageShell
     class="persona-page"
     :breadcrumbs="persona ? [
-      { label: 'Agents', to: '/personas' },
+      { label: 'Personas', to: '/personas' },
       { label: persona.name },
     ] : []"
     :show-heading="Boolean(persona)"
@@ -254,8 +254,8 @@ useHead(() => ({
             dropdown
             dropdown-align="right"
             icon-only
-            aria-label="More agent actions"
-            dropdown-label="Agent actions"
+            aria-label="More persona actions"
+            dropdown-label="Persona actions"
             :options="personaActionMenuOptions"
             :disabled="deleting"
             @select="selectAction"
@@ -272,9 +272,9 @@ useHead(() => ({
       </div>
     </template>
 
-    <div v-if="status === 'pending'" class="persona-state" role="status">Loading agent…</div>
+    <div v-if="status === 'pending'" class="persona-state" role="status">Loading persona…</div>
     <div v-else-if="error" class="persona-state persona-state--error" role="alert">
-      <span>Agent could not be loaded.</span>
+      <span>Persona could not be loaded.</span>
       <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
     </div>
     <template v-else-if="persona">
@@ -289,7 +289,7 @@ useHead(() => ({
           @click.capture="editing && $event.preventDefault()"
         />
 
-        <aside class="persona-aside" :class="{ 'persona-aside--editing': editing }" aria-label="Agent details">
+        <aside class="persona-aside" :class="{ 'persona-aside--editing': editing }" aria-label="Persona details">
           <div class="persona-icon-card" role="img" :aria-label="`${persona.name} icon`">
             <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false">
               <path :d="personaIcon(persona)" />
@@ -310,7 +310,7 @@ useHead(() => ({
     <UiModal
       v-if="persona"
       :open="deleteModalOpen"
-      title="Delete this agent?"
+      title="Delete this persona?"
       :description="`This permanently deletes ${persona.name}. This action cannot be undone.`"
       :close-on-backdrop="!deleting"
       :show-close="!deleting"
@@ -324,14 +324,14 @@ useHead(() => ({
       <p v-if="deleteError" class="persona-delete-error" role="alert">{{ deleteError }}</p>
       <template #actions>
         <UiButton data-autofocus variant="secondary" :disabled="deleting" @click="deleteModalOpen = false">Cancel</UiButton>
-        <UiButton variant="coral" :loading="deleting" @click="deletePersona">Delete agent</UiButton>
+        <UiButton variant="coral" :loading="deleting" @click="deletePersona">Delete persona</UiButton>
       </template>
     </UiModal>
 
     <UiModal
       v-model:open="leaveModalOpen"
       title="Save your changes?"
-      description="You have unsaved changes to this agent. Save them before leaving, or discard them."
+      description="You have unsaved changes to this persona. Save them before leaving, or discard them."
       :close-on-backdrop="!leaveActionPending"
       :show-close="!leaveActionPending"
     >

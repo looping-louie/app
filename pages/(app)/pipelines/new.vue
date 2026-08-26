@@ -122,7 +122,7 @@ function validateDetails() {
 async function createPipeline() {
   if (!validateDetails() || !designValid.value || savingPipeline.value) return
   if (!executionReady.value) {
-    saveError.value = 'Every loop agent needs a model from its agent, activity, pipeline, or workspace configuration.'
+    saveError.value = 'Every loop persona needs a model configured at the persona, activity, pipeline, or workspace level.'
     return
   }
   savingPipeline.value = true
@@ -346,7 +346,7 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
               :inherit-description="executionOptions?.defaults.harness ? `Currently ${executionOptions.defaults.harness.kind} v1.` : 'No workspace override is configured; the API will use Louie v1.'"
               @update:model-value="saveError = ''; saveLocalDraft()"
             />
-            <p v-if="!executionReady" class="pipeline-builder__execution-error" role="alert">At least one loop agent has no effective model target.</p>
+            <p v-if="!executionReady" class="pipeline-builder__execution-error" role="alert">At least one loop persona has no effective model target.</p>
           </div>
         </UiSectionStage>
       </div>

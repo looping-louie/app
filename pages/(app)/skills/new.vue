@@ -324,7 +324,7 @@ useHead({ title: 'Create a skill · Looping Louie' })
                 :rows="5"
                 :maxlength="descriptionMaxLength"
                 required
-                placeholder="Explain what this skill does and when an agent should use it…"
+                placeholder="Explain what this skill does and when a persona should use it…"
                 :hint="descriptionHint"
                 :error="errors.description"
                 @input="clearError('description')"
@@ -353,8 +353,8 @@ useHead({ title: 'Create a skill · Looping Louie' })
 
         <section v-else key="prompt" class="builder-panel" @keydown="onPanelKeydown">
           <div class="builder-panel__heading">
-            <h1>What should the agent do?</h1>
-            <p>Write the reusable instructions the agent should follow whenever this skill is applied.</p>
+            <h1>What should the persona do?</h1>
+            <p>Write the reusable instructions the persona should follow whenever this skill is applied.</p>
           </div>
           <div ref="promptStage" class="builder-field-stage builder-field-stage--prompt">
             <UiCollectionGroupTitle title="Prompt *" heading-as="h2" />
@@ -367,7 +367,7 @@ useHead({ title: 'Create a skill · Looping Louie' })
                 multiline
                 :rows="14"
                 required
-                placeholder="Write clear, actionable instructions for the agent…"
+                placeholder="Write clear, actionable instructions for the persona…"
                 hint="Markdown is supported. Press Ctrl or Cmd + Enter to save."
                 :error="errors.prompt"
                 @input="clearError('prompt')"
