@@ -12,6 +12,7 @@ const router = useRouter()
 const personaId = computed(() => String(route.params.id))
 const { personaIcon } = usePersonaIcon()
 const api = useApiClient()
+const notifications = useNotifications()
 const deleteModalOpen = ref(false)
 const deleting = ref(false)
 const deleteError = ref('')
@@ -153,8 +154,11 @@ function updateDeleteModal(open: boolean) {
 
 async function deletePersona() {
   if (!persona.value?.editable || deleting.value) return
+
+  const personaName = persona.value.name
   deleting.value = true
   deleteError.value = ''
+
   try {
     try {
       await api.personas.remove(personaId.value)
@@ -162,7 +166,12 @@ async function deletePersona() {
       if (!['instruction_not_found', 'instruction_not_owned'].includes(apiErrorCode(cause) ?? '')) throw cause
     }
     deleteModalOpen.value = false
-    window.location.replace('/personas')
+    clearNuxtData('agents-catalog')
+    notifications.success(
+      'Agent deleted',
+      `${personaName} has been deleted.`,
+    )
+    await router.push('/personas')
   } catch (cause) {
     deleteError.value = apiErrorMessage(cause, 'The agent could not be deleted. Please try again.')
   } finally {
