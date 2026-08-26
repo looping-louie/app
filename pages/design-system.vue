@@ -563,7 +563,7 @@ onBeforeUnmount(() => {
     <header class="ds-header">
       <UiContainer size="default" class="ds-header__container">
         <NuxtLink to="/" class="ds-brand" aria-label="Back to Looping Louie">
-          <img class="ds-brand__mark" src="/brand/twemoji-small-airplane.svg" alt="" width="28" height="28">
+          <img class="ds-brand__mark" src="/brand/looping-louie-biplane.png" alt="" width="28" height="28">
           <span>Looping Louie</span>
         </NuxtLink>
 
@@ -667,9 +667,9 @@ onBeforeUnmount(() => {
                 <div>
                   <div class="ds-component__title-row">
                     <h3>Color</h3>
-                    <code>Twemoji 2.0</code>
+                    <code>Louie brand</code>
                   </div>
-                  <p>Original Small Airplane colors and derived tones for the interface.</p>
+                  <p>Louie’s aviation colors and derived tones for the interface.</p>
                 </div>
                 <span class="ds-status"><i /> Defined</span>
               </header>
@@ -2816,7 +2816,7 @@ onBeforeUnmount(() => {
                 <UiMainNavigation :menus="mainNavigationMenus" :links="mainNavigationLinks">
                   <template #brand>
                     <a href="#site-navigation" class="ds-site-brand">
-                      <img src="/brand/twemoji-small-airplane.svg" alt="" width="26" height="26">
+                      <img src="/brand/looping-louie-biplane.png" alt="" width="26" height="26">
                       <strong>Looping Louie</strong>
                     </a>
                   </template>
@@ -2912,7 +2912,7 @@ onBeforeUnmount(() => {
                 <UiSiteFooter :columns="footerColumns" :legal-links="footerLegalLinks" status="All loops operational">
                   <template #brand>
                     <a href="#site-footer" class="ds-footer-brand">
-                      <img src="/brand/twemoji-small-airplane.svg" alt="" width="34" height="34">
+                      <img src="/brand/looping-louie-biplane.png" alt="" width="34" height="34">
                       <strong>Looping Louie</strong>
                     </a>
                   </template>
@@ -4242,7 +4242,7 @@ onBeforeUnmount(() => {
   height: 2.75rem;
   inset: 0;
   margin: auto;
-  background: url('/brand/twemoji-small-airplane.svg') center / contain no-repeat;
+  background: url('/brand/looping-louie-biplane.png') center / contain no-repeat;
   filter: drop-shadow(0 0.5rem 0.8rem rgba(41, 47, 51, 0.2));
 }
 
