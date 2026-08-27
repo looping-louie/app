@@ -7,6 +7,8 @@ import UiPill from '~/components/ui/Pill.vue'
 import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 
+type ModelVisualState = 'unavailable' | 'available-enabled' | 'available-disabled'
+
 const api = useApiClient()
 const route = useRoute()
 const router = useRouter()
@@ -120,6 +122,18 @@ function modelPolicyEnabled(modelId: string) {
   return (configured?.status ?? user.value?.settings.default_model_availability ?? 'enabled') === 'enabled'
 }
 
+function modelAvailable(model: ModelSummary) {
+  // @TODO Remove this Codex/OpenAI frontend override once the API exposes harness-driven availability; then trust model.available directly.
+  const codexEnablesOpenAi = user.value?.settings.default_harness?.kind === 'codex_cli'
+    && model.vendor.trim().toLocaleLowerCase() === 'openai'
+  return model.available || codexEnablesOpenAi
+}
+
+function modelVisualState(model: ModelSummary): ModelVisualState {
+  if (!modelAvailable(model)) return 'unavailable'
+  return modelPolicyEnabled(model.id) ? 'available-enabled' : 'available-disabled'
+}
+
 async function updateModelPolicy(modelId: string, enabled: boolean) {
   if (!user.value || policyMutatingId.value) return
   policyMutatingId.value = modelId
@@ -211,13 +225,16 @@ useHead({
           :id="`model-${model.id}`"
           :key="model.id"
           class="model-item"
-          :class="{ 'model-item--focused': focusedModelId() === model.id }"
+          :class="[
+            `model-item--${modelVisualState(model)}`,
+            { 'model-item--focused': focusedModelId() === model.id },
+          ]"
           variant="catalog"
           icon-style="circle"
           :src="providerLogo(model.vendor, model.family) || undefined"
           alt=""
           :description="model.vendor"
-          toggle
+          :toggle="modelAvailable(model)"
           :toggle-value="modelPolicyEnabled(model.id)"
           :toggle-disabled="Boolean(policyMutatingId) || !user"
           :toggle-label="`${modelPolicyEnabled(model.id) ? 'Disable' : 'Enable'} ${model.name}`"
@@ -257,6 +274,21 @@ useHead({
 
 .model-item {
   min-width: 0;
+}
+
+.model-item--unavailable {
+  opacity: 0.42;
+  transition: opacity var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.model-item--unavailable:hover,
+.model-item--unavailable:focus-within {
+  opacity: 0.78;
+}
+
+.model-item--available-enabled,
+.model-item--available-disabled {
+  opacity: 1;
 }
 
 .model-item--focused {
