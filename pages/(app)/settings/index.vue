@@ -317,12 +317,12 @@ useHead({ title: 'Settings · Looping Louie' })
             </UiPill>
           </div>
           <div class="execution-defaults__row">
-            <div class="execution-defaults__copy"><h3>Allow models by default</h3><p>Allow unconfigured models by policy; a usable provider connection is still required.</p></div>
+            <div class="execution-defaults__copy"><h3>Allow all models by default</h3><p>Allow unconfigured models by policy; a usable provider connection is still required.</p></div>
             <UiToggle
               class="execution-defaults__model-policy-toggle"
               :model-value="defaultModelAvailability === 'enabled'"
               :disabled="remoteSettingsSaving"
-              aria-label="Allow models by default"
+              aria-label="Allow all models by default"
               @update:model-value="void updateDefaultModelAvailability($event)"
             />
           </div>
