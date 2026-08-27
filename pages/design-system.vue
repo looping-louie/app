@@ -542,14 +542,14 @@ function copyButtonLabel(command: string) {
 function showSuccessNotification() {
   notifications.success(
     'Changes saved',
-    'Codex is now the default harness for this workspace.',
+    'Codex CLI is now your default harness.',
   )
 }
 
 function showErrorNotification() {
   notifications.error(
     'Changes weren’t saved',
-    'Claude is not supported by the workspace API yet. Choose Codex and try again.',
+    'Only Louie and Codex CLI harnesses are supported. Choose one and try again.',
   )
 }
 
@@ -1199,14 +1199,14 @@ onBeforeUnmount(() => {
                   <UiNotification
                     tone="success"
                     title="Changes saved"
-                    description="Codex is now the default harness for this workspace."
+                    description="Codex CLI is now your default harness."
                     :dismissible="false"
                     :announce="false"
                   />
                   <UiNotification
                     tone="error"
                     title="Changes weren’t saved"
-                    description="Claude is not supported by the workspace API yet. Choose Codex and try again."
+                    description="Only Louie and Codex CLI harnesses are supported. Choose one and try again."
                     :dismissible="false"
                     :announce="false"
                   />
