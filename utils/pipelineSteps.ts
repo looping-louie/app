@@ -12,7 +12,7 @@ export function pipelineStepRequestsFromResponse(
     description: step.description,
     type: step.type,
     config: cloneApiValue(step.config),
-    model_target: step.model_target ? { ...step.model_target } : null,
+    model_id: step.model_id,
     harness: step.harness ? { ...step.harness, config: {} } : null,
     dependsOn: step.dependsOn.map(dependency => ({ ...dependency })),
   })) as PipelineActivityStepRequest[]

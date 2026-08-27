@@ -14,13 +14,12 @@ import UiSectionStage from '~/components/ui/SectionStage.vue'
 import type {
   ActivityLoopConfig,
   ExecutionHarness,
-  ModelTarget,
   PipelineActivityStepRequest,
   PipelinePatchRequest,
 } from '~/types/api'
 import { apiErrorCode, apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
-import { modelTargetLabel, pipelineStepsHaveModelTargets } from '~/utils/executionDefaults'
+import { modelIdLabel, pipelineStepsHaveModelIds } from '~/utils/executionDefaults'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
@@ -41,7 +40,7 @@ const saving = ref(false)
 const editName = ref('')
 const editDescription = ref('')
 const editEnabled = ref(true)
-const editModelTarget = ref<ModelTarget | null>(null)
+const editModelId = ref<string | null>(null)
 const editHarness = ref<ExecutionHarness | null>(null)
 const editSteps = ref<PipelineActivityStepRequest[]>([])
 const editDesignDirty = ref(false)
@@ -77,11 +76,11 @@ const { data: pipeline, status, error, refresh } = await useAsyncData(
 const { data: executionOptions, refresh: refreshExecutionOptions } = await useAsyncData(
   'pipeline-detail-execution-options',
   async () => {
-    const [defaults, linkedServices] = await Promise.all([
+    const [defaults, models] = await Promise.all([
       api.workspaces.getDefaults(),
-      api.linkedServices.list(),
+      api.models.list({ available: true, sort: 'alphabetical-asc' }),
     ])
-    return { defaults, linkedServices }
+    return { defaults, models: models.items }
   },
 )
 
@@ -100,13 +99,13 @@ const detailItems = computed<DetailRow[]>(() => {
     { id: 'design', title: 'Design', kind: 'design' },
   ]
 })
-const editInheritedModelTarget = computed(() => editModelTarget.value ?? executionOptions.value?.defaults.model_target ?? null)
+const editInheritedModelId = computed(() => editModelId.value ?? executionOptions.value?.defaults.model_target?.model_id ?? null)
 const editInheritedHarness = computed(() => editHarness.value ?? executionOptions.value?.defaults.harness ?? null)
-const editExecutionReady = computed(() => pipelineStepsHaveModelTargets(editSteps.value, editInheritedModelTarget.value))
-const displayedModelTarget = computed(() => pipeline.value?.model_target ?? executionOptions.value?.defaults.model_target ?? null)
+const editExecutionReady = computed(() => pipelineStepsHaveModelIds(editSteps.value, editInheritedModelId.value))
+const displayedModelId = computed(() => pipeline.value?.model_id ?? executionOptions.value?.defaults.model_target?.model_id ?? null)
 const displayedHarness = computed(() => pipeline.value?.harness ?? executionOptions.value?.defaults.harness ?? null)
 const pipelineExecutionReady = computed(() => pipeline.value
-  ? pipelineStepsHaveModelTargets(pipeline.value.steps, displayedModelTarget.value)
+  ? pipelineStepsHaveModelIds(pipeline.value.steps, displayedModelId.value)
   : false)
 const canSaveEditing = computed(() => (
   editDesignValid.value
@@ -157,7 +156,7 @@ function beginEditing() {
   editName.value = pipeline.value.name
   editDescription.value = pipeline.value.description
   editEnabled.value = pipeline.value.enabled
-  editModelTarget.value = pipeline.value.model_target
+  editModelId.value = pipeline.value.model_id
   editHarness.value = pipeline.value.harness
   editSteps.value = pipelineStepRequestsFromResponse(pipeline.value.steps)
   editDesignDirty.value = false
@@ -225,7 +224,7 @@ async function saveEditing() {
       name,
       description,
       enabled: editEnabled.value,
-      model_target: editModelTarget.value,
+      model_id: editModelId.value,
       harness: editHarness.value,
     }
     if (editDesignDirty.value) body.steps = editSteps.value
@@ -253,7 +252,7 @@ async function duplicatePipeline() {
       name: `${pipeline.value.name} (Copy)`,
       description: pipeline.value.description,
       steps: pipelineStepRequestsFromResponse(pipeline.value.steps),
-      model_target: pipeline.value.model_target,
+      model_id: pipeline.value.model_id,
       harness: pipeline.value.harness,
     })
     clearNuxtData('pipelines-catalog')
@@ -429,8 +428,8 @@ useHead(() => ({
               <div v-else-if="item.kind === 'execution'" class="pipeline-execution">
                 <template v-if="editing">
                   <ExecutionModelTargetSelector
-                    v-model="editModelTarget"
-                    :services="executionOptions?.linkedServices ?? []"
+                    v-model="editModelId"
+                    :models="executionOptions?.models ?? []"
                     inherit-label="Inherit workspace model"
                     :inherit-description="executionOptions?.defaults.model_target ? `Currently ${executionOptions.defaults.model_target.model_id}.` : 'No workspace model is configured.'"
                     @update:model-value="markEditDirty"
@@ -444,8 +443,8 @@ useHead(() => ({
                   <p v-if="!editExecutionReady" class="pipeline-execution__error" role="alert">At least one loop persona has no effective model target.</p>
                 </template>
                 <dl v-else>
-                  <div><dt>Model</dt><dd>{{ modelTargetLabel(displayedModelTarget) }}</dd></div>
-                  <div><dt>Source</dt><dd>{{ pipeline.model_target ? 'Pipeline override' : displayedModelTarget ? 'Workspace default' : 'Not configured' }}</dd></div>
+                  <div><dt>Model</dt><dd>{{ modelIdLabel(displayedModelId) }}</dd></div>
+                  <div><dt>Source</dt><dd>{{ pipeline.model_id ? 'Pipeline override' : displayedModelId ? 'Workspace default' : 'Not configured' }}</dd></div>
                   <div><dt>Harness</dt><dd>{{ displayedHarness?.kind ?? 'louie' }} v1</dd></div>
                   <div><dt>Source</dt><dd>{{ pipeline.harness ? 'Pipeline override' : executionOptions?.defaults.harness ? 'Workspace default' : 'Compatibility default' }}</dd></div>
                 </dl>
@@ -455,7 +454,7 @@ useHead(() => ({
                 <PipelineDesignEditor
                   v-if="editing"
                   :initial-steps="pipeline.steps"
-                  :inherited-model-target="editInheritedModelTarget"
+                  :inherited-model-id="editInheritedModelId"
                   :inherited-harness="editInheritedHarness"
                   :show-title="false"
                   :use-stage="false"

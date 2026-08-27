@@ -11,9 +11,9 @@ import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
-import type { ExecutionHarness, ModelTarget, PipelineActivityStepRequest } from '~/types/api'
+import type { ExecutionHarness, PipelineActivityStepRequest } from '~/types/api'
 import { apiErrorCode, apiErrorMessage } from '~/utils/api/errors'
-import { pipelineStepsHaveModelTargets } from '~/utils/executionDefaults'
+import { pipelineStepsHaveModelIds } from '~/utils/executionDefaults'
 
 type PipelineBuilderStep = 'design' | 'details'
 
@@ -24,7 +24,7 @@ const builderSteps = ['Design', 'Details']
 const builderStep = ref<PipelineBuilderStep>(route.query.step === 'details' ? 'details' : 'design')
 const pipelineTitle = ref('')
 const pipelineDescription = ref('')
-const pipelineModelTarget = ref<ModelTarget | null>(null)
+const pipelineModelId = ref<string | null>(null)
 const pipelineHarness = ref<ExecutionHarness | null>(null)
 const detailErrors = reactive({ title: '', description: '' })
 const savingPipeline = ref(false)
@@ -43,23 +43,23 @@ const localKey = 'looping-louie:pipeline-builder-draft:v2'
 const { data: executionOptions, status: executionOptionsStatus, refresh: refreshExecutionOptions } = await useAsyncData(
   'pipeline-builder-execution-options',
   async () => {
-    const [defaults, linkedServices] = await Promise.all([
+    const [defaults, models] = await Promise.all([
       api.workspaces.getDefaults(),
-      api.linkedServices.list(),
+      api.models.list({ available: true, sort: 'alphabetical-asc' }),
     ])
-    return { defaults, linkedServices }
+    return { defaults, models: models.items }
   },
 )
 
 const builderStepIndex = computed(() => builderStep.value === 'design' ? 0 : 1)
-const inheritedModelTarget = computed(() => pipelineModelTarget.value ?? executionOptions.value?.defaults.model_target ?? null)
+const inheritedModelId = computed(() => pipelineModelId.value ?? executionOptions.value?.defaults.model_target?.model_id ?? null)
 const inheritedHarness = computed(() => pipelineHarness.value ?? executionOptions.value?.defaults.harness ?? null)
-const executionReady = computed(() => pipelineStepsHaveModelTargets(designSteps.value, inheritedModelTarget.value))
+const executionReady = computed(() => pipelineStepsHaveModelIds(designSteps.value, inheritedModelId.value))
 const hasProgress = computed(() => Boolean(
   designSteps.value.length
   || pipelineTitle.value.trim()
   || pipelineDescription.value.trim()
-  || pipelineModelTarget.value
+  || pipelineModelId.value
   || pipelineHarness.value,
 ))
 const canSavePipeline = computed(() => (
@@ -97,7 +97,7 @@ function saveLocalDraft() {
     design: designEditor.value?.getDraft() ?? designDraft.value,
     title: pipelineTitle.value,
     description: pipelineDescription.value,
-    modelTarget: pipelineModelTarget.value,
+    modelId: pipelineModelId.value,
     harness: pipelineHarness.value,
     step: builderStep.value,
     updatedAt: new Date().toISOString(),
@@ -132,7 +132,7 @@ async function createPipeline() {
       name: pipelineTitle.value.trim(),
       description: pipelineDescription.value.trim(),
       steps: designEditor.value?.getSteps() ?? designSteps.value,
-      model_target: pipelineModelTarget.value,
+      model_id: pipelineModelId.value,
       harness: pipelineHarness.value,
     })
     localStorage.removeItem(localKey)
@@ -160,7 +160,7 @@ function restoreLocalDraft() {
     const draft = JSON.parse(raw) as Record<string, unknown>
     pipelineTitle.value = typeof draft.title === 'string' ? draft.title : ''
     pipelineDescription.value = typeof draft.description === 'string' ? draft.description : ''
-    pipelineModelTarget.value = isModelTarget(draft.modelTarget) ? draft.modelTarget : null
+    pipelineModelId.value = modelIdFromDraft(draft.modelId) ?? modelIdFromDraft(draft.modelTarget)
     pipelineHarness.value = isHarness(draft.harness) ? draft.harness : null
     const design = draft.design && typeof draft.design === 'object'
       ? draft.design as Partial<PipelineDesignDraft>
@@ -177,10 +177,11 @@ function restoreLocalDraft() {
   }
 }
 
-function isModelTarget(value: unknown): value is ModelTarget {
-  if (!value || typeof value !== 'object') return false
+function modelIdFromDraft(value: unknown) {
+  if (typeof value === 'string' && value) return value
+  if (!value || typeof value !== 'object') return null
   const target = value as Record<string, unknown>
-  return typeof target.linked_service_id === 'string' && typeof target.model_id === 'string'
+  return typeof target.model_id === 'string' && target.model_id ? target.model_id : null
 }
 
 function isHarness(value: unknown): value is ExecutionHarness {
@@ -289,7 +290,7 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
       v-if="builderStep === 'design'"
       ref="designEditor"
       :initial-steps="designSteps"
-      :inherited-model-target="inheritedModelTarget"
+      :inherited-model-id="inheritedModelId"
       :inherited-harness="inheritedHarness"
       @update:steps="updateDesignSteps"
       @validity-change="updateDesignValidity"
@@ -334,8 +335,8 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
           <div v-else-if="executionOptionsStatus === 'error'" class="pipeline-builder__execution-state pipeline-builder__execution-state--error" role="alert">Execution defaults could not be loaded.</div>
           <div v-else class="pipeline-builder__execution-options">
             <ExecutionModelTargetSelector
-              v-model="pipelineModelTarget"
-              :services="executionOptions?.linkedServices ?? []"
+              v-model="pipelineModelId"
+              :models="executionOptions?.models ?? []"
               inherit-label="Inherit workspace model"
               :inherit-description="executionOptions?.defaults.model_target ? `Currently ${executionOptions.defaults.model_target.model_id}.` : 'No workspace model is configured.'"
               @update:model-value="saveError = ''; saveLocalDraft()"

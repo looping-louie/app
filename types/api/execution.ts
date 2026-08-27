@@ -12,6 +12,6 @@ export interface ExecutionHarness {
 }
 
 export interface ExecutionOverrides {
-  model_target?: ModelTarget | null
+  model_id?: string | null
   harness?: ExecutionHarness | null
 }

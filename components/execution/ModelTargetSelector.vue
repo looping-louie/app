@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import UiButton from '~/components/ui/Button.vue'
 import UiDirectoryOption from '~/components/ui/DirectoryOption.vue'
-import type { LinkedServiceResponse, ModelTarget } from '~/types/api'
+import type { ModelSummary } from '~/types/api'
 
 const props = withDefaults(defineProps<{
-  services: LinkedServiceResponse[]
-  modelValue: ModelTarget | null
+  models: ModelSummary[]
+  modelValue: string | null
   inheritLabel?: string
   inheritDescription?: string
   error?: string
@@ -18,48 +18,23 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  'update:modelValue': [value: ModelTarget | null]
+  'update:modelValue': [value: string | null]
 }>()
 
-const { modelLogo } = useModelLogo()
-const selectedServiceId = ref(props.modelValue?.linked_service_id ?? '')
-const selectableServices = computed(() => props.services.filter(service => (
-  service.enabled && service.config.configured && service.config.available_models.length
-)))
-const selectedService = computed(() => (
-  selectableServices.value.find(service => service.id === selectedServiceId.value) ?? null
-))
+const { modelLogo, providerLogo } = useModelLogo()
+const selectableModels = computed(() => props.models.filter(model => model.available))
 const currentTargetUnavailable = computed(() => {
   if (!props.modelValue) return false
-  const service = selectableServices.value.find(candidate => candidate.id === props.modelValue?.linked_service_id)
-  return !service || !service.config.available_models.includes(props.modelValue.model_id)
+  return !selectableModels.value.some(model => model.id === props.modelValue)
 })
-
-watch(() => props.modelValue, (value) => {
-  selectedServiceId.value = value?.linked_service_id ?? ''
-})
-
-function selectService(value: string | string[]) {
-  if (props.disabled || typeof value !== 'string') return
-  const service = selectableServices.value.find(candidate => candidate.id === value)
-  if (!service) return
-  selectedServiceId.value = service.id
-  const currentModel = props.modelValue?.model_id
-  if (currentModel && service.config.available_models.includes(currentModel)) {
-    emit('update:modelValue', { linked_service_id: service.id, model_id: currentModel })
-  } else if (service.config.available_models.length === 1) {
-    emit('update:modelValue', { linked_service_id: service.id, model_id: service.config.available_models[0]! })
-  }
-}
 
 function selectModel(value: string | string[]) {
-  if (props.disabled || typeof value !== 'string' || !selectedService.value?.config.available_models.includes(value)) return
-  emit('update:modelValue', { linked_service_id: selectedService.value.id, model_id: value })
+  if (props.disabled || typeof value !== 'string' || !selectableModels.value.some(model => model.id === value)) return
+  emit('update:modelValue', value)
 }
 
 function clearSelection() {
   if (props.disabled) return
-  selectedServiceId.value = ''
   emit('update:modelValue', null)
 }
 </script>
@@ -76,55 +51,32 @@ function clearSelection() {
       </UiButton>
     </div>
 
-    <section class="execution-model-target__group" aria-label="Connection">
-      <div class="execution-model-target__heading">
-        <h3>Connection</h3>
-        <p>Only enabled and configured workspace connections are available.</p>
-      </div>
-      <div v-if="selectableServices.length" class="execution-model-target__options" role="radiogroup" aria-label="Connection">
-        <UiDirectoryOption
-          v-for="service in selectableServices"
-          :key="service.id"
-          :model-value="selectedServiceId"
-          :value="service.id"
-          :title="service.name"
-          :description="`${service.provider_type} · ${service.config.available_models.length} ${service.config.available_models.length === 1 ? 'model' : 'models'}`"
-          selection-type="radio"
-          name="execution-linked-service"
-          :disabled="disabled"
-          @update:model-value="selectService"
-        >
-          <template #media><img :src="`/images/providers/${service.provider_type}.webp`" alt=""></template>
-        </UiDirectoryOption>
-      </div>
-      <p v-else class="execution-model-target__empty">No configured connection can currently serve a model.</p>
-    </section>
-
-    <section v-if="selectedService" class="execution-model-target__group" aria-label="Model">
+    <section class="execution-model-target__group" aria-label="Model">
       <div class="execution-model-target__heading">
         <h3>Model</h3>
-        <p>Choose a logical model deployed by {{ selectedService.name }}.</p>
+        <p>Choose an available logical model. Louie selects a usable connection when the run is created.</p>
       </div>
-      <div class="execution-model-target__options" role="radiogroup" aria-label="Model">
+      <div v-if="selectableModels.length" class="execution-model-target__options" role="radiogroup" aria-label="Model">
         <UiDirectoryOption
-          v-for="model in selectedService.config.available_models"
-          :key="model"
-          :model-value="modelValue?.linked_service_id === selectedService.id ? modelValue.model_id : ''"
-          :value="model"
-          :title="model"
-          description="Available through this connection"
+          v-for="model in selectableModels"
+          :key="model.id"
+          :model-value="modelValue ?? ''"
+          :value="model.id"
+          :title="model.name"
+          :description="`${model.vendor} · ${model.family}`"
           selection-type="radio"
           name="execution-model"
           :disabled="disabled"
           @update:model-value="selectModel"
         >
-          <template #media><img :src="modelLogo(model)" alt=""></template>
+          <template #media><img :src="providerLogo(model.vendor, model.family) || modelLogo(model.id)" alt=""></template>
         </UiDirectoryOption>
       </div>
+      <p v-else class="execution-model-target__empty">No model is currently available.</p>
     </section>
 
     <p v-if="currentTargetUnavailable" class="execution-model-target__error" role="alert">
-      The saved connection or model is no longer available. Choose another target or use inheritance.
+      The saved model is no longer available. Choose another model or use inheritance.
     </p>
     <p v-if="error" class="execution-model-target__error" role="alert">{{ error }}</p>
   </div>

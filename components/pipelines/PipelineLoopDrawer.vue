@@ -4,8 +4,8 @@ import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiDrawer from '~/components/ui/Drawer.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
-import type { ExecutionHarness, LinkedServiceResponse, ModelSummary, ModelTarget, PersonaSummary } from '~/types/api'
-import { effectiveModelTarget, modelTargetLabel } from '~/utils/executionDefaults'
+import type { ExecutionHarness, ModelSummary, PersonaSummary } from '~/types/api'
+import { effectiveModelId, modelIdLabel } from '~/utils/executionDefaults'
 import {
   executionHarnessCatalogId,
   executionHarnesses,
@@ -20,7 +20,7 @@ interface Assignment {
   key: string
   persona_id: string
   role: Role
-  model_target?: ModelTarget | null
+  model_id?: string | null
 }
 
 interface LoopDraft {
@@ -30,7 +30,7 @@ interface LoopDraft {
   flow: Flow
   status: string
   agents: Array<Omit<Assignment, 'key'>>
-  model_target?: ModelTarget | null
+  model_id?: string | null
   harness?: ExecutionHarness | null
   stop_conditions: {
     max_iterations: number | null
@@ -49,7 +49,6 @@ interface CommandPaletteItem {
   imageSrc?: string
   imageAlt?: string
   disabled?: boolean
-  linkedServiceId?: string
   modelId?: string
   harnessId?: ExecutionHarnessCatalogId
 }
@@ -58,12 +57,11 @@ const props = withDefaults(defineProps<{
   open: boolean
   personas: PersonaSummary[]
   models: ModelSummary[]
-  linkedServices: LinkedServiceResponse[]
-  inheritedModelTarget?: ModelTarget | null
+  inheritedModelId?: string | null
   inheritedHarness?: ExecutionHarness | null
   loading?: boolean
   loop?: LoopDraft | null
-}>(), { inheritedModelTarget: null, inheritedHarness: null, loading: false, loop: null })
+}>(), { inheritedModelId: null, inheritedHarness: null, loading: false, loop: null })
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
@@ -76,7 +74,7 @@ const { modelLogo, providerLogo } = useModelLogo()
 const name = ref('')
 const flow = ref<Flow>('direct')
 const assignments = ref<Assignment[]>([])
-const activityModelTarget = ref<ModelTarget | null>(null)
+const activityModelId = ref<string | null>(null)
 const activityHarness = ref<ExecutionHarness | null>(null)
 const maxIterations = ref('3')
 const maxTokens = ref('')
@@ -130,42 +128,30 @@ const paletteItems = computed<CommandPaletteItem[]>(() => {
   }
 
   if (paletteMode.value === 'model') {
-    const catalogById = new Map(props.models.map(model => [model.id, model]))
-    const seenModels = new Set<string>()
     const currentAssignment = assignments.value.find(assignment => assignment.key === targetAssignmentKey.value)
-    const preferredServiceIds = [
-      currentAssignment?.model_target?.linked_service_id,
-      activityModelTarget.value?.linked_service_id,
-      props.inheritedModelTarget?.linked_service_id,
-    ].filter((value): value is string => Boolean(value))
-    const services = [...props.linkedServices].sort((left, right) => {
-      const leftRank = preferredServiceIds.indexOf(left.id)
-      const rightRank = preferredServiceIds.indexOf(right.id)
-      return (leftRank < 0 ? Number.MAX_SAFE_INTEGER : leftRank)
-        - (rightRank < 0 ? Number.MAX_SAFE_INTEGER : rightRank)
-    })
-    const items = services.flatMap((service) => {
-      if (!service.enabled || !service.config.configured) return []
-
-      return service.config.available_models.flatMap((modelId) => {
-        if (seenModels.has(modelId)) return []
-        seenModels.add(modelId)
-        const model = catalogById.get(modelId)
-        return [{
-          id: `${service.id}:${modelId}`,
-          label: model?.name ?? modelId,
-          description: `${model?.vendor ?? service.provider_type} · ${service.name}`,
-          group: 'Models',
-          keywords: [modelId, model?.family, model?.vendor, service.name, service.provider_type].filter((value): value is string => Boolean(value)),
-          imageSrc: model ? providerLogo(model.vendor, model.family) ?? modelLogo(modelId) : modelLogo(modelId),
-          imageAlt: '',
-          linkedServiceId: service.id,
-          modelId,
-        }]
+    const preferredIds = [currentAssignment?.model_id, activityModelId.value, props.inheritedModelId]
+      .filter((value): value is string => Boolean(value))
+    return props.models
+      .filter(model => model.available)
+      .map(model => ({
+        id: model.id,
+        label: model.name,
+        description: `${model.vendor} · ${model.family}`,
+        group: 'Models',
+        keywords: [model.id, model.family, model.vendor],
+        imageSrc: providerLogo(model.vendor, model.family) ?? modelLogo(model.id),
+        imageAlt: '',
+        modelId: model.id,
+      }))
+      .sort((left, right) => {
+        const leftRank = preferredIds.indexOf(left.id)
+        const rightRank = preferredIds.indexOf(right.id)
+        if (leftRank !== rightRank) {
+          return (leftRank < 0 ? Number.MAX_SAFE_INTEGER : leftRank)
+            - (rightRank < 0 ? Number.MAX_SAFE_INTEGER : rightRank)
+        }
+        return left.label.localeCompare(right.label)
       })
-    })
-
-    return items.sort((left, right) => left.label.localeCompare(right.label))
   }
 
   const selectedInRole = new Set(assignments.value.filter(item => item.role === targetRole.value).map(item => item.persona_id))
@@ -182,10 +168,10 @@ const paletteItems = computed<CommandPaletteItem[]>(() => {
   })
 })
 
-const executionReady = computed(() => assignments.value.every(assignment => Boolean(effectiveModelTarget(
-  assignment.model_target,
-  activityModelTarget.value,
-  props.inheritedModelTarget,
+const executionReady = computed(() => assignments.value.every(assignment => Boolean(effectiveModelId(
+  assignment.model_id,
+  activityModelId.value,
+  props.inheritedModelId,
 ))))
 const canAdd = computed(() => {
   if (!name.value.trim() || !positiveInteger(maxIterations.value) || !executionReady.value) return false
@@ -225,7 +211,7 @@ function resetForm(loop: LoopDraft | null = null) {
   name.value = loop?.title ?? ''
   flow.value = loop?.flow ?? 'direct'
   assignments.value = loop?.agents.map(agent => ({ ...agent, key: createId('assignment-') })) ?? []
-  activityModelTarget.value = loop?.model_target ?? null
+  activityModelId.value = loop?.model_id ?? null
   activityHarness.value = loop?.harness ?? null
   maxIterations.value = formatIntegerInput(loop?.stop_conditions.max_iterations ?? 3)
   maxTokens.value = formatIntegerInput(loop?.stop_conditions.max_tokens)
@@ -276,11 +262,8 @@ function selectPaletteItem(item: CommandPaletteItem) {
   }
 
   if (paletteMode.value === 'model') {
-    if (!item.linkedServiceId || !item.modelId || !targetAssignmentKey.value) return
-    updateAssignmentTarget(targetAssignmentKey.value, {
-      linked_service_id: item.linkedServiceId,
-      model_id: item.modelId,
-    })
+    if (!item.modelId || !targetAssignmentKey.value) return
+    updateAssignmentModel(targetAssignmentKey.value, item.modelId)
     return
   }
 
@@ -298,14 +281,14 @@ function removeAssignment(key: string) {
   assignments.value = assignments.value.filter(assignment => assignment.key !== key)
 }
 
-function updateAssignmentTarget(key: string, modelTarget: ModelTarget | null) {
+function updateAssignmentModel(key: string, modelId: string | null) {
   assignments.value = assignments.value.map(assignment => assignment.key === key
-    ? { ...assignment, model_target: modelTarget }
+    ? { ...assignment, model_id: modelId }
     : assignment)
 }
 
-function assignmentTarget(assignment: Assignment) {
-  return effectiveModelTarget(assignment.model_target, activityModelTarget.value, props.inheritedModelTarget)
+function assignmentModelId(assignment: Assignment) {
+  return effectiveModelId(assignment.model_id, activityModelId.value, props.inheritedModelId)
 }
 
 function submitLoop() {
@@ -316,8 +299,8 @@ function submitLoop() {
     description: props.loop?.description ?? 'Configured inside this pipeline draft.',
     flow: flow.value,
     status: props.loop?.status ?? 'draft',
-    agents: assignments.value.map(({ persona_id, role, model_target }) => ({ persona_id, role, model_target })),
-    model_target: activityModelTarget.value,
+    agents: assignments.value.map(({ persona_id, role, model_id }) => ({ persona_id, role, model_id })),
+    model_id: activityModelId.value,
     harness: activityHarness.value,
     stop_conditions: {
       max_iterations: positiveInteger(maxIterations.value),
@@ -423,15 +406,15 @@ watch(() => props.open, (open) => {
                   <button
                     type="button"
                     class="pipeline-loop-drawer__model-target"
-                    :title="assignmentTarget(assignment) ? modelTargetLabel(assignmentTarget(assignment)) : 'Choose model'"
+                    :title="assignmentModelId(assignment) ? modelIdLabel(assignmentModelId(assignment)) : 'Choose model'"
                     :aria-label="`Change model for ${personaById.get(assignment.persona_id)?.name ?? 'persona'}`"
                     @click="openModelPalette(assignment)"
                   >
                     <UiPill
-                      v-if="assignmentTarget(assignment)"
-                      :src="modelLogo(assignmentTarget(assignment)!.model_id)"
+                      v-if="assignmentModelId(assignment)"
+                      :src="modelLogo(assignmentModelId(assignment)!)"
                       alt=""
-                      :tooltip="modelTargetLabel(assignmentTarget(assignment))"
+                      :tooltip="modelIdLabel(assignmentModelId(assignment))"
                       :focusable="false"
                     />
                     <UiPill v-else icon-style="circle" tooltip="Choose model" :focusable="false">
