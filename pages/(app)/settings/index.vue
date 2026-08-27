@@ -8,7 +8,7 @@ import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
-import type { ExecutionHarness, ExecutionHarnessKind, ModelSummary } from '~/types/api'
+import type { ExecutionHarness, ExecutionHarnessKind, ModelSummary, UserResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 
@@ -77,7 +77,9 @@ const selectedHarnessId = ref('louie')
 const preferences = reactive<ExecutionPreferences>({ ...initialPreferences })
 const modelPaletteOpen = ref(false)
 const modelPaletteQuery = ref('')
-const savedSettings = ref('')
+const savedPreferences = ref('')
+const savedRemoteSettings = ref('')
+const remoteSettingsSaving = ref(false)
 const initialized = ref(false)
 
 const {
@@ -109,12 +111,15 @@ const modelPaletteItems = computed<ModelPaletteItem[]>(() => [
   },
   ...(executionSettings.value?.models ?? []).map(model => modelPaletteItem(model)),
 ])
-const currentSettings = computed(() => JSON.stringify({
+const currentRemoteSettings = computed(() => JSON.stringify({
   default_model_id: defaultModelId.value,
   selected_harness_id: selectedHarnessId.value,
-  preferences,
 }))
-const isDirty = computed(() => initialized.value && currentSettings.value !== savedSettings.value)
+const currentPreferences = computed(() => JSON.stringify(preferences))
+const isDirty = computed(() => initialized.value && (
+  currentRemoteSettings.value !== savedRemoteSettings.value
+  || currentPreferences.value !== savedPreferences.value
+))
 const errorLabel = computed(() => apiErrorMessage(error.value, 'Execution settings could not be loaded.'))
 
 watch(executionSettings, (value) => {
@@ -122,7 +127,8 @@ watch(executionSettings, (value) => {
   defaultModelId.value = value.user.settings.default_model_id
   defaultHarness.value = cloneHarness(value.user.settings.default_harness)
   selectedHarnessId.value = value.user.settings.default_harness?.kind ?? 'louie'
-  savedSettings.value = currentSettings.value
+  savedRemoteSettings.value = currentRemoteSettings.value
+  savedPreferences.value = currentPreferences.value
   initialized.value = true
 }, { immediate: true })
 
@@ -147,13 +153,70 @@ function openModelPalette() {
   modelPaletteOpen.value = true
 }
 
-function selectModel(item: ModelPaletteItem) {
-  defaultModelId.value = item.id === noDefaultModelId ? null : item.id
+function syncRemoteSettings(user: UserResponse) {
+  defaultModelId.value = user.settings.default_model_id
+  defaultHarness.value = cloneHarness(user.settings.default_harness)
+  selectedHarnessId.value = user.settings.default_harness?.kind ?? 'louie'
 }
 
-function selectHarness(harness: HarnessOption) {
+async function persistRemoteSettings(successTitle: string, successDescription: string) {
+  if (remoteSettingsSaving.value || settingsNavigation?.saving.value) return false
+
+  remoteSettingsSaving.value = true
+  if (settingsNavigation) settingsNavigation.saving.value = true
+  try {
+    const currentUser = executionSettings.value?.user ?? await api.users.getCurrent()
+    const updated = await api.users.replaceSettings({
+      ...currentUser.settings,
+      default_model_id: defaultModelId.value,
+      default_harness: cloneHarness(defaultHarness.value),
+    })
+    if (executionSettings.value) executionSettings.value = { ...executionSettings.value, user: updated }
+    syncRemoteSettings(updated)
+    savedRemoteSettings.value = currentRemoteSettings.value
+    notifications.success(successTitle, successDescription)
+    return true
+  } catch (cause) {
+    notifications.error(
+      'Changes weren’t saved',
+      apiErrorMessage(cause, 'Your user settings could not be updated. Please try again.'),
+    )
+    return false
+  } finally {
+    remoteSettingsSaving.value = false
+    if (settingsNavigation) settingsNavigation.saving.value = false
+  }
+}
+
+async function selectModel(item: ModelPaletteItem) {
+  if (remoteSettingsSaving.value) return
+  const previousModelId = defaultModelId.value
+  defaultModelId.value = item.id === noDefaultModelId ? null : item.id
+  const saved = await persistRemoteSettings(
+    'Default model updated',
+    defaultModelId.value
+      ? `${selectedModel.value?.name ?? defaultModelId.value} is now the default execution model.`
+      : 'Executions will require a model from a narrower scope.',
+  )
+  if (!saved) defaultModelId.value = previousModelId
+}
+
+async function selectHarness(harness: HarnessOption) {
+  if (remoteSettingsSaving.value) return
+  const previousHarnessId = selectedHarnessId.value
+  const previousHarness = cloneHarness(defaultHarness.value)
   selectedHarnessId.value = harness.id
-  if (harness.kind) defaultHarness.value = { kind: harness.kind, version: 'v1', config: {} }
+  if (!harness.kind) return
+
+  defaultHarness.value = { kind: harness.kind, version: 'v1', config: {} }
+  const saved = await persistRemoteSettings(
+    'Default harness updated',
+    `${harness.name} is now the default execution harness.`,
+  )
+  if (!saved) {
+    selectedHarnessId.value = previousHarnessId
+    defaultHarness.value = previousHarness
+  }
 }
 
 function restoreLocalPreferences() {
@@ -167,14 +230,14 @@ function restoreLocalPreferences() {
     if (typeof saved.allowPullRequests === 'boolean') preferences.allowPullRequests = saved.allowPullRequests
     if (typeof saved.createRunBranches === 'boolean') preferences.createRunBranches = saved.createRunBranches
     if (typeof saved.requireMergeApproval === 'boolean') preferences.requireMergeApproval = saved.requireMergeApproval
-    savedSettings.value = currentSettings.value
+    savedPreferences.value = currentPreferences.value
   } catch {
     localStorage.removeItem(localPreferencesKey)
   }
 }
 
 async function saveDefaults() {
-  if (!settingsNavigation || settingsNavigation.saving.value) return
+  if (!settingsNavigation || settingsNavigation.saving.value || remoteSettingsSaving.value) return
   const selectedHarness = harnessOptions.find(harness => harness.id === selectedHarnessId.value)
   if (!selectedHarness?.kind) {
     notifications.error(
@@ -193,10 +256,10 @@ async function saveDefaults() {
       default_harness: cloneHarness(defaultHarness.value),
     })
     if (executionSettings.value) executionSettings.value = { ...executionSettings.value, user: updated }
-    defaultModelId.value = updated.settings.default_model_id
-    defaultHarness.value = cloneHarness(updated.settings.default_harness)
+    syncRemoteSettings(updated)
     if (import.meta.client) localStorage.setItem(localPreferencesKey, JSON.stringify(preferences))
-    savedSettings.value = currentSettings.value
+    savedRemoteSettings.value = currentRemoteSettings.value
+    savedPreferences.value = currentPreferences.value
     notifications.success('Changes saved', 'Your execution defaults have been updated.')
   } catch (cause) {
     notifications.error(
@@ -244,6 +307,7 @@ useHead({ title: 'Settings · Looping Louie' })
           <UiPill
             v-for="harness in harnessOptions"
             :key="harness.id"
+            :class="{ 'harness-pill--louie': harness.id === 'louie' }"
             variant="selectable"
             icon-style="circle"
             :src="harness.image"
@@ -251,7 +315,7 @@ useHead({ title: 'Settings · Looping Louie' })
             :description="harness.owner"
             :selected="selectedHarnessId === harness.id"
             :aria-label="`Use ${harness.name} by ${harness.owner} as the default harness`"
-            @click="selectHarness(harness)"
+            @click="void selectHarness(harness)"
           >
             {{ harness.name }}
           </UiPill>
@@ -259,36 +323,27 @@ useHead({ title: 'Settings · Looping Louie' })
       </UiSectionStage>
     </section>
 
-    <section class="configuration-section" aria-labelledby="default-model-title">
-      <UiCollectionGroupTitle id="default-model-title" title="Default model" heading-as="h2" />
-      <UiSectionStage inverse="bottom">
-        <div class="default-model-control">
-          <UiPill
-            class="default-model-pill"
-            :class="{ 'default-model-pill--empty': !selectedModel }"
-            :src="selectedModelLogo"
-            alt=""
-            clickable
-            aria-haspopup="dialog"
-            :aria-label="selectedModel ? `Change default model, currently ${selectedModel.name}` : 'Choose a default model'"
-            @click="openModelPalette"
-          >
-            <template v-if="!selectedModel" #icon>
-              <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                <path d="M208,40H48A16,16,0,0,0,32,56V200a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V56A16,16,0,0,0,208,40Zm0,160H48V56H208ZM80,96A16,16,0,1,1,96,112,16,16,0,0,1,80,96Zm96,0a16,16,0,1,1,16,16A16,16,0,0,1,176,96ZM80,160a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,160Z" />
-              </svg>
-            </template>
-            {{ selectedModel?.name ?? 'No default model' }}
-          </UiPill>
-          <p>{{ selectedModel ? `${selectedModel.vendor} · ${selectedModel.family}` : 'Choose the model inherited by Louie runs without a narrower override.' }}</p>
-        </div>
-      </UiSectionStage>
-    </section>
-
     <section class="configuration-section" aria-labelledby="execution-defaults-title">
       <UiCollectionGroupTitle id="execution-defaults-title" title="Execution defaults" heading-as="h2" />
       <UiSectionStage inverse="both">
         <div class="execution-defaults">
+          <div class="execution-defaults__row">
+            <div class="execution-defaults__copy"><h3>Default model</h3><p>Used when an execution does not provide a model override.</p></div>
+            <UiPill
+              class="execution-defaults__model-pill"
+              variant="catalog"
+              :empty="!selectedModel"
+              :src="selectedModelLogo"
+              alt=""
+              clickable
+              aria-haspopup="dialog"
+              :aria-label="selectedModel ? `Change default model, currently ${selectedModel.name}` : 'Choose a default execution model'"
+              :description="selectedModel ? `${selectedModel.vendor} · ${selectedModel.family}` : 'Click to choose a default execution model'"
+              @click="openModelPalette"
+            >
+              {{ selectedModel?.name ?? 'No model has been selected' }}
+            </UiPill>
+          </div>
           <div class="execution-defaults__row">
             <div class="execution-defaults__copy"><h3>Default branch</h3><p>The branch new runs use when no branch is specified.</p></div>
             <UiTextField v-model="preferences.defaultBranch" label="Default branch" hide-label placeholder="main" autocomplete="off" />
@@ -331,7 +386,7 @@ useHead({ title: 'Settings · Looping Louie' })
     option-style="card"
     size="wide"
     :keyboard-shortcut="false"
-    @select="selectModel"
+    @select="void selectModel($event)"
   />
 </template>
 
@@ -341,14 +396,13 @@ useHead({ title: 'Settings · Looping Louie' })
 .configuration-state--error { color: var(--ll-color-brand-ink); }
 .configuration-section { min-width: 0; }
 .configuration-section :deep(.ui-section-stage) { --ui-section-stage-shell-inset: 0rem; }
-.default-model-control { display: flex; min-height: 5rem; align-items: center; gap: var(--ll-space-4); padding: var(--ll-space-4) var(--ll-space-5); }
-.default-model-control > p { margin: 0; color: var(--ll-color-text-muted); font: 400 var(--ll-text-sm) / 1.45 var(--ll-font-control); }
-.default-model-pill { --ui-icon-pill-height: 2.75rem; flex: 0 0 auto; }
-.default-model-pill--empty :deep(.ui-icon-pill__trigger) { color: var(--ll-color-text-muted); border-style: dashed; }
 .harness-grid { padding: var(--ll-space-2); }
+.harness-pill--louie :deep(.ui-icon-pill__media--image) { background: transparent; }
+.harness-pill--louie :deep(.ui-icon-pill__media--image img) { width: 72%; height: 72%; object-fit: contain; }
 .execution-defaults { display: grid; padding: var(--ll-space-2); }
 .execution-defaults__row { display: grid; min-width: 0; min-height: 5.5rem; box-sizing: border-box; grid-template-columns: minmax(14rem, 1fr) minmax(16rem, 0.7fr); align-items: center; gap: var(--ll-space-8); padding: var(--ll-space-4) var(--ll-space-5); border-bottom: 1px solid var(--ll-color-divider); }
 .execution-defaults__row:last-child { border-bottom: 0; }
+.execution-defaults__model-pill { width: 100%; max-width: 32rem; justify-self: end; }
 .execution-defaults__toggle-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .execution-defaults__toggle-option { display: grid; min-width: 0; min-height: 6.5rem; box-sizing: border-box; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--ll-space-5); padding: var(--ll-space-4) var(--ll-space-5); }
 .execution-defaults__toggle-option:nth-child(even) { border-left: 1px solid var(--ll-color-divider); }
@@ -362,9 +416,9 @@ useHead({ title: 'Settings · Looping Louie' })
   .execution-defaults__toggle-option:nth-child(even) { padding-left: calc(var(--ui-section-stage-shell-padding) + var(--ll-space-2) + var(--ll-space-5)); }
 }
 @media (max-width: 44rem) {
-  .default-model-control { align-items: flex-start; flex-direction: column; }
   .execution-defaults__row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--ll-space-3) var(--ll-space-5); padding-inline: var(--ll-space-3); }
-  .execution-defaults__row > :deep(.ui-text-field) { grid-column: 1 / -1; }
+  .execution-defaults__row > :deep(.ui-text-field),
+  .execution-defaults__model-pill { grid-column: 1 / -1; max-width: none; }
   .execution-defaults__toggle-grid { grid-template-columns: minmax(0, 1fr); }
   .execution-defaults__toggle-option { min-height: 5.5rem; padding-inline: var(--ll-space-3); border-bottom: 1px solid var(--ll-color-divider); }
   .execution-defaults__toggle-option:nth-child(even) { border-left: 0; }
