@@ -37,6 +37,8 @@ import type {
   SkillListQuery,
   SkillCreateRequest,
   SkillResponse,
+  UserResponse,
+  UserSettingsRequest,
   WorkspaceDefaultsReplaceRequest,
   WorkspaceDefaultsResponse,
 } from '~/types/api'
@@ -83,8 +85,13 @@ export function useApiClient() {
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('skills', id), { method: 'DELETE' }),
     },
     models: {
-      list: (query: ModelListQuery = {}) => $fetch<ModelListResponse>('/api/v1/models', { query }),
-      get: (id: string) => $fetch<ModelResponse>(resourcePath('models', id)),
+      list: (query: ModelListQuery = {}) => $fetch<ModelListResponse>('/api/v1/users/me/models', { query }),
+      get: (id: string) => $fetch<ModelResponse>(`/api/v1/users/me/models/${encodeURIComponent(id)}`),
+    },
+    users: {
+      registerCurrent: () => $fetch<UserResponse>('/api/v1/users', { method: 'POST' }),
+      getCurrent: () => $fetch<UserResponse>('/api/v1/users/me'),
+      replaceSettings: (body: UserSettingsRequest) => $fetch<UserResponse>('/api/v1/users/me', { method: 'PATCH', body }),
     },
     catalog: {
       listProviders: (signal?: AbortSignal) => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers', { signal }),
