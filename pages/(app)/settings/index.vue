@@ -6,7 +6,6 @@ import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
-import UiTextField from '~/components/ui/TextField.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
 import type { ExecutionHarness, ExecutionHarnessKind, ModelAvailabilityStatus, ModelSummary, UserResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
@@ -16,15 +15,6 @@ interface SettingsNavigationState {
   dirty: Ref<boolean>
   saving: Ref<boolean>
   save: ShallowRef<(() => Promise<void> | void) | null>
-}
-
-interface ExecutionPreferences {
-  defaultBranch: string
-  protectedBranches: string
-  allowCommits: boolean
-  allowPullRequests: boolean
-  createRunBranches: boolean
-  requireMergeApproval: boolean
 }
 
 interface HarnessOption {
@@ -45,14 +35,6 @@ interface ModelPaletteItem {
   imageAlt?: string
 }
 
-const initialPreferences: ExecutionPreferences = {
-  defaultBranch: 'main',
-  protectedBranches: 'main, master',
-  allowCommits: true,
-  allowPullRequests: true,
-  createRunBranches: true,
-  requireMergeApproval: false,
-}
 const harnessOptions: HarnessOption[] = [
   { id: 'louie', name: 'Louie', owner: 'Looping Louie', image: '/brand/looping-louie-biplane.png', kind: 'louie' },
   { id: 'codex_cli', name: 'Codex CLI', owner: 'OpenAI', image: '/images/harnesses/codex.webp', kind: 'codex_cli' },
@@ -64,7 +46,6 @@ const harnessOptions: HarnessOption[] = [
   { id: 'hermes', name: 'Hermes', owner: 'Nous Research', image: '/images/harnesses/hermes.webp' },
   { id: 'openclaw', name: 'OpenClaw', owner: 'OpenClaw', image: '/images/harnesses/openclaw.webp' },
 ]
-const localPreferencesKey = 'looping-louie:execution-preferences:v1'
 const noDefaultModelId = '__no-default-model__'
 
 const api = useApiClient()
@@ -75,10 +56,8 @@ const defaultModelId = ref<string | null>(null)
 const defaultModelAvailability = ref<ModelAvailabilityStatus>('enabled')
 const defaultHarness = ref<ExecutionHarness | null>(null)
 const selectedHarnessId = ref('louie')
-const preferences = reactive<ExecutionPreferences>({ ...initialPreferences })
 const modelPaletteOpen = ref(false)
 const modelPaletteQuery = ref('')
-const savedPreferences = ref('')
 const savedRemoteSettings = ref('')
 const remoteSettingsSaving = ref(false)
 const initialized = ref(false)
@@ -117,11 +96,7 @@ const currentRemoteSettings = computed(() => JSON.stringify({
   default_model_availability: defaultModelAvailability.value,
   selected_harness_id: selectedHarnessId.value,
 }))
-const currentPreferences = computed(() => JSON.stringify(preferences))
-const isDirty = computed(() => initialized.value && (
-  currentRemoteSettings.value !== savedRemoteSettings.value
-  || currentPreferences.value !== savedPreferences.value
-))
+const isDirty = computed(() => initialized.value && currentRemoteSettings.value !== savedRemoteSettings.value)
 const errorLabel = computed(() => apiErrorMessage(error.value, 'Execution settings could not be loaded.'))
 
 watch(executionSettings, (value) => {
@@ -131,7 +106,6 @@ watch(executionSettings, (value) => {
   defaultHarness.value = cloneHarness(value.user.settings.default_harness)
   selectedHarnessId.value = value.user.settings.default_harness?.kind ?? 'louie'
   savedRemoteSettings.value = currentRemoteSettings.value
-  savedPreferences.value = currentPreferences.value
   initialized.value = true
 }, { immediate: true })
 
@@ -237,23 +211,6 @@ async function selectHarness(harness: HarnessOption) {
   }
 }
 
-function restoreLocalPreferences() {
-  const raw = localStorage.getItem(localPreferencesKey)
-  if (!raw) return
-  try {
-    const saved = JSON.parse(raw) as Partial<ExecutionPreferences>
-    if (typeof saved.defaultBranch === 'string') preferences.defaultBranch = saved.defaultBranch
-    if (typeof saved.protectedBranches === 'string') preferences.protectedBranches = saved.protectedBranches
-    if (typeof saved.allowCommits === 'boolean') preferences.allowCommits = saved.allowCommits
-    if (typeof saved.allowPullRequests === 'boolean') preferences.allowPullRequests = saved.allowPullRequests
-    if (typeof saved.createRunBranches === 'boolean') preferences.createRunBranches = saved.createRunBranches
-    if (typeof saved.requireMergeApproval === 'boolean') preferences.requireMergeApproval = saved.requireMergeApproval
-    savedPreferences.value = currentPreferences.value
-  } catch {
-    localStorage.removeItem(localPreferencesKey)
-  }
-}
-
 async function saveDefaults() {
   if (!settingsNavigation || settingsNavigation.saving.value || remoteSettingsSaving.value) return
   const selectedHarness = harnessOptions.find(harness => harness.id === selectedHarnessId.value)
@@ -276,9 +233,7 @@ async function saveDefaults() {
     })
     if (executionSettings.value) executionSettings.value = { ...executionSettings.value, user: updated }
     syncRemoteSettings(updated)
-    if (import.meta.client) localStorage.setItem(localPreferencesKey, JSON.stringify(preferences))
     savedRemoteSettings.value = currentRemoteSettings.value
-    savedPreferences.value = currentPreferences.value
     notifications.success('Changes saved', 'Your execution defaults have been updated.')
   } catch (cause) {
     notifications.error(
@@ -303,8 +258,6 @@ if (settingsNavigation) {
     }
   })
 }
-
-onMounted(restoreLocalPreferences)
 
 definePageMeta({ pageTransition: false })
 useHead({ title: 'Settings · Looping Louie' })
@@ -373,32 +326,6 @@ useHead({ title: 'Settings · Looping Louie' })
               @update:model-value="void updateDefaultModelAvailability($event)"
             />
           </div>
-          <div class="execution-defaults__row">
-            <div class="execution-defaults__copy"><h3>Default branch</h3><p>The branch new runs use when no branch is specified.</p></div>
-            <UiTextField v-model="preferences.defaultBranch" label="Default branch" hide-label placeholder="main" autocomplete="off" />
-          </div>
-          <div class="execution-defaults__row">
-            <div class="execution-defaults__copy"><h3>Protected branches</h3><p>Comma-separated branches that harnesses must not commit to directly.</p></div>
-            <UiTextField v-model="preferences.protectedBranches" label="Protected branches" hide-label placeholder="main, master" autocomplete="off" />
-          </div>
-          <div class="execution-defaults__toggle-grid">
-            <div class="execution-defaults__toggle-option">
-              <div class="execution-defaults__copy"><h3>Allow commits</h3><p>Let harnesses create commits after an approved execution.</p></div>
-              <UiToggle v-model="preferences.allowCommits" aria-label="Allow commits" />
-            </div>
-            <div class="execution-defaults__toggle-option">
-              <div class="execution-defaults__copy"><h3>Allow pull requests</h3><p>Let harnesses open pull requests with their completed changes.</p></div>
-              <UiToggle v-model="preferences.allowPullRequests" aria-label="Allow pull requests" />
-            </div>
-            <div class="execution-defaults__toggle-option">
-              <div class="execution-defaults__copy"><h3>Create a branch for every run</h3><p>Keep each execution isolated from the default branch.</p></div>
-              <UiToggle v-model="preferences.createRunBranches" aria-label="Create a branch for every run" />
-            </div>
-            <div class="execution-defaults__toggle-option">
-              <div class="execution-defaults__copy"><h3>Require approval before merge</h3><p>Hold completed pull requests until a reviewer approves them.</p></div>
-              <UiToggle v-model="preferences.requireMergeApproval" aria-label="Require approval before merge" />
-            </div>
-          </div>
         </div>
       </UiSectionStage>
     </section>
@@ -433,25 +360,12 @@ useHead({ title: 'Settings · Looping Louie' })
 .execution-defaults__row:last-child { border-bottom: 0; }
 .execution-defaults__model-pill { width: 100%; max-width: 32rem; justify-self: end; }
 .execution-defaults__model-policy-toggle { justify-self: end; }
-.execution-defaults__toggle-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.execution-defaults__toggle-option { display: grid; min-width: 0; min-height: 6.5rem; box-sizing: border-box; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--ll-space-5); padding: var(--ll-space-4) var(--ll-space-5); }
-.execution-defaults__toggle-option:nth-child(even) { border-left: 1px solid var(--ll-color-divider); }
-.execution-defaults__toggle-option:nth-child(-n + 2) { border-bottom: 1px solid var(--ll-color-divider); }
 .execution-defaults__copy { display: grid; min-width: 0; gap: var(--ll-space-1); }
 .execution-defaults__copy h3, .execution-defaults__copy p { margin: 0; }
 .execution-defaults__copy h3 { color: var(--ll-color-ink); font: 600 var(--ll-text-md) / 1.25 var(--ll-font-control); }
 .execution-defaults__copy p { color: var(--ll-color-text-muted); font: 400 var(--ll-text-sm) / 1.45 var(--ll-font-control); }
-@media (min-width: 44.0625rem) {
-  .execution-defaults__toggle-option:nth-child(odd) { padding-right: calc(var(--ui-section-stage-shell-padding) + var(--ll-space-2) + var(--ll-space-5)); }
-  .execution-defaults__toggle-option:nth-child(even) { padding-left: calc(var(--ui-section-stage-shell-padding) + var(--ll-space-2) + var(--ll-space-5)); }
-}
 @media (max-width: 44rem) {
   .execution-defaults__row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--ll-space-3) var(--ll-space-5); padding-inline: var(--ll-space-3); }
-  .execution-defaults__row > :deep(.ui-text-field),
   .execution-defaults__model-pill { grid-column: 1 / -1; max-width: none; }
-  .execution-defaults__toggle-grid { grid-template-columns: minmax(0, 1fr); }
-  .execution-defaults__toggle-option { min-height: 5.5rem; padding-inline: var(--ll-space-3); border-bottom: 1px solid var(--ll-color-divider); }
-  .execution-defaults__toggle-option:nth-child(even) { border-left: 0; }
-  .execution-defaults__toggle-option:last-child { border-bottom: 0; }
 }
 </style>
