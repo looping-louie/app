@@ -19,7 +19,7 @@ import type {
 } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
-import { modelIdLabel, pipelineStepsHaveModelIds } from '~/utils/executionDefaults'
+import { modelIdLabel, pipelineStepsAreExecutable } from '~/utils/executionDefaults'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
@@ -101,11 +101,15 @@ const detailItems = computed<DetailRow[]>(() => {
 })
 const editInheritedModelId = computed(() => editModelId.value ?? executionOptions.value?.defaults.default_model_id ?? null)
 const editInheritedHarness = computed(() => editHarness.value ?? executionOptions.value?.defaults.default_harness ?? null)
-const editExecutionReady = computed(() => pipelineStepsHaveModelIds(editSteps.value, editInheritedModelId.value))
+const editExecutionReady = computed(() => pipelineStepsAreExecutable(
+  editSteps.value,
+  editInheritedModelId.value,
+  editInheritedHarness.value,
+))
 const displayedModelId = computed(() => pipeline.value?.model_id ?? executionOptions.value?.defaults.default_model_id ?? null)
 const displayedHarness = computed(() => pipeline.value?.harness ?? executionOptions.value?.defaults.default_harness ?? null)
 const pipelineExecutionReady = computed(() => pipeline.value
-  ? pipelineStepsHaveModelIds(pipeline.value.steps, displayedModelId.value)
+  ? pipelineStepsAreExecutable(pipeline.value.steps, displayedModelId.value, displayedHarness.value)
   : false)
 const canSaveEditing = computed(() => (
   editDesignValid.value
@@ -343,7 +347,7 @@ useHead(() => ({
           <UiButton type="button" variant="secondary" :disabled="saving" @click="cancelEditing">Cancel</UiButton>
         </template>
         <template v-else>
-          <UiButton type="button" :disabled="!pipelineExecutionReady" :title="pipelineExecutionReady ? undefined : 'Configure a model target for every loop persona before running.'" @click="runModalOpen = true">Run</UiButton>
+          <UiButton type="button" :disabled="!pipelineExecutionReady" :title="pipelineExecutionReady ? undefined : 'Configure a model for every Louie loop persona before running.'" @click="runModalOpen = true">Run</UiButton>
           <UiButton
             type="button"
             variant="stroke"
@@ -436,7 +440,7 @@ useHead(() => ({
                     :inherit-description="executionOptions?.defaults.default_harness ? `Currently ${executionOptions.defaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
                     @update:model-value="markEditDirty"
                   />
-                  <p v-if="!editExecutionReady" class="pipeline-execution__error" role="alert">At least one loop persona has no effective model target.</p>
+                  <p v-if="!editExecutionReady" class="pipeline-execution__error" role="alert">At least one Louie loop persona has no effective model configured.</p>
                 </template>
                 <dl v-else>
                   <div><dt>Model</dt><dd>{{ modelIdLabel(displayedModelId) }}</dd></div>

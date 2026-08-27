@@ -168,11 +168,14 @@ const paletteItems = computed<CommandPaletteItem[]>(() => {
   })
 })
 
-const executionReady = computed(() => assignments.value.every(assignment => Boolean(effectiveModelId(
-  assignment.model_id,
-  activityModelId.value,
-  props.inheritedModelId,
-))))
+const executionReady = computed(() => (
+  selectedHarnessId.value === 'codex_cli'
+  || assignments.value.every(assignment => Boolean(effectiveModelId(
+    assignment.model_id,
+    activityModelId.value,
+    props.inheritedModelId,
+  )))
+))
 const canAdd = computed(() => {
   if (!name.value.trim() || !positiveInteger(maxIterations.value) || !executionReady.value) return false
   return roleGroups.value.every((group) => {

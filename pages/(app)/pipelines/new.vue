@@ -13,7 +13,7 @@ import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import type { ExecutionHarness, PipelineActivityStepRequest } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
-import { pipelineStepsHaveModelIds } from '~/utils/executionDefaults'
+import { pipelineStepsAreExecutable } from '~/utils/executionDefaults'
 
 type PipelineBuilderStep = 'design' | 'details'
 
@@ -54,7 +54,11 @@ const { data: executionOptions, status: executionOptionsStatus, refresh: refresh
 const builderStepIndex = computed(() => builderStep.value === 'design' ? 0 : 1)
 const inheritedModelId = computed(() => pipelineModelId.value ?? executionOptions.value?.defaults.default_model_id ?? null)
 const inheritedHarness = computed(() => pipelineHarness.value ?? executionOptions.value?.defaults.default_harness ?? null)
-const executionReady = computed(() => pipelineStepsHaveModelIds(designSteps.value, inheritedModelId.value))
+const executionReady = computed(() => pipelineStepsAreExecutable(
+  designSteps.value,
+  inheritedModelId.value,
+  inheritedHarness.value,
+))
 const hasProgress = computed(() => Boolean(
   designSteps.value.length
   || pipelineTitle.value.trim()
@@ -343,7 +347,7 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
               :inherit-description="executionOptions?.defaults.default_harness ? `Currently ${executionOptions.defaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
               @update:model-value="saveError = ''; saveLocalDraft()"
             />
-            <p v-if="!executionReady" class="pipeline-builder__execution-error" role="alert">At least one loop persona has no effective model target.</p>
+            <p v-if="!executionReady" class="pipeline-builder__execution-error" role="alert">At least one Louie loop persona has no effective model configured.</p>
           </div>
         </UiSectionStage>
       </div>

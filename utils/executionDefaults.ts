@@ -1,5 +1,6 @@
 import type {
   ActivityLoopConfig,
+  ExecutionHarness,
   PipelineActivityStepRequest,
   PipelineActivityStepResponse,
 } from '~/types/api'
@@ -14,12 +15,15 @@ export function effectiveModelId(
   return agentModelId ?? activityModelId ?? inheritedModelId ?? null
 }
 
-export function pipelineStepsHaveModelIds(
+export function pipelineStepsAreExecutable(
   steps: PipelineStep[],
   inheritedModelId: string | null | undefined,
+  inheritedHarness: ExecutionHarness | null | undefined,
 ) {
   return steps.every((step) => {
     if (!step.type.endsWith('_loop')) return true
+    const effectiveHarness = step.harness ?? inheritedHarness
+    if (effectiveHarness?.kind === 'codex_cli') return true
     const config = step.config as ActivityLoopConfig
     return config.agents.every(agent => Boolean(effectiveModelId(
       agent.model_id,
