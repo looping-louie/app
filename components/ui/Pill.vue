@@ -31,6 +31,7 @@ const props = withDefaults(defineProps<{
   options?: PillOption[]
   modelValue?: string | string[]
   variant?: PillVariant
+  empty?: boolean
   selected?: boolean
   disabled?: boolean
   description?: string
@@ -59,6 +60,7 @@ const props = withDefaults(defineProps<{
   options: () => [],
   modelValue: undefined,
   variant: 'compact',
+  empty: false,
   selected: false,
   disabled: false,
   description: undefined,
@@ -84,9 +86,9 @@ const emit = defineEmits<{
 const slots = useSlots()
 const hasIcon = computed(() => Boolean(slots.icon))
 const hasLabel = computed(() => Boolean(slots.default))
-const hasMedia = computed(() => Boolean(props.src || hasIcon.value))
+const hasMedia = computed(() => Boolean(props.src || hasIcon.value || props.empty))
 const hasDropdown = computed(() => Boolean(props.options.length || slots.dropdown))
-const circularMedia = computed(() => Boolean(props.src || (hasIcon.value && props.iconStyle === 'circle')))
+const circularMedia = computed(() => Boolean(props.src || props.empty || (hasIcon.value && props.iconStyle === 'circle')))
 const root = ref<HTMLElement | null>(null)
 const trigger = ref<HTMLButtonElement | null>(null)
 const open = ref(false)
@@ -229,6 +231,12 @@ onBeforeUnmount(() => {
         <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
           <img :src="src" :alt="alt" width="44" height="44" loading="lazy">
         </span>
+        <span v-else-if="empty" class="ui-icon-pill__media ui-icon-pill__media--empty" aria-hidden="true">
+          <svg viewBox="0 0 44 44" fill="none">
+            <circle cx="22" cy="22" r="17" />
+            <path d="M10 10 34 34M34 10 10 34" />
+          </svg>
+        </span>
         <span
           v-else-if="$slots.icon"
           :class="iconStyle === 'circle' ? 'ui-icon-pill__media ui-icon-pill__media--icon' : 'ui-icon-pill__icon'"
@@ -263,6 +271,12 @@ onBeforeUnmount(() => {
       >
         <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
           <img :src="src" :alt="alt" width="44" height="44" loading="lazy">
+        </span>
+        <span v-else-if="empty" class="ui-icon-pill__media ui-icon-pill__media--empty" aria-hidden="true">
+          <svg viewBox="0 0 44 44" fill="none">
+            <circle cx="22" cy="22" r="17" />
+            <path d="M10 10 34 34M34 10 10 34" />
+          </svg>
         </span>
         <span
           v-else-if="$slots.icon"
@@ -322,6 +336,12 @@ onBeforeUnmount(() => {
       <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
         <img :src="src" :alt="alt" width="28" height="28" loading="lazy">
       </span>
+      <span v-else-if="empty" class="ui-icon-pill__media ui-icon-pill__media--empty" aria-hidden="true">
+        <svg viewBox="0 0 44 44" fill="none">
+          <circle cx="22" cy="22" r="17" />
+          <path d="M10 10 34 34M34 10 10 34" />
+        </svg>
+      </span>
       <span
         v-else-if="$slots.icon"
         :class="iconStyle === 'circle' ? 'ui-icon-pill__media ui-icon-pill__media--icon' : 'ui-icon-pill__icon'"
@@ -341,6 +361,12 @@ onBeforeUnmount(() => {
     >
       <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
         <img :src="src" :alt="alt" width="28" height="28" loading="lazy">
+      </span>
+      <span v-else-if="empty" class="ui-icon-pill__media ui-icon-pill__media--empty" aria-hidden="true">
+        <svg viewBox="0 0 44 44" fill="none">
+          <circle cx="22" cy="22" r="17" />
+          <path d="M10 10 34 34M34 10 10 34" />
+        </svg>
       </span>
       <span
         v-else-if="$slots.icon"
@@ -721,6 +747,26 @@ button.ui-icon-pill__trigger:focus-visible {
   color: var(--ll-color-ink);
   background: var(--ll-color-canvas);
   border: 1px solid var(--ui-icon-pill-border);
+}
+
+.ui-icon-pill__media--empty {
+  color: var(--ll-color-text-muted);
+  background: transparent;
+}
+
+.ui-icon-pill__media--empty svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 3 3;
+}
+
+.ui-icon-pill__media--empty svg > * {
+  vector-effect: non-scaling-stroke;
 }
 
 .ui-icon-pill__media--icon :deep(svg) {
