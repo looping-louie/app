@@ -366,6 +366,7 @@ useHead({ title: 'Settings · Looping Louie' })
           <div class="execution-defaults__row">
             <div class="execution-defaults__copy"><h3>Allow models by default</h3><p>Allow unconfigured models by policy; a usable provider connection is still required.</p></div>
             <UiToggle
+              class="execution-defaults__model-policy-toggle"
               :model-value="defaultModelAvailability === 'enabled'"
               :disabled="remoteSettingsSaving"
               aria-label="Allow models by default"
@@ -431,6 +432,7 @@ useHead({ title: 'Settings · Looping Louie' })
 .execution-defaults__row { display: grid; min-width: 0; min-height: 5.5rem; box-sizing: border-box; grid-template-columns: minmax(14rem, 1fr) minmax(16rem, 0.7fr); align-items: center; gap: var(--ll-space-8); padding: var(--ll-space-4) var(--ll-space-5); border-bottom: 1px solid var(--ll-color-divider); }
 .execution-defaults__row:last-child { border-bottom: 0; }
 .execution-defaults__model-pill { width: 100%; max-width: 32rem; justify-self: end; }
+.execution-defaults__model-policy-toggle { justify-self: end; }
 .execution-defaults__toggle-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .execution-defaults__toggle-option { display: grid; min-width: 0; min-height: 6.5rem; box-sizing: border-box; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--ll-space-5); padding: var(--ll-space-4) var(--ll-space-5); }
 .execution-defaults__toggle-option:nth-child(even) { border-left: 1px solid var(--ll-color-divider); }
