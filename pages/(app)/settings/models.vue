@@ -6,7 +6,6 @@ import UiPagination from '~/components/ui/Pagination.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
-import UiToggle from '~/components/ui/Toggle.vue'
 import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 
@@ -247,45 +246,38 @@ useHead({
       @retry="refresh"
     >
       <UiGrid :columns="3" gap="lg" class="models-grid">
-        <div
+        <UiPill
           v-for="model in models"
           :id="`model-${model.id}`"
           :key="model.id"
           class="model-item"
           :class="{ 'model-item--focused': focusedModelId() === model.id }"
+          variant="catalog"
+          icon-style="circle"
+          :src="providerLogo(model.vendor, model.family) || undefined"
+          alt=""
+          :description="model.name"
+          toggle
+          :toggle-value="modelPolicyEnabled(model.id)"
+          :toggle-disabled="Boolean(policyMutatingId) || !user"
+          :toggle-label="`${modelPolicyEnabled(model.id) ? 'Disable' : 'Enable'} ${model.name}`"
+          :action-icon-path="arrowSquareOutIconPath"
+          :action-href="officialModelPage(model)"
+          :action-label="`View official information about ${model.name}`"
+          action-target="_blank"
+          action-visibility="hover"
+          @update:toggle-value="updateModelPolicy(model.id, $event)"
         >
-          <UiPill
-            variant="catalog"
-            icon-style="circle"
-            :src="providerLogo(model.vendor, model.family) || undefined"
-            alt=""
-            :description="model.name"
-            :action-icon-path="arrowSquareOutIconPath"
-            :action-href="officialModelPage(model)"
-            :action-label="`View official information about ${model.name}`"
-            action-target="_blank"
-            action-visibility="hover"
-          >
-            <template v-if="!providerLogo(model.vendor, model.family)" #icon>
-              <span class="model-item__fallback">{{ vendorInitials(model.vendor) }}</span>
-            </template>
-            <span class="model-item__label">
-              <span>{{ model.vendor }}</span>
-              <UiStatusText :tone="model.available ? 'enabled' : 'disabled'" class="model-item__availability">
-                {{ model.available ? 'available' : 'unavailable' }}
-              </UiStatusText>
-            </span>
-          </UiPill>
-          <div class="model-item__policy">
-            <span>{{ modelPolicyEnabled(model.id) ? 'Allowed by policy' : 'Blocked by policy' }}</span>
-            <UiToggle
-              :model-value="modelPolicyEnabled(model.id)"
-              :disabled="Boolean(policyMutatingId) || !user"
-              :aria-label="`${modelPolicyEnabled(model.id) ? 'Disable' : 'Enable'} ${model.name}`"
-              @update:model-value="updateModelPolicy(model.id, $event)"
-            />
-          </div>
-        </div>
+          <template v-if="!providerLogo(model.vendor, model.family)" #icon>
+            <span class="model-item__fallback">{{ vendorInitials(model.vendor) }}</span>
+          </template>
+          <span class="model-item__label">
+            <span>{{ model.vendor }}</span>
+            <UiStatusText :tone="model.available ? 'enabled' : 'disabled'" class="model-item__availability">
+              {{ model.available ? 'available' : 'unavailable' }}
+            </UiStatusText>
+          </span>
+        </UiPill>
       </UiGrid>
     </UiAsyncStage>
 
@@ -314,12 +306,8 @@ useHead({
 .models-grid { column-gap: var(--ll-space-20); }
 
 .model-item {
-  display: grid;
   min-width: 0;
-  gap: var(--ll-space-2);
 }
-
-.model-item :deep(.ui-pill) { width: 100%; }
 
 .model-item--focused {
   background: var(--ll-color-primary-highlight);
@@ -349,8 +337,6 @@ useHead({
   font-size: var(--ll-text-xs);
   font-weight: 500;
 }
-
-.model-item__policy { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-3); padding-inline: var(--ll-space-2); color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); }
 
 @media (max-width: 48rem) { .models-policy { align-items: flex-start; flex-direction: column; } }
 
