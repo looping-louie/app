@@ -185,10 +185,10 @@ async function updateDefaultModelAvailability(enabled: boolean) {
   const previousAvailability = defaultModelAvailability.value
   defaultModelAvailability.value = enabled ? 'enabled' : 'disabled'
   const saved = await persistRemoteSettings(
-    'Default model policy updated',
+    'New model policy updated',
     enabled
-      ? 'Unconfigured models are now allowed by policy.'
-      : 'Models must now be enabled individually before they can be used.',
+      ? 'New models in available provider families will be enabled automatically.'
+      : 'New models in available provider families will remain disabled until you enable them.',
   )
   if (!saved) defaultModelAvailability.value = previousAvailability
 }
@@ -317,12 +317,12 @@ useHead({ title: 'Settings · Looping Louie' })
             </UiPill>
           </div>
           <div class="execution-defaults__row">
-            <div class="execution-defaults__copy"><h3>Allow all models by default</h3><p>Allow unconfigured models by policy; a usable provider connection is still required.</p></div>
+            <div class="execution-defaults__copy"><h3>Enable new models by default</h3><p>Automatically enable newly released models from provider families you already have available.</p></div>
             <UiToggle
               class="execution-defaults__model-policy-toggle"
               :model-value="defaultModelAvailability === 'enabled'"
               :disabled="remoteSettingsSaving"
-              aria-label="Allow all models by default"
+              aria-label="Enable new models by default"
               @update:model-value="void updateDefaultModelAvailability($event)"
             />
           </div>
