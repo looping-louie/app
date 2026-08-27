@@ -4,7 +4,6 @@ import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiPagination from '~/components/ui/Pagination.vue'
 import UiPill from '~/components/ui/Pill.vue'
-import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
 import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
@@ -61,7 +60,7 @@ const { data, status, refresh } = await useAsyncData(
   () => api.models.list(modelQuery.value),
   { watch: [modelQuery] },
 )
-const { data: user } = await useAsyncData('settings-model-policy', () => api.users.getCurrent())
+const { data: user, refresh: refreshUser } = await useAsyncData('settings-model-policy', () => api.users.getCurrent())
 
 const models = computed(() => data.value?.items ?? [])
 const modelTotal = computed(() => data.value?.total ?? 0)
@@ -74,15 +73,6 @@ const modelSearchItems = computed(() => models.value.map(model => ({
   imageSrc: providerLogo(model.vendor, model.family) || undefined,
   imageAlt: '',
 })))
-const defaultAvailability = computed({
-  get: () => user.value?.settings.default_model_availability ?? 'enabled',
-  set: value => void updateDefaultAvailability(value),
-})
-const defaultAvailabilityOptions = [
-  { value: 'enabled', label: 'Enabled by default' },
-  { value: 'disabled', label: 'Disabled by default' },
-]
-
 watch([modelStatus, modelLabs, modelSort, modelSearchTerm], () => {
   modelOffset.value = 0
 }, { deep: true })
@@ -131,24 +121,6 @@ function modelPolicyEnabled(modelId: string) {
   return (configured?.status ?? user.value?.settings.default_model_availability ?? 'enabled') === 'enabled'
 }
 
-async function updateDefaultAvailability(value: string | string[]) {
-  if (!user.value || policyMutatingId.value || typeof value !== 'string') return
-  if (value !== 'enabled' && value !== 'disabled') return
-  policyMutatingId.value = 'default'
-  policyError.value = ''
-  try {
-    user.value = await api.users.replaceSettings({
-      ...user.value.settings,
-      default_model_availability: value,
-    })
-    await refresh()
-  } catch (cause) {
-    policyError.value = apiErrorMessage(cause, 'The default model policy could not be updated.')
-  } finally {
-    policyMutatingId.value = null
-  }
-}
-
 async function updateModelPolicy(modelId: string, enabled: boolean) {
   if (!user.value || policyMutatingId.value) return
   policyMutatingId.value = modelId
@@ -183,6 +155,7 @@ async function revealFocusedModel() {
 }
 
 watch([models, () => route.query.model], () => void revealFocusedModel(), { immediate: true })
+onActivated(() => void refreshUser())
 
 async function selectModelSearchResult(item: { id: string }) {
   await router.replace({
@@ -205,18 +178,6 @@ useHead({
 <template>
   <section aria-labelledby="models-heading">
     <h2 id="models-heading" class="visually-hidden">Models</h2>
-    <div class="models-policy">
-      <div>
-        <strong>Model policy</strong>
-        <p>Choose the policy for unconfigured models, then override individual models below. A usable <NuxtLink to="/settings/providers">provider connection</NuxtLink> is still required for Louie.</p>
-      </div>
-      <UiSegmentedControl
-        v-model="defaultAvailability"
-        :options="defaultAvailabilityOptions"
-        :disabled="Boolean(policyMutatingId) || !user"
-        aria-label="Default model availability"
-      />
-    </div>
     <p v-if="policyError" class="models-policy-error" role="alert">{{ policyError }}</p>
 
     <UiCatalogFilterBar
@@ -296,12 +257,7 @@ useHead({
   margin-bottom: var(--ll-space-10);
 }
 
-.models-policy { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-6); padding: var(--ll-space-5); margin-bottom: var(--ll-space-6); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); }
-.models-policy > div { display: grid; gap: var(--ll-space-1); }
-.models-policy strong, .models-policy p { margin: 0; }
-.models-policy p { color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
-.models-policy a { color: var(--ll-color-ink); }
-.models-policy-error { margin: calc(-1 * var(--ll-space-3)) 0 var(--ll-space-5); color: var(--ll-color-brand-ink); font-size: var(--ll-text-sm); }
+.models-policy-error { margin: 0 0 var(--ll-space-5); color: var(--ll-color-brand-ink); font-size: var(--ll-text-sm); }
 
 .models-grid { column-gap: var(--ll-space-20); }
 
@@ -337,8 +293,6 @@ useHead({
   font-size: var(--ll-text-xs);
   font-weight: 500;
 }
-
-@media (max-width: 48rem) { .models-policy { align-items: flex-start; flex-direction: column; } }
 
 .visually-hidden {
   position: absolute;

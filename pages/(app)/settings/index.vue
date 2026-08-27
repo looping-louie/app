@@ -8,7 +8,7 @@ import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
-import type { ExecutionHarness, ExecutionHarnessKind, ModelSummary, UserResponse } from '~/types/api'
+import type { ExecutionHarness, ExecutionHarnessKind, ModelAvailabilityStatus, ModelSummary, UserResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 
@@ -72,6 +72,7 @@ const notifications = useNotifications()
 const { modelLogo, providerLogo } = useModelLogo()
 const settingsNavigation = inject<SettingsNavigationState>('settings-navigation')
 const defaultModelId = ref<string | null>(null)
+const defaultModelAvailability = ref<ModelAvailabilityStatus>('enabled')
 const defaultHarness = ref<ExecutionHarness | null>(null)
 const selectedHarnessId = ref('louie')
 const preferences = reactive<ExecutionPreferences>({ ...initialPreferences })
@@ -113,6 +114,7 @@ const modelPaletteItems = computed<ModelPaletteItem[]>(() => [
 ])
 const currentRemoteSettings = computed(() => JSON.stringify({
   default_model_id: defaultModelId.value,
+  default_model_availability: defaultModelAvailability.value,
   selected_harness_id: selectedHarnessId.value,
 }))
 const currentPreferences = computed(() => JSON.stringify(preferences))
@@ -125,6 +127,7 @@ const errorLabel = computed(() => apiErrorMessage(error.value, 'Execution settin
 watch(executionSettings, (value) => {
   if (!value || initialized.value) return
   defaultModelId.value = value.user.settings.default_model_id
+  defaultModelAvailability.value = value.user.settings.default_model_availability
   defaultHarness.value = cloneHarness(value.user.settings.default_harness)
   selectedHarnessId.value = value.user.settings.default_harness?.kind ?? 'louie'
   savedRemoteSettings.value = currentRemoteSettings.value
@@ -155,6 +158,7 @@ function openModelPalette() {
 
 function syncRemoteSettings(user: UserResponse) {
   defaultModelId.value = user.settings.default_model_id
+  defaultModelAvailability.value = user.settings.default_model_availability
   defaultHarness.value = cloneHarness(user.settings.default_harness)
   selectedHarnessId.value = user.settings.default_harness?.kind ?? 'louie'
 }
@@ -169,6 +173,7 @@ async function persistRemoteSettings(successTitle: string, successDescription: s
     const updated = await api.users.replaceSettings({
       ...currentUser.settings,
       default_model_id: defaultModelId.value,
+      default_model_availability: defaultModelAvailability.value,
       default_harness: cloneHarness(defaultHarness.value),
     })
     if (executionSettings.value) executionSettings.value = { ...executionSettings.value, user: updated }
@@ -199,6 +204,19 @@ async function selectModel(item: ModelPaletteItem) {
       : 'Executions will require a model from a narrower scope.',
   )
   if (!saved) defaultModelId.value = previousModelId
+}
+
+async function updateDefaultModelAvailability(enabled: boolean) {
+  if (remoteSettingsSaving.value) return
+  const previousAvailability = defaultModelAvailability.value
+  defaultModelAvailability.value = enabled ? 'enabled' : 'disabled'
+  const saved = await persistRemoteSettings(
+    'Default model policy updated',
+    enabled
+      ? 'Unconfigured models are now allowed by policy.'
+      : 'Models must now be enabled individually before they can be used.',
+  )
+  if (!saved) defaultModelAvailability.value = previousAvailability
 }
 
 async function selectHarness(harness: HarnessOption) {
@@ -253,6 +271,7 @@ async function saveDefaults() {
     const updated = await api.users.replaceSettings({
       ...currentUser.settings,
       default_model_id: defaultModelId.value,
+      default_model_availability: defaultModelAvailability.value,
       default_harness: cloneHarness(defaultHarness.value),
     })
     if (executionSettings.value) executionSettings.value = { ...executionSettings.value, user: updated }
@@ -343,6 +362,15 @@ useHead({ title: 'Settings · Looping Louie' })
             >
               {{ selectedModel?.name ?? 'No model has been selected' }}
             </UiPill>
+          </div>
+          <div class="execution-defaults__row">
+            <div class="execution-defaults__copy"><h3>Allow models by default</h3><p>Allow unconfigured models by policy; a usable provider connection is still required.</p></div>
+            <UiToggle
+              :model-value="defaultModelAvailability === 'enabled'"
+              :disabled="remoteSettingsSaving"
+              aria-label="Allow models by default"
+              @update:model-value="void updateDefaultModelAvailability($event)"
+            />
           </div>
           <div class="execution-defaults__row">
             <div class="execution-defaults__copy"><h3>Default branch</h3><p>The branch new runs use when no branch is specified.</p></div>
