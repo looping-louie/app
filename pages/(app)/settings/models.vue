@@ -151,7 +151,6 @@ async function updateModelPolicy(modelId: string, enabled: boolean) {
       ...user.value.settings,
       configured_models: configured,
     })
-    await refresh()
   } catch (cause) {
     policyError.value = apiErrorMessage(cause, `The policy for ${modelId} could not be updated.`)
   } finally {
