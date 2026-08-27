@@ -128,7 +128,7 @@ const restrictionItems = computed(() => restrictionDefinitions.map(item => ({
 const memoryItems = computed(() => [{
   id: 'projectMemory',
   title: 'Project memory',
-  description: 'Keep shared context available to every agent working in this project.',
+  description: 'Keep shared context available to every persona working in this project.',
   checked: projectMemoryEnabled.value,
   actionLabel: 'Project memory',
   ariaLabel: `Project memory: ${projectMemoryEnabled.value ? 'enabled' : 'disabled'}`,
@@ -613,7 +613,7 @@ useHead({ title: 'Create a project · Looping Louie' })
         >
           <div class="builder-panel__heading">
             <h1>Write the project constitution</h1>
-            <p>Give every person and agent one shared source of truth for how work should happen.</p>
+            <p>Give every teammate and persona one shared source of truth for how work should happen.</p>
           </div>
 
           <div class="builder-field-stage">
@@ -627,7 +627,7 @@ useHead({ title: 'Create a project · Looping Louie' })
             </UiCollectionGroupTitle>
             <UiSectionStage inverse="bottom">
               <div class="constitution-explainer">
-                <p><code>constitution.md</code> works like one repository-wide <code>AGENTS.md</code> shared by every user and agent in the project.</p>
+                <p><code>constitution.md</code> works like one repository-wide <code>AGENTS.md</code> shared by every user and persona in the project.</p>
                 <ul>
                   <li>It defines principles, constraints, and the expected quality bar.</li>
                   <li>Its instructions apply consistently across the entire repository.</li>
@@ -664,7 +664,7 @@ useHead({ title: 'Create a project · Looping Louie' })
         >
           <div class="builder-panel__heading">
             <h1>Connect project tools</h1>
-            <p>Add optional MCP integrations so agents can work with the services your team already uses.</p>
+            <p>Add optional MCP integrations so personas can work with the services your team already uses.</p>
           </div>
 
           <div class="builder-field-stage">

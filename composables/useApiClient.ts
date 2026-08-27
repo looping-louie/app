@@ -28,6 +28,8 @@ import type {
   PipelineRunListResponse,
   PipelineRunResponse,
   CatalogProviderResponse,
+  CatalogPersonaResponse,
+  CatalogSkillResponse,
   LinkedServiceCreateRequest,
   LinkedServicePatchRequest,
   LinkedServiceResponse,
@@ -35,6 +37,8 @@ import type {
   SkillListQuery,
   SkillCreateRequest,
   SkillResponse,
+  WorkspaceDefaultsReplaceRequest,
+  WorkspaceDefaultsResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
@@ -76,6 +80,7 @@ export function useApiClient() {
       list: (query: SkillListQuery = {}) => $fetch<SkillListResponse>('/api/v1/skills', { query }),
       get: (id: string) => $fetch<SkillResponse>(resourcePath('skills', id)),
       create: (body: SkillCreateRequest) => $fetch<SkillResponse>('/api/v1/skills', { method: 'POST', body }),
+      remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('skills', id), { method: 'DELETE' }),
     },
     models: {
       list: (query: ModelListQuery = {}) => $fetch<ModelListResponse>('/api/v1/models', { query }),
@@ -83,6 +88,12 @@ export function useApiClient() {
     },
     catalog: {
       listProviders: (signal?: AbortSignal) => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers', { signal }),
+      listPersonas: (signal?: AbortSignal) => $fetch<CatalogPersonaResponse[]>('/api/v1/catalog/personas', { signal }),
+      listSkills: (signal?: AbortSignal) => $fetch<CatalogSkillResponse[]>('/api/v1/catalog/skills', { signal }),
+    },
+    workspaces: {
+      getDefaults: () => $fetch<WorkspaceDefaultsResponse>('/api/v1/workspaces/defaults'),
+      replaceDefaults: (body: WorkspaceDefaultsReplaceRequest) => $fetch<WorkspaceDefaultsResponse>('/api/v1/workspaces/defaults', { method: 'PUT', body }),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),

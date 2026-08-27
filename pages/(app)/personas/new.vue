@@ -2,7 +2,6 @@
 import InstructionCategorySelector from '~/components/instructions/InstructionCategorySelector.vue'
 import InstructionSkillOption from '~/components/instructions/InstructionSkillOption.vue'
 import InstructionSkillSelector from '~/components/instructions/InstructionSkillSelector.vue'
-import PersonaExecutionSelector from '~/components/personas/PersonaExecutionSelector.vue'
 import WizardShell from '~/components/layout/WizardShell.vue'
 import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
@@ -11,13 +10,13 @@ import UiModal from '~/components/ui/Modal.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import type { PersonaCategory } from '~/types/api'
-import { apiErrorCode, apiErrorMessage } from '~/utils/api/errors'
+import { apiErrorMessage } from '~/utils/api/errors'
 import { instructionCategoryOptions } from '~/utils/instructionCategories'
 
-type BuilderStep = 'details' | 'execution' | 'category' | 'skills' | 'prompt'
+type BuilderStep = 'details' | 'category' | 'skills' | 'prompt'
 
-const steps = ['Details', 'Connection', 'Category', 'Skills', 'Prompt']
-const stepOrder: BuilderStep[] = ['details', 'execution', 'category', 'skills', 'prompt']
+const steps = ['Details', 'Category', 'Skills', 'Prompt']
+const stepOrder: BuilderStep[] = ['details', 'category', 'skills', 'prompt']
 const descriptionMaxLength = 160
 const api = useApiClient()
 const route = useRoute()
@@ -25,12 +24,10 @@ const router = useRouter()
 const step = ref<BuilderStep>(isBuilderStep(route.query.step) ? route.query.step : 'details')
 const name = ref('')
 const description = ref('')
-const selectedServiceId = ref('')
-const selectedModelId = ref('')
 const category = ref<PersonaCategory | ''>('')
 const selectedSkillIds = ref<string[]>([])
 const prompt = ref('')
-const errors = reactive({ name: '', description: '', service: '', model: '', category: '', prompt: '' })
+const errors = reactive({ name: '', description: '', category: '', prompt: '' })
 const saving = ref(false)
 const saveError = ref('')
 const exitModalOpen = ref(false)
@@ -39,30 +36,20 @@ const allowRouteLeave = ref(false)
 const pendingDestination = ref('/personas')
 const questionRoot = ref<HTMLElement | null>(null)
 const nameField = ref<InstanceType<typeof UiTextField> | null>(null)
-const executionSelector = ref<InstanceType<typeof PersonaExecutionSelector> | null>(null)
 const promptField = ref<InstanceType<typeof UiTextField> | null>(null)
 const categorySelector = ref<InstanceType<typeof InstructionCategorySelector> | null>(null)
 const skillSelector = ref<InstanceType<typeof InstructionSkillSelector> | null>(null)
 const promptStage = ref<HTMLElement | null>(null)
 const navigationRoot = ref<HTMLElement | null>(null)
 const navigationBounds = reactive({ left: 0, width: 0 })
-const localKey = 'looping-louie:agent-builder-draft:v1'
+const localKey = 'looping-louie:agent-builder-draft:v2'
 let questionResizeObserver: ResizeObserver | undefined
 
 const { data: skillsData, status: skillsStatus, refresh: refreshSkills } = await useAsyncData(
   'agent-builder-skills',
   () => api.skills.list({ status: 'enabled', sort: 'alphabetical-asc', offset: 0 }),
 )
-const { data: linkedServicesData, status: linkedServicesStatus, refresh: refreshLinkedServices } = await useAsyncData(
-  'persona-linked-services',
-  () => api.linkedServices.list(),
-)
-
 const availableSkills = computed(() => skillsData.value?.items ?? [])
-const linkedServices = computed(() => linkedServicesData.value ?? [])
-const selectableLinkedServices = computed(() => linkedServices.value.filter(service => (
-  service.enabled && service.config.configured
-)))
 const selectedSkills = computed(() => {
   const skillsById = new Map(availableSkills.value.map(skill => [skill.id, skill]))
   return selectedSkillIds.value.flatMap(id => skillsById.get(id) ?? [])
@@ -75,11 +62,6 @@ const canContinue = computed(() => {
   if (step.value === 'details') {
     return Boolean(name.value.trim() && description.value.trim() && description.value.length <= descriptionMaxLength)
   }
-  if (step.value === 'execution') {
-    const service = selectableLinkedServices.value.find(item => item.id === selectedServiceId.value)
-    return linkedServicesStatus.value === 'success'
-      && Boolean(service?.config.available_models.includes(selectedModelId.value))
-  }
   if (step.value === 'category') return Boolean(category.value)
   if (step.value === 'skills') return skillsStatus.value !== 'pending'
   return Boolean(prompt.value.trim() && !saving.value)
@@ -87,8 +69,6 @@ const canContinue = computed(() => {
 const hasProgress = computed(() => Boolean(
   name.value.trim()
     || description.value.trim()
-    || selectedServiceId.value
-    || selectedModelId.value
     || category.value
     || selectedSkillIds.value.length
     || prompt.value.trim(),
@@ -107,8 +87,8 @@ function clearError(field: keyof typeof errors) {
 }
 
 function validateDetails() {
-  errors.name = name.value.trim() ? '' : 'Give this agent a name.'
-  errors.description = description.value.trim() ? '' : 'Describe the role this agent should play.'
+  errors.name = name.value.trim() ? '' : 'Give this persona a name.'
+  errors.description = description.value.trim() ? '' : 'Describe the role this persona should play.'
   if (description.value.length > descriptionMaxLength) {
     errors.description = `Keep the description to ${descriptionMaxLength} characters or fewer.`
   }
@@ -116,23 +96,13 @@ function validateDetails() {
 }
 
 function validatePrompt() {
-  errors.prompt = prompt.value.trim() ? '' : 'Write the instructions for this agent.'
+  errors.prompt = prompt.value.trim() ? '' : 'Write the instructions for this persona.'
   return !errors.prompt
-}
-
-function validateExecution() {
-  const service = selectableLinkedServices.value.find(item => item.id === selectedServiceId.value)
-  errors.service = service ? '' : 'Choose an enabled and configured connection.'
-  errors.model = service?.config.available_models.includes(selectedModelId.value)
-    ? ''
-    : 'Choose a model available through this connection.'
-  return !errors.service && !errors.model
 }
 
 async function focusCurrentStep() {
   await nextTick()
   if (step.value === 'details') nameField.value?.focus()
-  else if (step.value === 'execution') executionSelector.value?.focus()
   else if (step.value === 'category') categorySelector.value?.focus()
   else if (step.value === 'skills') await skillSelector.value?.resetAndFocus()
   else promptField.value?.focus()
@@ -154,9 +124,7 @@ async function goBack() {
 
 async function continueCurrentStep() {
   if (step.value === 'details') {
-    if (validateDetails()) await goTo('execution')
-  } else if (step.value === 'execution') {
-    if (validateExecution()) await goTo('category')
+    if (validateDetails()) await goTo('category')
   } else if (step.value === 'category') {
     if (category.value) await goTo('skills')
     else errors.category = 'Choose a category.'
@@ -178,27 +146,12 @@ function updateSkills(value: string | string[]) {
   if (Array.isArray(value)) selectedSkillIds.value = value
 }
 
-function updateService(value: string) {
-  selectedServiceId.value = value
-  errors.service = ''
-  errors.model = ''
-  saveError.value = ''
-}
-
-function updateModel(value: string) {
-  selectedModelId.value = value
-  errors.model = ''
-  saveError.value = ''
-}
-
 function saveLocalDraft() {
   if (!import.meta.client) return
   localStorage.setItem(localKey, JSON.stringify({
     step: step.value,
     name: name.value,
     description: description.value,
-    linkedServiceId: selectedServiceId.value,
-    modelId: selectedModelId.value,
     category: category.value,
     skillIds: selectedSkillIds.value,
     prompt: prompt.value,
@@ -215,12 +168,6 @@ function restoreLocalDraft() {
     name.value = typeof draft.name === 'string' ? draft.name : ''
     description.value = typeof draft.description === 'string' ? draft.description : ''
     prompt.value = typeof draft.prompt === 'string' ? draft.prompt : ''
-    const draftServiceId = typeof draft.linkedServiceId === 'string' ? draft.linkedServiceId : ''
-    const draftService = selectableLinkedServices.value.find(service => service.id === draftServiceId)
-    selectedServiceId.value = draftService?.id ?? ''
-    selectedModelId.value = draftService && typeof draft.modelId === 'string' && draftService.config.available_models.includes(draft.modelId)
-      ? draft.modelId
-      : ''
     category.value = instructionCategoryOptions.some(option => option.value === draft.category)
       ? draft.category as PersonaCategory
       : ''
@@ -236,10 +183,6 @@ function restoreLocalDraft() {
 
 async function createAgent() {
   if (!validatePrompt() || saving.value || !category.value || !validateDetails()) return
-  if (!validateExecution()) {
-    await goTo('execution')
-    return
-  }
   saving.value = true
   saveError.value = ''
   try {
@@ -247,11 +190,6 @@ async function createAgent() {
       name: name.value.trim(),
       description: description.value.trim(),
       instructions: prompt.value.trim(),
-      linked_service: {
-        type: 'LinkedServiceReference',
-        reference_id: selectedServiceId.value,
-      },
-      config: { model: selectedModelId.value },
       skill_ids: selectedSkillIds.value,
       metadata: { category: category.value },
     })
@@ -260,12 +198,7 @@ async function createAgent() {
     allowRouteLeave.value = true
     await router.push(`/personas/${encodeURIComponent(agent.id)}`)
   } catch (error) {
-    if (apiErrorCode(error) === 'linked_service_selection_unavailable') {
-      errors.service = 'This connection is disabled, unconfigured, or no longer deploys the selected model. Choose an available connection and model.'
-      await goTo('execution')
-    } else {
-      saveError.value = apiErrorMessage(error, 'The agent could not be saved. Please try again.')
-    }
+    saveError.value = apiErrorMessage(error, 'The persona could not be saved. Please try again.')
     saveLocalDraft()
   } finally {
     saving.value = false
@@ -377,52 +310,30 @@ onBeforeUnmount(() => {
 })
 
 definePageMeta({ layout: 'app' })
-useHead({ title: 'Create an agent · Looping Louie' })
+useHead({ title: 'Create a persona · Looping Louie' })
 </script>
 
 <template>
   <WizardShell :steps="steps" :current="stepIndex" class="agent-builder">
     <div class="agent-builder__layout" :class="{ 'agent-builder__layout--skills': step === 'skills' }">
       <main ref="questionRoot" class="agent-builder__question">
-      <UiBreadcrumb :items="[{ label: 'Agents', to: '/personas' }, { label: 'Create new agent' }]" class="agent-builder__breadcrumb" />
+      <UiBreadcrumb :items="[{ label: 'Personas', to: '/personas' }, { label: 'Create new persona' }]" class="agent-builder__breadcrumb" />
 
       <Transition name="builder-question" mode="out-in" @after-enter="focusCurrentStep">
         <section v-if="step === 'details'" key="details" class="builder-panel" @keydown="onPanelKeydown">
-          <div class="builder-panel__heading"><h1>Tell us about this agent</h1><p>Give it a clear name and a concise description of the role it should play.</p></div>
+          <div class="builder-panel__heading"><h1>Tell us about this persona</h1><p>Give it a clear name and a concise description of the role it should play.</p></div>
           <div class="builder-field-stage">
             <UiCollectionGroupTitle title="Name *" heading-as="h2" />
             <UiSectionStage inverse="bottom"><UiTextField ref="nameField" v-model="name" label="Name" hide-label required placeholder="e.g. API reviewer" :error="errors.name" @input="clearError('name')" /></UiSectionStage>
           </div>
           <div class="builder-field-stage">
             <UiCollectionGroupTitle title="Description *" heading-as="h2" />
-            <UiSectionStage inverse="bottom"><UiTextField v-model="description" label="Description" hide-label multiline :rows="5" :maxlength="descriptionMaxLength" required placeholder="Explain what this agent is responsible for…" :hint="descriptionHint" :error="errors.description" @input="clearError('description')" /></UiSectionStage>
-          </div>
-        </section>
-
-        <section v-else-if="step === 'execution'" key="execution" class="builder-panel">
-          <div class="builder-panel__heading"><h1>How should this agent run?</h1><p>Choose the workspace connection and one of the models it can actually deploy.</p></div>
-          <div class="builder-field-stage">
-            <UiCollectionGroupTitle title="Connection and model *" heading-as="h2" />
-            <UiSectionStage inverse="bottom">
-              <div v-if="linkedServicesStatus === 'pending'" class="builder-state" role="status">Loading connections…</div>
-              <div v-else-if="linkedServicesStatus === 'error'" class="builder-state builder-state--error" role="alert"><span>Connections could not be loaded.</span><UiButton variant="stroke" size="sm" @click="() => refreshLinkedServices()">Retry</UiButton></div>
-              <PersonaExecutionSelector
-                v-else
-                ref="executionSelector"
-                :services="linkedServices"
-                :service-id="selectedServiceId"
-                :model-id="selectedModelId"
-                :service-error="errors.service"
-                :model-error="errors.model"
-                @update:service-id="updateService"
-                @update:model-id="updateModel"
-              />
-            </UiSectionStage>
+            <UiSectionStage inverse="bottom"><UiTextField v-model="description" label="Description" hide-label multiline :rows="5" :maxlength="descriptionMaxLength" required placeholder="Explain what this persona is responsible for…" :hint="descriptionHint" :error="errors.description" @input="clearError('description')" /></UiSectionStage>
           </div>
         </section>
 
         <section v-else-if="step === 'category'" key="category" class="builder-panel">
-          <div class="builder-panel__heading"><h1>Where does this agent belong?</h1><p>Choose one category. Selecting it will take you directly to skills.</p></div>
+          <div class="builder-panel__heading"><h1>Where does this persona belong?</h1><p>Choose one category. Selecting it will take you directly to skills.</p></div>
           <div class="builder-field-stage">
             <UiCollectionGroupTitle title="Category" heading-as="h2" />
             <UiSectionStage inverse="bottom">
@@ -433,7 +344,7 @@ useHead({ title: 'Create an agent · Looping Louie' })
         </section>
 
         <section v-else-if="step === 'skills'" key="skills" class="builder-panel">
-          <div class="builder-panel__heading"><h1>Which skills should it use?</h1><p>Select any reusable capabilities this agent needs, or continue without adding one.</p></div>
+          <div class="builder-panel__heading"><h1>Which skills should it use?</h1><p>Select any reusable capabilities this persona needs, or continue without adding one.</p></div>
           <div class="builder-field-stage">
             <UiCollectionGroupTitle :title="selectedSkillIds.length ? `${selectedSkillIds.length} selected` : 'Skills · Optional'" heading-as="h2" />
             <UiSectionStage inverse="bottom">
@@ -446,10 +357,10 @@ useHead({ title: 'Create an agent · Looping Louie' })
         </section>
 
         <section v-else key="prompt" class="builder-panel" @keydown="onPanelKeydown">
-          <div class="builder-panel__heading"><h1>How should this agent behave?</h1><p>Write the role, perspective and instructions it should follow whenever it participates.</p></div>
+          <div class="builder-panel__heading"><h1>How should this persona behave?</h1><p>Write the role, perspective and instructions it should follow whenever it participates.</p></div>
           <div ref="promptStage" class="builder-field-stage builder-field-stage--prompt">
             <UiCollectionGroupTitle title="Prompt *" heading-as="h2" />
-            <UiSectionStage inverse="bottom"><UiTextField ref="promptField" v-model="prompt" label="Prompt" hide-label multiline :rows="14" required placeholder="Write clear, actionable instructions for the agent…" hint="Markdown is supported. Press Ctrl or Cmd + Enter to save." :error="errors.prompt" @input="clearError('prompt')" /></UiSectionStage>
+            <UiSectionStage inverse="bottom"><UiTextField ref="promptField" v-model="prompt" label="Prompt" hide-label multiline :rows="14" required placeholder="Write clear, actionable instructions for the persona…" hint="Markdown is supported. Press Ctrl or Cmd + Enter to save." :error="errors.prompt" @input="clearError('prompt')" /></UiSectionStage>
           </div>
           <p v-if="saveError" class="builder-save-error" role="alert">{{ saveError }}</p>
         </section>
@@ -457,7 +368,7 @@ useHead({ title: 'Create an agent · Looping Louie' })
 
       <nav ref="navigationRoot" class="builder-navigation" :style="navigationStyle" aria-label="Form steps">
         <UiButton class="builder-navigation__back" variant="secondary" :disabled="stepIndex === 0" @click="goBack">Back <kbd aria-hidden="true">↑</kbd></UiButton>
-        <UiButton class="builder-navigation__continue" :disabled="!canContinue" :loading="saving" @click="continueCurrentStep">{{ step === 'prompt' ? 'Save agent' : 'Continue' }}<kbd aria-hidden="true">{{ step === 'prompt' ? 'Ctrl/⌘ ↵' : '↓' }}</kbd></UiButton>
+        <UiButton class="builder-navigation__continue" :disabled="!canContinue" :loading="saving" @click="continueCurrentStep">{{ step === 'prompt' ? 'Save persona' : 'Continue' }}<kbd aria-hidden="true">{{ step === 'prompt' ? 'Ctrl/⌘ ↵' : '↓' }}</kbd></UiButton>
       </nav>
       </main>
 
@@ -479,7 +390,7 @@ useHead({ title: 'Create an agent · Looping Louie' })
       </Transition>
     </div>
 
-    <UiModal v-model:open="exitModalOpen" title="Leave this agent unfinished?" description="Save your progress as a draft so you can continue later, or discard it permanently." :close-on-backdrop="!exitActionPending" :show-close="!exitActionPending">
+    <UiModal v-model:open="exitModalOpen" title="Leave this persona unfinished?" description="Save your progress as a draft so you can continue later, or discard it permanently." :close-on-backdrop="!exitActionPending" :show-close="!exitActionPending">
       <template #icon><svg viewBox="0 0 256 256" fill="currentColor"><path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" /></svg></template>
       <template #actions><UiButton variant="coral" :disabled="exitActionPending" @click="discardDraftAndLeave">Discard draft</UiButton><UiButton data-autofocus :loading="exitActionPending" @click="saveDraftAndLeave">Save draft</UiButton></template>
     </UiModal>

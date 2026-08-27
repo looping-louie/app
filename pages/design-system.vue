@@ -19,6 +19,7 @@ import UiPill from '~/components/ui/Pill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiMetricCard from '~/components/ui/MetricCard.vue'
+import UiNotification from '~/components/ui/Notification.vue'
 import UiPagination from '~/components/ui/Pagination.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
@@ -59,6 +60,8 @@ const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
 const pillAreas = ref<string[]>(['software_engineering'])
 const pillCatalogEnabled = ref(true)
+const pillSelectable = ref('codex')
+const notifications = useNotifications()
 const pillActionIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
 const samplePaginationOffset = ref(24)
 const buttonDropdownSelection = ref('No action selected')
@@ -142,7 +145,7 @@ const buttonDropdownOptions = [
   },
   {
     value: 'agent',
-    label: 'Create agent',
+    label: 'Create persona',
     iconPath: 'M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z',
   },
   {
@@ -156,7 +159,7 @@ const commandPaletteItems = [
   {
     id: 'browse-loops',
     label: 'Browse loops',
-    description: 'Open the catalog of iterative agent workflows.',
+    description: 'Open the catalog of iterative persona workflows.',
     group: 'Navigate',
     keywords: ['workflows', 'automation'],
     iconPath: buttonDropdownOptions[0]!.iconPath,
@@ -164,7 +167,7 @@ const commandPaletteItems = [
   },
   {
     id: 'browse-agents',
-    label: 'Browse agents',
+    label: 'Browse personas',
     description: 'Review the personas available to your teams.',
     group: 'Navigate',
     keywords: ['personas', 'team'],
@@ -183,7 +186,7 @@ const commandPaletteItems = [
   {
     id: 'create-loop',
     label: 'Create new loop',
-    description: 'Start a guided setup for a new agent workflow.',
+    description: 'Start a guided setup for a new persona workflow.',
     group: 'Create',
     keywords: ['new', 'wizard'],
     iconPath: buttonDropdownOptions[0]!.iconPath,
@@ -210,6 +213,7 @@ const designSystemNavItems = [
   { id: 'modal', label: 'Modal', level: 2 },
   { id: 'drawer', label: 'Drawer', level: 2 },
   { id: 'command-palette', label: 'Command palette', level: 2 },
+  { id: 'notification', label: 'Notification', level: 2 },
   { id: 'pill', label: 'Pill', level: 2 },
   { id: 'copy-command', label: 'Copyable command', level: 2 },
   { id: 'segmented-control', label: 'Segmented control', level: 2 },
@@ -301,7 +305,7 @@ const mainNavigationMenus = [
       {
         label: 'Open source',
         items: [
-          { label: 'Framework', description: 'Build loops and agent teams', mark: '✣', to: '#site-navigation' },
+          { label: 'Framework', description: 'Build loops and persona teams', mark: '✣', to: '#site-navigation' },
         ],
       },
       {
@@ -343,7 +347,7 @@ const mainNavigationLinks = [
 ]
 
 const interfaceTabs = [
-  { value: 'agents', label: 'Agents', mark: '✣', description: 'Configure specialist agents, tools, models, and instructions in one clear workspace.' },
+  { value: 'agents', label: 'Personas', mark: '✣', description: 'Configure specialist personas, tools, models, and instructions in one clear workspace.' },
   { value: 'workflows', label: 'Workflows', mark: '⌘', description: 'Compose typed steps, branches, retries, and human checkpoints into inspectable flows.' },
   { value: 'harness', label: 'Harness', mark: '⌁', description: 'Coordinate multiple modes and specialists around shared state and a single objective.' },
   { value: 'memory', label: 'Memory', mark: '◌', description: 'Give every loop durable context, semantic recall, and thread-aware storage.' },
@@ -358,10 +362,10 @@ const interfaceScreens: Record<string, {
   status: string
 }> = {
   agents: {
-    file: 'agent.ts',
+    file: 'persona.ts',
     title: 'Weather specialist',
     navigation: ['Chat', 'Tools', 'Review'],
-    code: ['new Agent({', '  model: cockpitModel,', '  tools: { weather },', '})'],
+    code: ['new Persona({', '  model: cockpitModel,', '  tools: { weather },', '})'],
     status: 'Ready for takeoff',
   },
   workflows: {
@@ -410,7 +414,7 @@ const footerLegalLinks = [
 ]
 
 const customerRows = [
-  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding agent', actionLabel: 'Read story', to: '#grid-list' },
+  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding persona', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'airframe', name: 'Airframe', categories: 'AI · Infrastructure', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'runway', name: 'Runway Labs', categories: 'FinTech · Enterprise', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'hangar', name: 'Hangar Cloud', categories: 'AI · Infrastructure', actionLabel: 'Read story', to: '#grid-list' },
@@ -428,7 +432,7 @@ const providerRows = ref([
 
 const keyValueRows = [
   { id: 'status', key: 'Status', actionLabel: 'Edit' },
-  { id: 'agents', key: 'Agents', actionLabel: 'Edit' },
+  { id: 'agents', key: 'Personas', actionLabel: 'Edit' },
   { id: 'prompt', key: 'Prompt', actionLabel: 'Edit' },
 ]
 
@@ -535,6 +539,20 @@ function copyButtonLabel(command: string) {
   return `Copy command: ${command}`
 }
 
+function showSuccessNotification() {
+  notifications.success(
+    'Changes saved',
+    'Codex is now the default harness for this workspace.',
+  )
+}
+
+function showErrorNotification() {
+  notifications.error(
+    'Changes weren’t saved',
+    'Claude is not supported by the workspace API yet. Choose Codex and try again.',
+  )
+}
+
 onBeforeUnmount(() => {
   if (copyResetTimer) clearTimeout(copyResetTimer)
 })
@@ -545,7 +563,7 @@ onBeforeUnmount(() => {
     <header class="ds-header">
       <UiContainer size="default" class="ds-header__container">
         <NuxtLink to="/" class="ds-brand" aria-label="Back to Looping Louie">
-          <img class="ds-brand__mark" src="/brand/twemoji-small-airplane.svg" alt="" width="28" height="28">
+          <img class="ds-brand__mark" src="/brand/looping-louie-biplane.png" alt="" width="28" height="28">
           <span>Looping Louie</span>
         </NuxtLink>
 
@@ -649,9 +667,9 @@ onBeforeUnmount(() => {
                 <div>
                   <div class="ds-component__title-row">
                     <h3>Color</h3>
-                    <code>Twemoji 2.0</code>
+                    <code>Louie brand</code>
                   </div>
-                  <p>Original Small Airplane colors and derived tones for the interface.</p>
+                  <p>Louie’s aviation colors and derived tones for the interface.</p>
                 </div>
                 <span class="ds-status"><i /> Defined</span>
               </header>
@@ -706,7 +724,7 @@ onBeforeUnmount(() => {
                     <span>Instrument Sans</span>
                     <code>Display · Body · UI</code>
                   </div>
-                  <p>Agents that stay on course.</p>
+                  <p>Personas that stay on course.</p>
                   <small>Precise and compact, with just enough personality to keep the interface from looking like a tax return.</small>
                 </div>
 
@@ -733,7 +751,7 @@ onBeforeUnmount(() => {
                     <h3>Markdown content</h3>
                     <code>UiMarkdownContent</code>
                   </div>
-                  <p>Safe, consistent long-form content for agent and skill instructions.</p>
+                  <p>Safe, consistent long-form content for persona and skill instructions.</p>
                 </div>
                 <span class="ds-status"><i /> New</span>
               </header>
@@ -1164,6 +1182,62 @@ onBeforeUnmount(() => {
               </footer>
             </article>
 
+            <article id="notification" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Notification</h3>
+                    <code>UiNotification · useNotifications</code>
+                  </div>
+                  <p>Transient, global feedback for completed actions and recoverable errors, without interrupting the current workflow.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage ds-stage--notifications">
+                <div class="ds-notification-samples">
+                  <UiNotification
+                    tone="success"
+                    title="Changes saved"
+                    description="Codex is now the default harness for this workspace."
+                    :dismissible="false"
+                    :announce="false"
+                  />
+                  <UiNotification
+                    tone="error"
+                    title="Changes weren’t saved"
+                    description="Claude is not supported by the workspace API yet. Choose Codex and try again."
+                    :dismissible="false"
+                    :announce="false"
+                  />
+                </div>
+                <div class="ds-notification-actions">
+                  <UiButton variant="stroke" @click="showSuccessNotification">Show success</UiButton>
+                  <UiButton variant="stroke" @click="showErrorNotification">Show error</UiButton>
+                </div>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Feedback</span><code>success · error</code></div>
+                  <p class="ds-property__copy">Use success only after an action is confirmed. Error messages state what failed, include the useful reason, and explain the next available step.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Placement</span><code>UiNotificationViewport</code></div>
+                  <p class="ds-property__copy">The newest message docks flush to the top-right edge; older messages stack below it with breathing room between them. On mobile, the stack remains anchored to the top. Notifications dismiss automatically or through their close control.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Motion</span><code>opacity · scaleY · translateY</code></div>
+                  <p class="ds-property__copy">Entry and exit mirror the compact movement and transform origin of right-aligned Pill dropdowns, with a reduced-motion fallback.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Success uses a polite status announcement; errors use an assertive alert. Every live notification remains manually dismissible.</p>
+              </footer>
+            </article>
+
             <article id="pill" class="ds-component">
               <header class="ds-component__header">
                 <div>
@@ -1267,6 +1341,34 @@ onBeforeUnmount(() => {
                     DeepSeek
                   </UiPill>
                 </div>
+
+                <div class="ds-icon-pill-example ds-icon-pill-example--selectable">
+                  <span class="ds-stage__caption">Selectable · mutually exclusive choice</span>
+                  <div class="ds-selectable-pills" role="radiogroup" aria-label="Default coding harness">
+                    <UiPill
+                      variant="selectable"
+                      src="/images/models/openai.webp"
+                      alt=""
+                      description="OpenAI"
+                      :selected="pillSelectable === 'codex'"
+                      aria-label="Select Codex"
+                      @click="pillSelectable = 'codex'"
+                    >
+                      Codex
+                    </UiPill>
+                    <UiPill
+                      variant="selectable"
+                      src="/images/models/anthropic.webp"
+                      alt=""
+                      description="Anthropic"
+                      :selected="pillSelectable === 'claude'"
+                      aria-label="Select Claude"
+                      @click="pillSelectable = 'claude'"
+                    >
+                      Claude
+                    </UiPill>
+                  </div>
+                </div>
               </div>
 
               <div class="ds-stage ds-stage--icon-pills">
@@ -1349,6 +1451,10 @@ onBeforeUnmount(() => {
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Catalog actions</span><code>variant="catalog" · toggle · actionIconPath · actionVisibility</code></div>
                   <p class="ds-property__copy">Catalog pills can append an optional icon-only Stroke action and an optional UiToggle. The toggle remains visible; the action can remain visible or appear on hover while staying keyboard accessible.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Selection</span><code>variant="selectable" · selected · @click</code></div>
+                  <p class="ds-property__copy">Selectable pills retain the catalog hierarchy while exposing a radio state. The selected choice keeps a transparent surface and uses Primary for its border and animated CircleCheck icon; unselected siblings recede until hover or keyboard focus.</p>
                 </div>
               </div>
 
@@ -1545,7 +1651,7 @@ onBeforeUnmount(() => {
               <div class="ds-stage">
                 <UiBreadcrumb
                   :items="[
-                    { label: 'Agents', to: '/personas' },
+                    { label: 'Personas', to: '/personas' },
                     { label: 'Engineering', to: '/skills' },
                     { label: 'Code review', to: '/skills?category=code-review' },
                   ]"
@@ -1594,7 +1700,7 @@ onBeforeUnmount(() => {
                     <UiHeadingBlock
                       layout="centered"
                       size="hero"
-                      eyebrow="Agent observability / Code"
+                      eyebrow="Persona observability / Code"
                       eyebrow-to="/personas"
                     >
                       <template #title>
@@ -2216,21 +2322,21 @@ onBeforeUnmount(() => {
                     <UiGrid :columns="3" gap="md">
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Internal agents</h4></template>
+                        <template #title><h4>Internal personas</h4></template>
                         <template #description><p>Automate the work that keeps your team circling the same runway.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--messages" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--messages is-animated" /></template>
                       </UiCard>
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Customer-facing agents</h4></template>
+                        <template #title><h4>Customer-facing personas</h4></template>
                         <template #description><p>Answer, complete tasks, and hand off without losing context.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--signal" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--signal is-animated" /></template>
                       </UiCard>
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Developer platform agents</h4></template>
+                        <template #title><h4>Developer platform personas</h4></template>
                         <template #description><p>Build reliable AI operations on shared primitives.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--console" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--console is-animated" /></template>
@@ -2243,12 +2349,12 @@ onBeforeUnmount(() => {
               <div class="ds-collection-example">
                 <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-example__heading ds-collection-example__heading--outside">
-                    <span>Agent books and latest releases</span>
+                    <span>Persona books and latest releases</span>
                     <code>group titles outside Stage · content inside</code>
                   </div>
                   <div class="ds-grouped-collection">
                     <UiGrid :columns="2" gap="md" collapse="never" class="ds-grouped-collection__titles">
-                      <UiCollectionGroupTitle title="Agent books" />
+                      <UiCollectionGroupTitle title="Persona books" />
                       <UiCollectionGroupTitle title="Latest releases" to="#grid-card" />
                     </UiGrid>
                     <UiSectionStage inverse="bottom" class="ds-collection-stage ds-collection-stage--grouped">
@@ -2257,7 +2363,7 @@ onBeforeUnmount(() => {
                           <UiCard to="#grid-card" variant="editorial">
                             <template #eyebrow>Field manual · Volume 01</template>
                             <template #title><h4>Principles of Building Reliable Loops</h4></template>
-                            <template #description><p>A practical guide to agents that know when to take another lap.</p></template>
+                            <template #description><p>A practical guide to personas that know when to take another lap.</p></template>
                             <template #meta>240K+ copies distributed</template>
                           </UiCard>
                         </div>
@@ -2269,7 +2375,7 @@ onBeforeUnmount(() => {
                           </UiCard>
                           <UiCard to="#grid-card" variant="row">
                             <template #title><h4>Persistent loop memory</h4></template>
-                            <template #description><p>Carry decisions and state across long-running agent workflows.</p></template>
+                            <template #description><p>Carry decisions and state across long-running persona workflows.</p></template>
                             <template #trailing><time datetime="2026-08-03">Aug 3</time></template>
                           </UiCard>
                         </div>
@@ -2289,7 +2395,7 @@ onBeforeUnmount(() => {
                     <UiGrid :columns="2" gap="md">
                       <UiCard to="#grid-card" variant="editorial">
                         <template #eyebrow>Engineering</template>
-                        <template #title><h4>How to review long-running agents without slowing them down</h4></template>
+                        <template #title><h4>How to review long-running personas without slowing them down</h4></template>
                         <template #description><p>Patterns for parallel review, confidence thresholds, and useful retries.</p></template>
                         <template #meta>Aug 1, 2026</template>
                         <template #trailing><span># foundations</span></template>
@@ -2710,7 +2816,7 @@ onBeforeUnmount(() => {
                 <UiMainNavigation :menus="mainNavigationMenus" :links="mainNavigationLinks">
                   <template #brand>
                     <a href="#site-navigation" class="ds-site-brand">
-                      <img src="/brand/twemoji-small-airplane.svg" alt="" width="26" height="26">
+                      <img src="/brand/looping-louie-biplane.png" alt="" width="26" height="26">
                       <strong>Looping Louie</strong>
                     </a>
                   </template>
@@ -2806,7 +2912,7 @@ onBeforeUnmount(() => {
                 <UiSiteFooter :columns="footerColumns" :legal-links="footerLegalLinks" status="All loops operational">
                   <template #brand>
                     <a href="#site-footer" class="ds-footer-brand">
-                      <img src="/brand/twemoji-small-airplane.svg" alt="" width="34" height="34">
+                      <img src="/brand/looping-louie-biplane.png" alt="" width="34" height="34">
                       <strong>Looping Louie</strong>
                     </a>
                   </template>
@@ -3386,6 +3492,27 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-3);
 }
 
+.ds-stage--notifications {
+  display: grid;
+  justify-items: center;
+  gap: var(--ll-space-6);
+}
+
+.ds-notification-samples {
+  display: grid;
+  width: min(100%, 40rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--ll-space-4);
+}
+
+.ds-notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ll-space-3);
+}
+
 .ds-stage--icon-pills {
   display: flex;
   flex-wrap: wrap;
@@ -3410,6 +3537,15 @@ onBeforeUnmount(() => {
 }
 
 .ds-icon-pill-example--catalog { width: min(100%, 28rem); }
+
+.ds-icon-pill-example--selectable { width: min(100%, 40rem); }
+
+.ds-selectable-pills {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ll-space-5);
+}
 
 .ds-pill-dropdown {
   display: grid;
@@ -4106,7 +4242,7 @@ onBeforeUnmount(() => {
   height: 2.75rem;
   inset: 0;
   margin: auto;
-  background: url('/brand/twemoji-small-airplane.svg') center / contain no-repeat;
+  background: url('/brand/looping-louie-biplane.png') center / contain no-repeat;
   filter: drop-shadow(0 0.5rem 0.8rem rgba(41, 47, 51, 0.2));
 }
 
@@ -4762,6 +4898,10 @@ onBeforeUnmount(() => {
   }
 
   .ds-stage--toggles {
+    grid-template-columns: 1fr;
+  }
+
+  .ds-notification-samples {
     grid-template-columns: 1fr;
   }
 

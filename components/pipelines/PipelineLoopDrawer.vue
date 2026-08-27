@@ -4,37 +4,23 @@ import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiDrawer from '~/components/ui/Drawer.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
+import type { ExecutionHarness, LinkedServiceResponse, ModelSummary, ModelTarget, PersonaSummary } from '~/types/api'
+import { effectiveModelTarget, modelTargetLabel } from '~/utils/executionDefaults'
+import {
+  executionHarnessCatalogId,
+  executionHarnesses,
+  executionHarnessValue,
+} from '~/utils/executionHarnesses'
+import type { ExecutionHarnessCatalogId } from '~/utils/executionHarnesses'
 
 type Flow = 'direct' | 'refinement' | 'roundtable'
 type Role = 'generator' | 'reviewer' | 'aggregator'
-
-interface Persona {
-  id: string
-  name: string
-  description?: string
-  source_instruction_id?: string | null
-  linked_service: {
-    type: 'LinkedServiceReference'
-    reference_id: string
-  } | null
-  config: {
-    model: string
-  } | null
-}
-
-interface LinkedService {
-  id: string
-  enabled: boolean
-  config: {
-    configured: boolean
-    available_models: string[]
-  }
-}
 
 interface Assignment {
   key: string
   persona_id: string
   role: Role
+  model_target?: ModelTarget | null
 }
 
 interface LoopDraft {
@@ -44,6 +30,8 @@ interface LoopDraft {
   flow: Flow
   status: string
   agents: Array<Omit<Assignment, 'key'>>
+  model_target?: ModelTarget | null
+  harness?: ExecutionHarness | null
   stop_conditions: {
     max_iterations: number | null
     max_tokens: number | null
@@ -61,15 +49,21 @@ interface CommandPaletteItem {
   imageSrc?: string
   imageAlt?: string
   disabled?: boolean
+  linkedServiceId?: string
+  modelId?: string
+  harnessId?: ExecutionHarnessCatalogId
 }
 
 const props = withDefaults(defineProps<{
   open: boolean
-  personas: Persona[]
-  linkedServices: LinkedService[]
+  personas: PersonaSummary[]
+  models: ModelSummary[]
+  linkedServices: LinkedServiceResponse[]
+  inheritedModelTarget?: ModelTarget | null
+  inheritedHarness?: ExecutionHarness | null
   loading?: boolean
   loop?: LoopDraft | null
-}>(), { loading: false, loop: null })
+}>(), { inheritedModelTarget: null, inheritedHarness: null, loading: false, loop: null })
 
 const emit = defineEmits<{
   'update:open': [value: boolean]
@@ -78,16 +72,20 @@ const emit = defineEmits<{
 }>()
 
 const { personaIcon } = usePersonaIcon()
-const { modelLogo } = useModelLogo()
+const { modelLogo, providerLogo } = useModelLogo()
 const name = ref('')
 const flow = ref<Flow>('direct')
 const assignments = ref<Assignment[]>([])
+const activityModelTarget = ref<ModelTarget | null>(null)
+const activityHarness = ref<ExecutionHarness | null>(null)
 const maxIterations = ref('3')
 const maxTokens = ref('')
 const timeoutSeconds = ref('')
 const paletteOpen = ref(false)
 const paletteQuery = ref('')
+const paletteMode = ref<'persona' | 'model' | 'harness'>('persona')
 const targetRole = ref<Role>('generator')
+const targetAssignmentKey = ref<string | null>(null)
 
 const flowOptions = [
   { value: 'direct', label: 'Direct' },
@@ -99,57 +97,98 @@ const iterationLabel = computed(() => flow.value === 'direct' ? 'Max retries' : 
 
 const roleGroups = computed(() => {
   if (flow.value === 'direct') return [
-    { role: 'generator' as const, title: 'Executor agent', multiple: false },
+    { role: 'generator' as const, title: 'Executor persona', multiple: false },
   ]
   if (flow.value === 'refinement') return [
-    { role: 'generator' as const, title: 'Executor agent', multiple: false },
-    { role: 'reviewer' as const, title: 'Reviewer agent/s', multiple: true },
+    { role: 'generator' as const, title: 'Executor persona', multiple: false },
+    { role: 'reviewer' as const, title: 'Reviewer personas', multiple: true },
   ]
   return [
-    { role: 'generator' as const, title: 'Participant agents', multiple: true },
-    { role: 'aggregator' as const, title: 'Aggregator agent', multiple: false },
+    { role: 'generator' as const, title: 'Participant personas', multiple: true },
+    { role: 'aggregator' as const, title: 'Aggregator persona', multiple: false },
   ]
 })
 
 const personaById = computed(() => new Map(props.personas.map(persona => [persona.id, persona])))
-const linkedServiceById = computed(() => new Map(props.linkedServices.map(service => [service.id, service])))
-
-function personaExecution(persona: Persona) {
-  if (!persona.linked_service || !persona.config) {
-    return { available: false, model: '', reason: 'Execution setup required' }
-  }
-
-  const service = linkedServiceById.value.get(persona.linked_service.reference_id)
-  if (!service) return { available: false, model: persona.config.model, reason: 'Connection not found' }
-  if (!service.enabled) return { available: false, model: persona.config.model, reason: 'Connection disabled' }
-  if (!service.config.configured) return { available: false, model: persona.config.model, reason: 'Connection not configured' }
-  if (!service.config.available_models.includes(persona.config.model)) {
-    return { available: false, model: persona.config.model, reason: 'Model unavailable on this connection' }
-  }
-  return { available: true, model: persona.config.model, reason: '' }
-}
-
+const inheritedHarnessId = computed(() => executionHarnessCatalogId(props.inheritedHarness))
+const selectedHarnessId = computed(() => executionHarnessCatalogId(activityHarness.value ?? props.inheritedHarness))
+const selectedHarness = computed(() => (
+  executionHarnesses.find(harness => harness.id === selectedHarnessId.value) ?? executionHarnesses[0]!
+))
 const paletteItems = computed<CommandPaletteItem[]>(() => {
+  if (paletteMode.value === 'harness') {
+    return executionHarnesses.map(harness => ({
+      id: harness.id,
+      label: harness.name,
+      description: harness.owner,
+      group: 'Harnesses',
+      keywords: [harness.id, harness.owner],
+      imageSrc: harness.image,
+      imageAlt: '',
+      harnessId: harness.id,
+    }))
+  }
+
+  if (paletteMode.value === 'model') {
+    const catalogById = new Map(props.models.map(model => [model.id, model]))
+    const seenModels = new Set<string>()
+    const currentAssignment = assignments.value.find(assignment => assignment.key === targetAssignmentKey.value)
+    const preferredServiceIds = [
+      currentAssignment?.model_target?.linked_service_id,
+      activityModelTarget.value?.linked_service_id,
+      props.inheritedModelTarget?.linked_service_id,
+    ].filter((value): value is string => Boolean(value))
+    const services = [...props.linkedServices].sort((left, right) => {
+      const leftRank = preferredServiceIds.indexOf(left.id)
+      const rightRank = preferredServiceIds.indexOf(right.id)
+      return (leftRank < 0 ? Number.MAX_SAFE_INTEGER : leftRank)
+        - (rightRank < 0 ? Number.MAX_SAFE_INTEGER : rightRank)
+    })
+    const items = services.flatMap((service) => {
+      if (!service.enabled || !service.config.configured) return []
+
+      return service.config.available_models.flatMap((modelId) => {
+        if (seenModels.has(modelId)) return []
+        seenModels.add(modelId)
+        const model = catalogById.get(modelId)
+        return [{
+          id: `${service.id}:${modelId}`,
+          label: model?.name ?? modelId,
+          description: `${model?.vendor ?? service.provider_type} · ${service.name}`,
+          group: 'Models',
+          keywords: [modelId, model?.family, model?.vendor, service.name, service.provider_type].filter((value): value is string => Boolean(value)),
+          imageSrc: model ? providerLogo(model.vendor, model.family) ?? modelLogo(modelId) : modelLogo(modelId),
+          imageAlt: '',
+          linkedServiceId: service.id,
+          modelId,
+        }]
+      })
+    })
+
+    return items.sort((left, right) => left.label.localeCompare(right.label))
+  }
+
   const selectedInRole = new Set(assignments.value.filter(item => item.role === targetRole.value).map(item => item.persona_id))
   return props.personas.map((persona) => {
-    const execution = personaExecution(persona)
     return {
       id: persona.id,
       label: persona.name,
-      description: execution.available
-        ? `${persona.description ?? ''} · ${execution.model}`
-        : execution.reason,
-      group: execution.available ? 'Agents' : 'Unavailable agents',
-      keywords: [persona.id, execution.model],
+      description: persona.description,
+      group: 'Personas',
+      keywords: [persona.id],
       iconPath: personaIcon(persona),
-      disabled: selectedInRole.has(persona.id) || !execution.available,
+      disabled: selectedInRole.has(persona.id),
     }
   })
 })
 
+const executionReady = computed(() => assignments.value.every(assignment => Boolean(effectiveModelTarget(
+  assignment.model_target,
+  activityModelTarget.value,
+  props.inheritedModelTarget,
+))))
 const canAdd = computed(() => {
-  if (!name.value.trim() || !positiveInteger(maxIterations.value)) return false
-  if (assignments.value.some(assignment => !assignmentExecution(assignment).available)) return false
+  if (!name.value.trim() || !positiveInteger(maxIterations.value) || !executionReady.value) return false
   return roleGroups.value.every((group) => {
     const count = assignments.value.filter(item => item.role === group.role).length
     return flow.value === 'roundtable' && group.role === 'generator' ? count >= 2 : count >= 1
@@ -186,11 +225,15 @@ function resetForm(loop: LoopDraft | null = null) {
   name.value = loop?.title ?? ''
   flow.value = loop?.flow ?? 'direct'
   assignments.value = loop?.agents.map(agent => ({ ...agent, key: createId('assignment-') })) ?? []
+  activityModelTarget.value = loop?.model_target ?? null
+  activityHarness.value = loop?.harness ?? null
   maxIterations.value = formatIntegerInput(loop?.stop_conditions.max_iterations ?? 3)
   maxTokens.value = formatIntegerInput(loop?.stop_conditions.max_tokens)
   timeoutSeconds.value = formatIntegerInput(loop?.stop_conditions.timeout_seconds)
   paletteOpen.value = false
   paletteQuery.value = ''
+  paletteMode.value = 'persona'
+  targetAssignmentKey.value = null
 }
 
 function closeDrawer() {
@@ -201,20 +244,46 @@ function assignmentsFor(role: Role) {
   return assignments.value.filter(assignment => assignment.role === role)
 }
 
-function assignmentExecution(assignment: Assignment) {
-  const persona = personaById.value.get(assignment.persona_id)
-  return persona
-    ? personaExecution(persona)
-    : { available: false, model: '', reason: 'Agent not found' }
+function openPersonaPalette(role: Role) {
+  targetRole.value = role
+  targetAssignmentKey.value = null
+  paletteMode.value = 'persona'
+  paletteQuery.value = ''
+  paletteOpen.value = true
 }
 
-function openAgentPalette(role: Role) {
-  targetRole.value = role
+function openModelPalette(assignment: Assignment) {
+  targetAssignmentKey.value = assignment.key
+  paletteMode.value = 'model'
+  paletteQuery.value = ''
+  paletteOpen.value = true
+}
+
+function openHarnessPalette() {
+  targetAssignmentKey.value = null
+  paletteMode.value = 'harness'
   paletteQuery.value = ''
   paletteOpen.value = true
 }
 
 function selectPaletteItem(item: CommandPaletteItem) {
+  if (paletteMode.value === 'harness') {
+    if (!item.harnessId) return
+    activityHarness.value = item.harnessId === inheritedHarnessId.value
+      ? null
+      : executionHarnessValue(item.harnessId)
+    return
+  }
+
+  if (paletteMode.value === 'model') {
+    if (!item.linkedServiceId || !item.modelId || !targetAssignmentKey.value) return
+    updateAssignmentTarget(targetAssignmentKey.value, {
+      linked_service_id: item.linkedServiceId,
+      model_id: item.modelId,
+    })
+    return
+  }
+
   const group = roleGroups.value.find(candidate => candidate.role === targetRole.value)
   if (!group || item.disabled) return
   if (!group.multiple) assignments.value = assignments.value.filter(candidate => candidate.role !== targetRole.value)
@@ -229,6 +298,16 @@ function removeAssignment(key: string) {
   assignments.value = assignments.value.filter(assignment => assignment.key !== key)
 }
 
+function updateAssignmentTarget(key: string, modelTarget: ModelTarget | null) {
+  assignments.value = assignments.value.map(assignment => assignment.key === key
+    ? { ...assignment, model_target: modelTarget }
+    : assignment)
+}
+
+function assignmentTarget(assignment: Assignment) {
+  return effectiveModelTarget(assignment.model_target, activityModelTarget.value, props.inheritedModelTarget)
+}
+
 function submitLoop() {
   if (!canAdd.value) return
   const loop: LoopDraft = {
@@ -237,7 +316,9 @@ function submitLoop() {
     description: props.loop?.description ?? 'Configured inside this pipeline draft.',
     flow: flow.value,
     status: props.loop?.status ?? 'draft',
-    agents: assignments.value.map(({ persona_id, role }) => ({ persona_id, role })),
+    agents: assignments.value.map(({ persona_id, role, model_target }) => ({ persona_id, role, model_target })),
+    model_target: activityModelTarget.value,
+    harness: activityHarness.value,
     stop_conditions: {
       max_iterations: positiveInteger(maxIterations.value),
       max_tokens: positiveInteger(maxTokens.value),
@@ -291,6 +372,22 @@ watch(() => props.open, (open) => {
         />
       </section>
 
+      <section class="pipeline-loop-drawer__section pipeline-loop-drawer__activity-execution" aria-labelledby="pipeline-loop-drawer-execution-title">
+        <h3 id="pipeline-loop-drawer-execution-title" class="pipeline-loop-drawer__section-title">Execution harness</h3>
+        <UiPill
+          variant="catalog"
+          clickable
+          aria-haspopup="dialog"
+          :src="selectedHarness.image"
+          alt=""
+          :description="selectedHarness.owner"
+          :aria-label="`Change execution harness. Currently ${selectedHarness.name} by ${selectedHarness.owner}`"
+          @click="openHarnessPalette"
+        >
+          {{ selectedHarness.name }}
+        </UiPill>
+      </section>
+
       <div class="pipeline-loop-drawer__route">
         <template v-for="(group, groupIndex) in roleGroups" :key="group.role">
           <section class="pipeline-loop-drawer__section pipeline-loop-drawer__agent-group">
@@ -302,57 +399,52 @@ watch(() => props.open, (open) => {
                 size="sm"
                 type="button"
                 :disabled="loading || !personas.length"
-                @click="openAgentPalette(group.role)"
+                @click="openPersonaPalette(group.role)"
               >
                 <template #leading>
                   <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
                     <path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16ZM92,120a12,12,0,1,1,12-12A12,12,0,0,1,92,120Zm84,0a12,12,0,1,1-12-12A12,12,0,0,1,176,120Zm-12,32H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm0,40H92a12,12,0,0,1,0-24h72a12,12,0,0,1,0,24Z" />
                   </svg>
                 </template>
-                Add an agent
+                Add a persona
               </UiButton>
             </div>
 
-            <p v-if="!assignmentsFor(group.role).length" class="pipeline-loop-drawer__empty-role">No agent selected yet.</p>
+            <p v-if="!assignmentsFor(group.role).length" class="pipeline-loop-drawer__empty-role">No persona selected yet.</p>
             <ul v-else class="pipeline-loop-drawer__agents">
               <li v-for="assignment in assignmentsFor(group.role)" :key="assignment.key">
-                <UiPill icon-style="circle">
-                  <template #icon>
-                    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path :d="personaIcon(personaById.get(assignment.persona_id) ?? { id: assignment.persona_id })" /></svg>
-                  </template>
-                  {{ personaById.get(assignment.persona_id)?.name ?? assignment.persona_id }}
-                </UiPill>
-                <span
-                  class="pipeline-loop-drawer__execution"
-                  :class="{ 'pipeline-loop-drawer__execution--unavailable': !assignmentExecution(assignment).available }"
-                  :title="assignmentExecution(assignment).available ? assignmentExecution(assignment).model : assignmentExecution(assignment).reason"
-                >
-                  <UiPill
-                    v-if="assignmentExecution(assignment).model"
-                    :src="modelLogo(assignmentExecution(assignment).model)"
-                    alt=""
-                    :tooltip="assignmentExecution(assignment).model"
-                    :focusable="false"
-                  />
-                  <UiPill v-else icon-style="circle" :tooltip="assignmentExecution(assignment).reason" :focusable="false">
-                    <template #icon><span class="pipeline-loop-drawer__execution-warning">!</span></template>
-                  </UiPill>
-                  <small>{{ assignmentExecution(assignment).available ? assignmentExecution(assignment).model : assignmentExecution(assignment).reason }}</small>
-                </span>
-                <span class="pipeline-loop-drawer__remove-control">
-                  <UiButton
-                    class="pipeline-loop-drawer__remove"
-                    variant="coral"
-                    icon-only
-                    :aria-label="`Delete ${personaById.get(assignment.persona_id)?.name ?? 'agent'}`"
-                    @click="removeAssignment(assignment.key)"
-                  >
-                    <template #leading>
-                      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z" /></svg>
+                <div class="pipeline-loop-drawer__agent-row">
+                  <UiPill icon-style="circle">
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path :d="personaIcon(personaById.get(assignment.persona_id) ?? { id: assignment.persona_id })" /></svg>
                     </template>
-                  </UiButton>
-                  <span class="pipeline-loop-drawer__remove-tooltip" role="tooltip">Delete</span>
-                </span>
+                    {{ personaById.get(assignment.persona_id)?.name ?? assignment.persona_id }}
+                  </UiPill>
+                  <button
+                    type="button"
+                    class="pipeline-loop-drawer__model-target"
+                    :title="assignmentTarget(assignment) ? modelTargetLabel(assignmentTarget(assignment)) : 'Choose model'"
+                    :aria-label="`Change model for ${personaById.get(assignment.persona_id)?.name ?? 'persona'}`"
+                    @click="openModelPalette(assignment)"
+                  >
+                    <UiPill
+                      v-if="assignmentTarget(assignment)"
+                      :src="modelLogo(assignmentTarget(assignment)!.model_id)"
+                      alt=""
+                      :tooltip="modelTargetLabel(assignmentTarget(assignment))"
+                      :focusable="false"
+                    />
+                    <UiPill v-else icon-style="circle" tooltip="Choose model" :focusable="false">
+                      <template #icon><span class="pipeline-loop-drawer__model-initials">AI</span></template>
+                    </UiPill>
+                  </button>
+                  <span class="pipeline-loop-drawer__remove-control">
+                    <UiButton class="pipeline-loop-drawer__remove" variant="coral" icon-only :aria-label="`Delete ${personaById.get(assignment.persona_id)?.name ?? 'persona'}`" @click="removeAssignment(assignment.key)">
+                      <template #leading><svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,24Z" /></svg></template>
+                    </UiButton>
+                    <span class="pipeline-loop-drawer__remove-tooltip" role="tooltip">Delete</span>
+                  </span>
+                </div>
               </li>
             </ul>
           </section>
@@ -390,9 +482,9 @@ watch(() => props.open, (open) => {
     :items="paletteItems"
     :keyboard-shortcut="false"
     option-style="card"
-    placeholder="Search agents…"
-    aria-label="Choose an agent"
-    empty-title="No agents found"
+    :placeholder="paletteMode === 'persona' ? 'Search personas…' : paletteMode === 'model' ? 'Search models…' : 'Search harnesses…'"
+    :aria-label="paletteMode === 'persona' ? 'Choose a persona' : paletteMode === 'model' ? 'Choose a model' : 'Choose an execution harness'"
+    :empty-title="paletteMode === 'persona' ? 'No personas found' : paletteMode === 'model' ? 'No models found' : 'No harnesses found'"
     empty-description="Try another name or search term."
     @select="selectPaletteItem"
   />
@@ -409,7 +501,8 @@ watch(() => props.open, (open) => {
 .pipeline-loop-drawer__brief input:focus { border-bottom-color: var(--ll-color-primary); outline: none; }
 .pipeline-loop-drawer__section { display: grid; min-width: 0; box-sizing: border-box; padding: var(--ll-space-6) var(--ll-space-8); margin: 0; gap: var(--ll-space-3); background: var(--ll-color-canvas); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); }
 .pipeline-loop-drawer > .pipeline-loop-drawer__brief,
-.pipeline-loop-drawer > .pipeline-loop-drawer__flow { margin-bottom: var(--pipeline-loop-card-gap); }
+.pipeline-loop-drawer > .pipeline-loop-drawer__flow,
+.pipeline-loop-drawer > .pipeline-loop-drawer__activity-execution { margin-bottom: var(--pipeline-loop-card-gap); }
 .pipeline-loop-drawer__flow :deep(.ui-segmented-control) { width: fit-content; }
 .pipeline-loop-drawer__flow { overflow-x: auto; }
 
@@ -421,13 +514,14 @@ watch(() => props.open, (open) => {
 .pipeline-loop-drawer__empty-role { margin: 0; color: var(--ll-color-text-muted); font: 400 var(--ll-text-xs) / 1.4 var(--ll-font-control); }
 .pipeline-loop-drawer__agents { display: grid; padding: 0; margin: 0; gap: var(--ll-space-2); list-style: none; }
 .pipeline-loop-drawer__agents li { display: flex; min-width: 0; align-items: center; gap: var(--ll-space-2); }
+.pipeline-loop-drawer__agent-row { display: flex; min-width: 0; align-items: center; gap: var(--ll-space-2); }
 .pipeline-loop-drawer__agents :deep(.ui-icon-pill) { min-width: 0; }
+.pipeline-loop-drawer__activity-execution :deep(.ui-icon-pill--catalog) { width: 100%; }
 
-.pipeline-loop-drawer__execution { display: flex; min-width: 0; flex: 1; align-items: center; gap: var(--ll-space-2); color: var(--ll-color-text-muted); }
-.pipeline-loop-drawer__execution :deep(.ui-icon-pill) { display: block; flex: none; }
-.pipeline-loop-drawer__execution small { overflow: hidden; font: 500 var(--ll-text-xs) / 1.3 var(--ll-font-mono); text-overflow: ellipsis; white-space: nowrap; }
-.pipeline-loop-drawer__execution--unavailable { color: var(--ll-color-brand-ink); }
-.pipeline-loop-drawer__execution-warning { font: 700 var(--ll-text-xs) / 1 var(--ll-font-control); }
+.pipeline-loop-drawer__model-target { display: block; width: 2rem; height: 2rem; flex: 0 0 2rem; padding: 0; color: inherit; background: transparent; border: 0; border-radius: var(--ll-radius-pill); cursor: pointer; }
+.pipeline-loop-drawer__model-target:focus-visible { outline: 2px solid var(--ll-color-primary); outline-offset: 2px; }
+.pipeline-loop-drawer__model-target :deep(.ui-icon-pill) { display: block; }
+.pipeline-loop-drawer__model-initials { font: 650 0.625rem / 1 var(--ll-font-mono); }
 .pipeline-loop-drawer__remove-control { position: relative; display: block; width: 1.75rem; height: 1.75rem; flex: 0 0 1.75rem; align-self: center; }
 .pipeline-loop-drawer__remove {
   --ui-button-height: 1.75rem;

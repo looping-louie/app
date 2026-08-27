@@ -67,7 +67,7 @@ useHead({
 <template>
   <PageShell
     title="Skills"
-    description="Capabilities available to agents when they participate in a loop."
+    description="Capabilities available to personas when they participate in a loop."
   >
     <template #actions><UiButton to="/skills/new">Create new skill</UiButton></template>
     <template #toolbar>
@@ -96,7 +96,7 @@ useHead({
       empty-label="No skills found."
       @retry="refresh"
     >
-      <UiGrid :columns="3" gap="md">
+      <UiGrid :columns="4" gap="md">
         <UiCard
           v-for="skill in skills"
           :key="skill.id"

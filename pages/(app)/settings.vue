@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageShell from '~/components/layout/PageShell.vue'
+import UiButton from '~/components/ui/Button.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
 type SettingsSection = 'global' | 'providers' | 'models' | 'mcps'
@@ -29,6 +30,16 @@ function sectionFromPath(path: string): SettingsSection {
 }
 
 const activeSection = ref<SettingsSection>(sectionFromPath(route.path))
+const settingsNavigationDirty = ref(false)
+const settingsNavigationSaving = ref(false)
+const settingsNavigationSave = shallowRef<(() => Promise<void> | void) | null>(null)
+
+provide('settings-navigation', {
+  dirty: settingsNavigationDirty,
+  saving: settingsNavigationSaving,
+  save: settingsNavigationSave,
+})
+
 const section = computed({
   get: () => activeSection.value,
   set: (nextSection: SettingsSection) => {
@@ -48,6 +59,10 @@ onMounted(() => {
   void preloadRouteComponents(sectionRoutes.mcps)
 })
 
+async function saveGlobalDefaults() {
+  await settingsNavigationSave.value?.()
+}
+
 definePageMeta({
   layout: 'app',
   pageTransition: false,
@@ -57,14 +72,23 @@ definePageMeta({
 <template>
   <PageShell title="Settings" class="settings-page">
     <template #navigation>
-      <UiSegmentedControl
-        v-model="section"
-        :options="sectionOptions"
-        variant="inline"
-        accent="metal"
-        bordered-options
-        aria-label="Settings section"
-      />
+      <div class="settings-navigation">
+        <UiSegmentedControl
+          v-model="section"
+          :options="sectionOptions"
+          variant="inline"
+          accent="metal"
+          bordered-options
+          aria-label="Settings section"
+        />
+        <UiButton
+          v-if="section === 'global' && settingsNavigationDirty"
+          :loading="settingsNavigationSaving"
+          @click="saveGlobalDefaults"
+        >
+          Save defaults
+        </UiButton>
+      </div>
     </template>
 
     <div class="settings-panel">
@@ -74,14 +98,31 @@ definePageMeta({
 </template>
 
 <style scoped>
+.settings-navigation {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ll-space-6);
+}
+
 .settings-panel {
   min-height: 12rem;
 }
 
 @media (max-width: 38rem) {
+  .settings-navigation {
+    flex-wrap: wrap;
+  }
+
   .settings-page :deep(.ui-segmented-control--inline) {
-    width: 100%;
+    flex: 1 1 100%;
+    width: auto;
     overflow-x: auto;
+  }
+
+  .settings-navigation :deep(.ui-button) {
+    margin-left: auto;
   }
 }
 </style>

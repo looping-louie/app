@@ -3,6 +3,7 @@ import type {
   ActivityCreateRequest,
   ActivityResponse,
 } from './activities'
+import type { ExecutionHarness, ModelTarget } from './execution'
 
 export type PipelineStatus = 'active' | 'disabled' | 'archived'
 
@@ -19,6 +20,8 @@ export interface PipelineCreateRequest {
   name: string
   description: string
   steps: PipelineActivityStepRequest[]
+  model_target?: ModelTarget | null
+  harness?: ExecutionHarness | null
 }
 
 export interface PipelinePatchRequest {
@@ -26,6 +29,8 @@ export interface PipelinePatchRequest {
   description?: string
   enabled?: boolean
   steps?: PipelineActivityStepRequest[]
+  model_target?: ModelTarget | null
+  harness?: ExecutionHarness | null
 }
 
 export interface PipelineStepDependencyResponse {
@@ -42,6 +47,8 @@ export interface PipelineListItemResponse {
   name: string
   description: string
   enabled: boolean
+  model_target: ModelTarget | null
+  harness: ExecutionHarness | null
   steps: PipelineActivityStepResponse[]
   created_at: string
   updated_at: string

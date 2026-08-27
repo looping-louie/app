@@ -40,15 +40,13 @@ watch([agentStatus, agentCategories, agentSort, agentSearchTerm], () => {
   agentOffset.value = 0
 }, { deep: true })
 
-const { personaIcon } = usePersonaIcon()
 const { formatDate } = useDateTime()
 const agentSearchItems = computed(() => agents.value.map(agent => ({
   id: agent.id,
   label: agent.name,
   description: agent.description,
-  group: 'Agents',
+  group: 'Personas',
   keywords: agent.category ? [instructionCategoryLabels[agent.category]] : [],
-  iconPath: personaIcon(agent),
 })))
 
 async function selectAgentSearchResult(item: { id: string }) {
@@ -60,16 +58,16 @@ definePageMeta({
 })
 
 useHead({
-  title: 'Agents · Looping Louie',
+  title: 'Personas · Looping Louie',
 })
 </script>
 
 <template>
   <PageShell
-    title="Agents"
-    description="Agent roles available to loops and pipelines."
+    title="Personas"
+    description="Reusable personas available to loops and pipelines."
   >
-    <template #actions><UiButton to="/personas/new">Create new agent</UiButton></template>
+    <template #actions><UiButton to="/personas/new">Create new persona</UiButton></template>
     <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="agentStatus"
@@ -78,8 +76,8 @@ useHead({
         v-model:search="agentSearchQuery"
         interactive
         :search-items="agentSearchItems"
-        search-placeholder="Search agents…"
-        search-empty-title="No agents found"
+        search-placeholder="Search personas…"
+        search-empty-title="No personas found"
         search-empty-description="Try another name, description, or area."
         third-label="Area"
         third-icon="department"
@@ -91,12 +89,12 @@ useHead({
     <UiAsyncStage
       :status="status"
       :empty="agents.length === 0"
-      loading-label="Loading agents…"
-      error-label="Agents could not be loaded."
-      empty-label="No agents found."
+      loading-label="Loading personas…"
+      error-label="Personas could not be loaded."
+      empty-label="No personas found."
       @retry="refresh"
     >
-      <UiGrid :columns="4" gap="md">
+      <UiGrid :columns="3" gap="md">
         <UiCard
           v-for="agent in agents"
           :key="agent.id"
@@ -119,18 +117,11 @@ useHead({
           </template>
           <template #trailing>
             <UiStatusText
-              :tone="agent.linked_service && agent.config && agent.enabled ? 'enabled' : 'disabled'"
+              :tone="agent.enabled ? 'enabled' : 'disabled'"
               activation="card-hover"
             >
-              {{ !agent.linked_service || !agent.config ? 'setup required' : agent.enabled ? 'enabled' : 'disabled' }}
+              {{ agent.enabled ? 'enabled' : 'disabled' }}
             </UiStatusText>
-          </template>
-          <template #media>
-            <div class="agent-media" aria-hidden="true">
-              <svg viewBox="0 0 256 256" fill="currentColor" focusable="false">
-                <path :d="personaIcon(agent)" />
-              </svg>
-            </div>
           </template>
         </UiCard>
       </UiGrid>
@@ -142,7 +133,7 @@ useHead({
         v-model:offset="agentOffset"
         :total="agentTotal"
         :page-size="agentPageSize"
-        aria-label="Agents pagination"
+        aria-label="Personas pagination"
       />
     </template>
   </PageShell>
@@ -154,20 +145,6 @@ useHead({
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
-}
-
-.agent-media {
-  display: grid;
-  width: 100%;
-  height: 100%;
-  place-items: center;
-  color: var(--ll-color-primary-depth);
-  background: var(--ll-color-highlight);
-}
-
-.agent-media svg {
-  width: 5rem;
-  height: 5rem;
 }
 
 </style>

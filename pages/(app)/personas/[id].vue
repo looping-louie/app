@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import PersonaExecutionPanel from '~/components/personas/PersonaExecutionPanel.vue'
 import PersonaSkillsEditor from '~/components/personas/PersonaSkillsEditor.vue'
 import PageShell from '~/components/layout/PageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
@@ -13,6 +12,7 @@ const router = useRouter()
 const personaId = computed(() => String(route.params.id))
 const { personaIcon } = usePersonaIcon()
 const api = useApiClient()
+const notifications = useNotifications()
 const deleteModalOpen = ref(false)
 const deleting = ref(false)
 const deleteError = ref('')
@@ -22,9 +22,6 @@ const editName = ref('')
 const editDescription = ref('')
 const editInstructions = ref('')
 const editSkillIds = ref<string[]>([])
-const editServiceId = ref('')
-const editModelId = ref('')
-const editSelectionError = ref('')
 const editError = ref('')
 const editDirty = ref(false)
 const leaveModalOpen = ref(false)
@@ -43,16 +40,7 @@ const { data: skillsData } = await useAsyncData(
   'persona-edit-skills',
   () => api.skills.list({ status: 'enabled', sort: 'alphabetical-asc', offset: 0 }),
 )
-const {
-  data: linkedServicesData,
-  status: linkedServicesStatus,
-  refresh: refreshLinkedServices,
-} = await useAsyncData(
-  'persona-detail-linked-services',
-  () => api.linkedServices.list(),
-)
 const availableSkills = computed(() => skillsData.value?.items ?? [])
-const linkedServices = computed(() => linkedServicesData.value ?? [])
 const visibleSkillIds = computed(() => editing.value ? editSkillIds.value : persona.value?.skill_ids ?? [])
 const personaActionMenuOptions = computed(() => entityActionMenuOptions.map(option => (
   option.value === 'delete' ? { ...option, disabled: !persona.value?.editable } : option
@@ -68,9 +56,6 @@ function beginEditing() {
   editDescription.value = persona.value.description
   editInstructions.value = persona.value.instructions
   editSkillIds.value = [...persona.value.skill_ids]
-  editServiceId.value = persona.value.linked_service?.reference_id ?? ''
-  editModelId.value = persona.value.config?.model ?? ''
-  editSelectionError.value = ''
   editError.value = ''
   editDirty.value = false
   editing.value = true
@@ -86,37 +71,11 @@ function cancelEditing() {
   }
   editing.value = false
   editError.value = ''
-  editSelectionError.value = ''
 }
 
 function markEditDirty() {
   editDirty.value = true
   editError.value = ''
-}
-
-function updateEditService(serviceId: string) {
-  editServiceId.value = serviceId
-  editSelectionError.value = ''
-  markEditDirty()
-}
-
-function updateEditModel(modelId: string) {
-  editModelId.value = modelId
-  editSelectionError.value = ''
-  markEditDirty()
-}
-
-function validateExecutionSelection() {
-  const service = linkedServices.value.find(item => (
-    item.id === editServiceId.value
-    && item.enabled
-    && item.config.configured
-  ))
-  const valid = Boolean(service?.config.available_models.includes(editModelId.value))
-  editSelectionError.value = valid
-    ? ''
-    : 'Choose an enabled, configured connection and one of its available models.'
-  return valid
 }
 
 async function saveEditing() {
@@ -125,10 +84,9 @@ async function saveEditing() {
   const description = editableText(editDescriptionElement.value)
   const instructions = editBody.value?.readMarkdown().trim() ?? ''
   if (!name || !instructions) {
-    editError.value = !name ? 'Give this agent a name.' : 'Write the instructions for this agent.'
+    editError.value = !name ? 'Give this persona a name.' : 'Write the instructions for this persona.'
     return false
   }
-  if (!validateExecutionSelection()) return false
   saving.value = true
   editError.value = ''
   try {
@@ -137,11 +95,6 @@ async function saveEditing() {
       name,
       description,
       instructions,
-      linked_service: {
-        type: 'LinkedServiceReference',
-        reference_id: editServiceId.value,
-      },
-      config: { model: editModelId.value },
       skill_ids: editSkillIds.value,
     })
     editing.value = false
@@ -149,12 +102,7 @@ async function saveEditing() {
     clearNuxtData('agents-catalog')
     return true
   } catch (cause) {
-    if (apiErrorCode(cause) === 'linked_service_selection_unavailable') {
-      editSelectionError.value = 'This connection is disabled, unconfigured, or no longer deploys the selected model. Choose another selection.'
-      await refreshLinkedServices()
-    } else {
-      editError.value = apiErrorMessage(cause, 'The agent could not be saved. Please try again.')
-    }
+    editError.value = apiErrorMessage(cause, 'The persona could not be saved. Please try again.')
     return false
   } finally {
     saving.value = false
@@ -170,7 +118,6 @@ async function discardChanges() {
   leaveModalOpen.value = false
   editing.value = false
   editDirty.value = false
-  editSelectionError.value = ''
   if (pendingDestination.value) {
     allowRouteLeave.value = true
     await router.push(pendingDestination.value)
@@ -207,8 +154,11 @@ function updateDeleteModal(open: boolean) {
 
 async function deletePersona() {
   if (!persona.value?.editable || deleting.value) return
+
+  const personaName = persona.value.name
   deleting.value = true
   deleteError.value = ''
+
   try {
     try {
       await api.personas.remove(personaId.value)
@@ -216,9 +166,14 @@ async function deletePersona() {
       if (!['instruction_not_found', 'instruction_not_owned'].includes(apiErrorCode(cause) ?? '')) throw cause
     }
     deleteModalOpen.value = false
-    window.location.replace('/personas')
+    clearNuxtData('agents-catalog')
+    notifications.success(
+      'Persona deleted',
+      `${personaName} has been deleted.`,
+    )
+    await router.push('/personas')
   } catch (cause) {
-    deleteError.value = apiErrorMessage(cause, 'The agent could not be deleted. Please try again.')
+    deleteError.value = apiErrorMessage(cause, 'The persona could not be deleted. Please try again.')
   } finally {
     deleting.value = false
   }
@@ -246,8 +201,8 @@ definePageMeta({
 
 useHead(() => ({
   title: persona.value
-    ? `${persona.value.name} · Agents · Looping Louie`
-    : 'Agent · Looping Louie',
+    ? `${persona.value.name} · Personas · Looping Louie`
+    : 'Persona · Looping Louie',
 }))
 </script>
 
@@ -255,7 +210,7 @@ useHead(() => ({
   <PageShell
     class="persona-page"
     :breadcrumbs="persona ? [
-      { label: 'Agents', to: '/personas' },
+      { label: 'Personas', to: '/personas' },
       { label: persona.name },
     ] : []"
     :show-heading="Boolean(persona)"
@@ -299,8 +254,8 @@ useHead(() => ({
             dropdown
             dropdown-align="right"
             icon-only
-            aria-label="More agent actions"
-            dropdown-label="Agent actions"
+            aria-label="More persona actions"
+            dropdown-label="Persona actions"
             :options="personaActionMenuOptions"
             :disabled="deleting"
             @select="selectAction"
@@ -317,9 +272,9 @@ useHead(() => ({
       </div>
     </template>
 
-    <div v-if="status === 'pending'" class="persona-state" role="status">Loading agent…</div>
+    <div v-if="status === 'pending'" class="persona-state" role="status">Loading persona…</div>
     <div v-else-if="error" class="persona-state persona-state--error" role="alert">
-      <span>Agent could not be loaded.</span>
+      <span>Persona could not be loaded.</span>
       <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
     </div>
     <template v-else-if="persona">
@@ -334,26 +289,12 @@ useHead(() => ({
           @click.capture="editing && $event.preventDefault()"
         />
 
-        <aside class="persona-aside" :class="{ 'persona-aside--editing': editing }" aria-label="Agent details">
+        <aside class="persona-aside" :class="{ 'persona-aside--editing': editing }" aria-label="Persona details">
           <div class="persona-icon-card" role="img" :aria-label="`${persona.name} icon`">
             <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" focusable="false">
               <path :d="personaIcon(persona)" />
             </svg>
           </div>
-
-          <PersonaExecutionPanel
-            :services="linkedServices"
-            :service-id="editing ? editServiceId : persona.linked_service?.reference_id"
-            :model-id="editing ? editModelId : persona.config?.model"
-            :editing="editing"
-            :loading="linkedServicesStatus === 'pending'"
-            :load-error="linkedServicesStatus === 'error'"
-            :selection-error="editSelectionError"
-            :disabled="saving"
-            @update:service-id="updateEditService"
-            @update:model-id="updateEditModel"
-            @retry="refreshLinkedServices"
-          />
 
           <PersonaSkillsEditor
             v-if="visibleSkillIds.length || editing"
@@ -369,7 +310,7 @@ useHead(() => ({
     <UiModal
       v-if="persona"
       :open="deleteModalOpen"
-      title="Delete this agent?"
+      title="Delete this persona?"
       :description="`This permanently deletes ${persona.name}. This action cannot be undone.`"
       :close-on-backdrop="!deleting"
       :show-close="!deleting"
@@ -383,14 +324,14 @@ useHead(() => ({
       <p v-if="deleteError" class="persona-delete-error" role="alert">{{ deleteError }}</p>
       <template #actions>
         <UiButton data-autofocus variant="secondary" :disabled="deleting" @click="deleteModalOpen = false">Cancel</UiButton>
-        <UiButton variant="coral" :loading="deleting" @click="deletePersona">Delete agent</UiButton>
+        <UiButton variant="coral" :loading="deleting" @click="deletePersona">Delete persona</UiButton>
       </template>
     </UiModal>
 
     <UiModal
       v-model:open="leaveModalOpen"
       title="Save your changes?"
-      description="You have unsaved changes to this agent. Save them before leaving, or discard them."
+      description="You have unsaved changes to this persona. Save them before leaving, or discard them."
       :close-on-backdrop="!leaveActionPending"
       :show-close="!leaveActionPending"
     >
