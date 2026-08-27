@@ -12,7 +12,7 @@ import UiModal from '~/components/ui/Modal.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import type { ExecutionHarness, PipelineActivityStepRequest } from '~/types/api'
-import { apiErrorCode, apiErrorMessage } from '~/utils/api/errors'
+import { apiErrorMessage } from '~/utils/api/errors'
 import { pipelineStepsHaveModelIds } from '~/utils/executionDefaults'
 
 type PipelineBuilderStep = 'design' | 'details'
@@ -43,17 +43,17 @@ const localKey = 'looping-louie:pipeline-builder-draft:v2'
 const { data: executionOptions, status: executionOptionsStatus, refresh: refreshExecutionOptions } = await useAsyncData(
   'pipeline-builder-execution-options',
   async () => {
-    const [defaults, models] = await Promise.all([
-      api.workspaces.getDefaults(),
+    const [user, models] = await Promise.all([
+      api.users.getCurrent(),
       api.models.list({ available: true, sort: 'alphabetical-asc' }),
     ])
-    return { defaults, models: models.items }
+    return { defaults: user.settings, models: models.items }
   },
 )
 
 const builderStepIndex = computed(() => builderStep.value === 'design' ? 0 : 1)
-const inheritedModelId = computed(() => pipelineModelId.value ?? executionOptions.value?.defaults.model_target?.model_id ?? null)
-const inheritedHarness = computed(() => pipelineHarness.value ?? executionOptions.value?.defaults.harness ?? null)
+const inheritedModelId = computed(() => pipelineModelId.value ?? executionOptions.value?.defaults.default_model_id ?? null)
+const inheritedHarness = computed(() => pipelineHarness.value ?? executionOptions.value?.defaults.default_harness ?? null)
 const executionReady = computed(() => pipelineStepsHaveModelIds(designSteps.value, inheritedModelId.value))
 const hasProgress = computed(() => Boolean(
   designSteps.value.length
@@ -122,7 +122,7 @@ function validateDetails() {
 async function createPipeline() {
   if (!validateDetails() || !designValid.value || savingPipeline.value) return
   if (!executionReady.value) {
-    saveError.value = 'Every loop persona needs a model configured at the persona, activity, pipeline, or workspace level.'
+    saveError.value = 'Every Louie loop persona needs a model configured at the persona, activity, pipeline, or user level.'
     return
   }
   savingPipeline.value = true
@@ -140,12 +140,8 @@ async function createPipeline() {
     allowRouteLeave.value = true
     await router.push('/pipelines')
   } catch (cause) {
-    if (apiErrorCode(cause) === 'linked_service_selection_unavailable') {
-      saveError.value = 'One execution override uses a connection or model that is no longer available. Review the highlighted execution settings.'
-      await refreshExecutionOptions()
-    } else {
-      saveError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
-    }
+    saveError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
+    await refreshExecutionOptions()
     saveLocalDraft()
   } finally {
     savingPipeline.value = false
@@ -337,14 +333,14 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
             <ExecutionModelTargetSelector
               v-model="pipelineModelId"
               :models="executionOptions?.models ?? []"
-              inherit-label="Inherit workspace model"
-              :inherit-description="executionOptions?.defaults.model_target ? `Currently ${executionOptions.defaults.model_target.model_id}.` : 'No workspace model is configured.'"
+              inherit-label="Inherit user model"
+              :inherit-description="executionOptions?.defaults.default_model_id ? `Currently ${executionOptions.defaults.default_model_id}.` : 'No user model is configured.'"
               @update:model-value="saveError = ''; saveLocalDraft()"
             />
             <ExecutionHarnessSelector
               v-model="pipelineHarness"
-              inherit-label="Inherit workspace"
-              :inherit-description="executionOptions?.defaults.harness ? `Currently ${executionOptions.defaults.harness.kind} v1.` : 'No workspace override is configured; the API will use Louie v1.'"
+              inherit-label="Inherit user default"
+              :inherit-description="executionOptions?.defaults.default_harness ? `Currently ${executionOptions.defaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
               @update:model-value="saveError = ''; saveLocalDraft()"
             />
             <p v-if="!executionReady" class="pipeline-builder__execution-error" role="alert">At least one loop persona has no effective model target.</p>

@@ -17,7 +17,7 @@ import type {
   PipelineActivityStepRequest,
   PipelinePatchRequest,
 } from '~/types/api'
-import { apiErrorCode, apiErrorMessage } from '~/utils/api/errors'
+import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
 import { modelIdLabel, pipelineStepsHaveModelIds } from '~/utils/executionDefaults'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
@@ -76,11 +76,11 @@ const { data: pipeline, status, error, refresh } = await useAsyncData(
 const { data: executionOptions, refresh: refreshExecutionOptions } = await useAsyncData(
   'pipeline-detail-execution-options',
   async () => {
-    const [defaults, models] = await Promise.all([
-      api.workspaces.getDefaults(),
+    const [user, models] = await Promise.all([
+      api.users.getCurrent(),
       api.models.list({ available: true, sort: 'alphabetical-asc' }),
     ])
-    return { defaults, models: models.items }
+    return { defaults: user.settings, models: models.items }
   },
 )
 
@@ -99,11 +99,11 @@ const detailItems = computed<DetailRow[]>(() => {
     { id: 'design', title: 'Design', kind: 'design' },
   ]
 })
-const editInheritedModelId = computed(() => editModelId.value ?? executionOptions.value?.defaults.model_target?.model_id ?? null)
-const editInheritedHarness = computed(() => editHarness.value ?? executionOptions.value?.defaults.harness ?? null)
+const editInheritedModelId = computed(() => editModelId.value ?? executionOptions.value?.defaults.default_model_id ?? null)
+const editInheritedHarness = computed(() => editHarness.value ?? executionOptions.value?.defaults.default_harness ?? null)
 const editExecutionReady = computed(() => pipelineStepsHaveModelIds(editSteps.value, editInheritedModelId.value))
-const displayedModelId = computed(() => pipeline.value?.model_id ?? executionOptions.value?.defaults.model_target?.model_id ?? null)
-const displayedHarness = computed(() => pipeline.value?.harness ?? executionOptions.value?.defaults.harness ?? null)
+const displayedModelId = computed(() => pipeline.value?.model_id ?? executionOptions.value?.defaults.default_model_id ?? null)
+const displayedHarness = computed(() => pipeline.value?.harness ?? executionOptions.value?.defaults.default_harness ?? null)
 const pipelineExecutionReady = computed(() => pipeline.value
   ? pipelineStepsHaveModelIds(pipeline.value.steps, displayedModelId.value)
   : false)
@@ -213,7 +213,7 @@ async function saveEditing() {
     return
   }
   if (!editExecutionReady.value) {
-    editError.value = 'Every loop persona needs a model configured at the persona, activity, pipeline, or workspace level.'
+    editError.value = 'Every Louie loop persona needs a model configured at the persona, activity, pipeline, or user level.'
     return
   }
 
@@ -232,12 +232,8 @@ async function saveEditing() {
     editing.value = false
     clearNuxtData('pipelines-catalog')
   } catch (cause) {
-    if (apiErrorCode(cause) === 'linked_service_selection_unavailable') {
-      editError.value = 'One execution override uses a connection or model that is no longer available. Review the execution settings.'
-      await refreshExecutionOptions()
-    } else {
-      editError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
-    }
+    editError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
+    await refreshExecutionOptions()
   } finally {
     saving.value = false
   }
@@ -430,23 +426,23 @@ useHead(() => ({
                   <ExecutionModelTargetSelector
                     v-model="editModelId"
                     :models="executionOptions?.models ?? []"
-                    inherit-label="Inherit workspace model"
-                    :inherit-description="executionOptions?.defaults.model_target ? `Currently ${executionOptions.defaults.model_target.model_id}.` : 'No workspace model is configured.'"
+                    inherit-label="Inherit user model"
+                    :inherit-description="executionOptions?.defaults.default_model_id ? `Currently ${executionOptions.defaults.default_model_id}.` : 'No user model is configured.'"
                     @update:model-value="markEditDirty"
                   />
                   <ExecutionHarnessSelector
                     v-model="editHarness"
-                    inherit-label="Inherit workspace"
-                    :inherit-description="executionOptions?.defaults.harness ? `Currently ${executionOptions.defaults.harness.kind} v1.` : 'No workspace override is configured; the API will use Louie v1.'"
+                    inherit-label="Inherit user default"
+                    :inherit-description="executionOptions?.defaults.default_harness ? `Currently ${executionOptions.defaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
                     @update:model-value="markEditDirty"
                   />
                   <p v-if="!editExecutionReady" class="pipeline-execution__error" role="alert">At least one loop persona has no effective model target.</p>
                 </template>
                 <dl v-else>
                   <div><dt>Model</dt><dd>{{ modelIdLabel(displayedModelId) }}</dd></div>
-                  <div><dt>Source</dt><dd>{{ pipeline.model_id ? 'Pipeline override' : displayedModelId ? 'Workspace default' : 'Not configured' }}</dd></div>
+                  <div><dt>Source</dt><dd>{{ pipeline.model_id ? 'Pipeline override' : displayedModelId ? 'User default' : 'Not configured' }}</dd></div>
                   <div><dt>Harness</dt><dd>{{ displayedHarness?.kind ?? 'louie' }} v1</dd></div>
-                  <div><dt>Source</dt><dd>{{ pipeline.harness ? 'Pipeline override' : executionOptions?.defaults.harness ? 'Workspace default' : 'Compatibility default' }}</dd></div>
+                  <div><dt>Source</dt><dd>{{ pipeline.harness ? 'Pipeline override' : executionOptions?.defaults.default_harness ? 'User default' : 'Compatibility default' }}</dd></div>
                 </dl>
               </div>
 

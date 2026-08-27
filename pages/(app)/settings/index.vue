@@ -1,23 +1,12 @@
 <script setup lang="ts">
 import type { Ref, ShallowRef } from 'vue'
+import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
+import ExecutionModelTargetSelector from '~/components/execution/ModelTargetSelector.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
-import UiGrid from '~/components/ui/Grid.vue'
-import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
-import UiTextField from '~/components/ui/TextField.vue'
-import UiToggle from '~/components/ui/Toggle.vue'
+import type { ExecutionHarness } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
-import { executionHarnesses } from '~/utils/executionHarnesses'
-
-interface ExecutionDefaultsForm {
-  harness: string
-  defaultBranch: string
-  protectedBranches: string
-  allowCommits: boolean
-  allowPullRequests: boolean
-  createRunBranches: boolean
-  requireMergeApproval: boolean
-}
 
 interface SettingsNavigationState {
   dirty: Ref<boolean>
@@ -25,59 +14,65 @@ interface SettingsNavigationState {
   save: ShallowRef<(() => Promise<void> | void) | null>
 }
 
-const initialDefaults: ExecutionDefaultsForm = {
-  harness: 'codex',
-  defaultBranch: 'main',
-  protectedBranches: 'main, master',
-  allowCommits: true,
-  allowPullRequests: true,
-  createRunBranches: true,
-  requireMergeApproval: false,
-}
-
 const api = useApiClient()
 const notifications = useNotifications()
-const defaults = reactive<ExecutionDefaultsForm>({ ...initialDefaults })
-const savedDefaults = ref<ExecutionDefaultsForm>({ ...initialDefaults })
-const isDirty = computed(() => JSON.stringify(defaults) !== JSON.stringify(savedDefaults.value))
 const settingsNavigation = inject<SettingsNavigationState>('settings-navigation')
+const defaultModelId = ref<string | null>(null)
+const defaultHarness = ref<ExecutionHarness | null>(null)
+const savedSettings = ref('')
+const initialized = ref(false)
+
+const {
+  data: executionSettings,
+  status,
+  error,
+  refresh,
+} = await useAsyncData('user-execution-settings', async () => {
+  const [user, models] = await Promise.all([
+    api.users.getCurrent(),
+    api.models.list({ available: true, sort: 'alphabetical-asc' }),
+  ])
+  return { user, models: models.items }
+})
+
+const currentSettings = computed(() => JSON.stringify({
+  default_model_id: defaultModelId.value,
+  default_harness: defaultHarness.value,
+}))
+const isDirty = computed(() => initialized.value && currentSettings.value !== savedSettings.value)
+const errorLabel = computed(() => apiErrorMessage(error.value, 'Execution settings could not be loaded.'))
+
+watch(executionSettings, (value) => {
+  if (!value || initialized.value) return
+  defaultModelId.value = value.user.settings.default_model_id
+  defaultHarness.value = cloneHarness(value.user.settings.default_harness)
+  savedSettings.value = currentSettings.value
+  initialized.value = true
+}, { immediate: true })
+
+function cloneHarness(value: ExecutionHarness | null) {
+  return value ? { ...value, config: {} } : null
+}
 
 async function saveDefaults() {
   if (!settingsNavigation || settingsNavigation.saving.value) return
-
-  if (defaults.harness !== 'codex') {
-    const selectedHarness = executionHarnesses.find(harness => harness.id === defaults.harness)
-    notifications.error(
-      'Changes weren’t saved',
-      `${selectedHarness?.name ?? 'This harness'} is not supported by the workspace API yet. Choose Codex and try again.`,
-    )
-    return
-  }
-
   settingsNavigation.saving.value = true
   try {
-    const currentDefaults = await api.workspaces.getDefaults()
-    await api.workspaces.replaceDefaults({
-      model_target: currentDefaults.model_target,
-      harness: {
-        kind: 'codex_cli',
-        version: 'v1',
-        config: {},
-      },
+    const currentUser = executionSettings.value?.user ?? await api.users.getCurrent()
+    const updated = await api.users.replaceSettings({
+      ...currentUser.settings,
+      default_model_id: defaultModelId.value,
+      default_harness: cloneHarness(defaultHarness.value),
     })
-    savedDefaults.value = { ...defaults }
-    notifications.success(
-      'Changes saved',
-      'Codex is now the default harness for this workspace.',
-    )
+    if (executionSettings.value) executionSettings.value = { ...executionSettings.value, user: updated }
+    defaultModelId.value = updated.settings.default_model_id
+    defaultHarness.value = cloneHarness(updated.settings.default_harness)
+    savedSettings.value = currentSettings.value
+    notifications.success('Changes saved', 'Your execution defaults have been updated.')
   } catch (cause) {
-    const reason = apiErrorMessage(
-      cause,
-      'The workspace API could not be reached. Check your connection and try again.',
-    )
     notifications.error(
       'Changes weren’t saved',
-      `We couldn’t update the workspace defaults. ${reason}`,
+      apiErrorMessage(cause, 'Your user settings could not be updated. Please try again.'),
     )
   } finally {
     settingsNavigation.saving.value = false
@@ -98,243 +93,51 @@ if (settingsNavigation) {
   })
 }
 
-definePageMeta({
-  pageTransition: false,
-})
-
-useHead({
-  title: 'Settings · Looping Louie',
-})
+definePageMeta({ pageTransition: false })
+useHead({ title: 'Settings · Looping Louie' })
 </script>
 
 <template>
-  <div class="global-configuration">
-    <section class="configuration-section" aria-labelledby="default-harness-title">
-      <UiCollectionGroupTitle
-        id="default-harness-title"
-        title="Default harness"
-        heading-as="h2"
-      />
-      <UiSectionStage inverse="bottom">
-        <UiGrid :columns="4" gap="md" class="harness-grid" role="radiogroup" aria-label="Default harness">
-          <UiPill
-            v-for="harness in executionHarnesses"
-            :key="harness.id"
-            variant="selectable"
-            icon-style="circle"
-            :src="harness.image"
-            alt=""
-            :description="harness.owner"
-            :selected="defaults.harness === harness.id"
-            :aria-label="`Use ${harness.name} by ${harness.owner} as the default harness`"
-            @click="defaults.harness = harness.id"
-          >
-            {{ harness.name }}
-          </UiPill>
-        </UiGrid>
-      </UiSectionStage>
-    </section>
-
-    <section class="configuration-section" aria-labelledby="execution-defaults-title">
-      <UiCollectionGroupTitle
-        id="execution-defaults-title"
-        title="Execution defaults"
-        heading-as="h2"
-      />
-      <UiSectionStage inverse="both">
-        <div class="execution-defaults">
-          <div class="execution-defaults__row">
-            <div class="execution-defaults__copy">
-              <h3>Default branch</h3>
-              <p>The branch new runs use when no branch is specified.</p>
-            </div>
-            <UiTextField
-              v-model="defaults.defaultBranch"
-              label="Default branch"
-              hide-label
-              placeholder="main"
-              autocomplete="off"
+  <UiAsyncStage
+    :status="status"
+    :error-label="errorLabel"
+    :show-retry="true"
+    @retry="refresh"
+  >
+    <div class="global-configuration">
+      <section class="configuration-section" aria-labelledby="default-model-title">
+        <UiCollectionGroupTitle id="default-model-title" title="Default model" heading-as="h2" />
+        <UiSectionStage inverse="bottom">
+          <div class="configuration-control">
+            <ExecutionModelTargetSelector
+              v-model="defaultModelId"
+              :models="executionSettings?.models ?? []"
+              inherit-label="No default model"
+              inherit-description="Louie runs must then configure a model at pipeline, activity, or persona level."
             />
           </div>
+        </UiSectionStage>
+      </section>
 
-          <div class="execution-defaults__row">
-            <div class="execution-defaults__copy">
-              <h3>Protected branches</h3>
-              <p>Comma-separated branches that harnesses must not commit to directly.</p>
-            </div>
-            <UiTextField
-              v-model="defaults.protectedBranches"
-              label="Protected branches"
-              hide-label
-              placeholder="main, master"
-              autocomplete="off"
+      <section class="configuration-section" aria-labelledby="default-harness-title">
+        <UiCollectionGroupTitle id="default-harness-title" title="Default harness" heading-as="h2" />
+        <UiSectionStage inverse="bottom">
+          <div class="configuration-control">
+            <ExecutionHarnessSelector
+              v-model="defaultHarness"
+              inherit-label="Use compatibility default"
+              inherit-description="The API uses Louie v1 when no narrower scope selects a harness."
             />
           </div>
-
-          <div class="execution-defaults__toggle-grid">
-            <div class="execution-defaults__toggle-option">
-              <div class="execution-defaults__copy">
-                <h3>Allow commits</h3>
-                <p>Let harnesses create commits after an approved execution.</p>
-              </div>
-              <UiToggle v-model="defaults.allowCommits" aria-label="Allow commits" />
-            </div>
-
-            <div class="execution-defaults__toggle-option">
-              <div class="execution-defaults__copy">
-                <h3>Allow pull requests</h3>
-                <p>Let harnesses open pull requests with their completed changes.</p>
-              </div>
-              <UiToggle v-model="defaults.allowPullRequests" aria-label="Allow pull requests" />
-            </div>
-
-            <div class="execution-defaults__toggle-option">
-              <div class="execution-defaults__copy">
-                <h3>Create a branch for every run</h3>
-                <p>Keep each execution isolated from the default branch.</p>
-              </div>
-              <UiToggle v-model="defaults.createRunBranches" aria-label="Create a branch for every run" />
-            </div>
-
-            <div class="execution-defaults__toggle-option">
-              <div class="execution-defaults__copy">
-                <h3>Require approval before merge</h3>
-                <p>Hold completed pull requests until a reviewer approves them.</p>
-              </div>
-              <UiToggle v-model="defaults.requireMergeApproval" aria-label="Require approval before merge" />
-            </div>
-          </div>
-        </div>
-      </UiSectionStage>
-    </section>
-  </div>
+        </UiSectionStage>
+      </section>
+    </div>
+  </UiAsyncStage>
 </template>
 
 <style scoped>
-.global-configuration {
-  display: grid;
-  gap: var(--ll-space-12);
-}
-
-.configuration-section {
-  min-width: 0;
-}
-
-.configuration-section :deep(.ui-section-stage) {
-  --ui-section-stage-shell-inset: 0rem;
-}
-
-.harness-grid {
-  padding: var(--ll-space-2);
-}
-
-.execution-defaults {
-  display: grid;
-  padding: var(--ll-space-2);
-}
-
-.execution-defaults__row {
-  display: grid;
-  min-width: 0;
-  min-height: 5.5rem;
-  box-sizing: border-box;
-  grid-template-columns: minmax(14rem, 1fr) minmax(16rem, 0.7fr);
-  align-items: center;
-  gap: var(--ll-space-8);
-  padding: var(--ll-space-4) var(--ll-space-5);
-  border-bottom: 1px solid var(--ll-color-divider);
-}
-
-.execution-defaults__row:last-child {
-  border-bottom: 0;
-}
-
-.execution-defaults__toggle-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.execution-defaults__toggle-option {
-  display: grid;
-  min-width: 0;
-  min-height: 6.5rem;
-  box-sizing: border-box;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--ll-space-5);
-  padding: var(--ll-space-4) var(--ll-space-5);
-}
-
-.execution-defaults__toggle-option:nth-child(even) {
-  border-left: 1px solid var(--ll-color-divider);
-}
-
-.execution-defaults__toggle-option:nth-child(-n + 2) {
-  border-bottom: 1px solid var(--ll-color-divider);
-}
-
-@media (min-width: 44.0625rem) {
-  .execution-defaults__toggle-option:nth-child(odd) {
-    padding-right: calc(
-      var(--ui-section-stage-shell-padding) + var(--ll-space-2) + var(--ll-space-5)
-    );
-  }
-
-  .execution-defaults__toggle-option:nth-child(even) {
-    padding-left: calc(
-      var(--ui-section-stage-shell-padding) + var(--ll-space-2) + var(--ll-space-5)
-    );
-  }
-}
-
-.execution-defaults__copy {
-  display: grid;
-  min-width: 0;
-  gap: var(--ll-space-1);
-}
-
-.execution-defaults__copy h3,
-.execution-defaults__copy p {
-  margin: 0;
-}
-
-.execution-defaults__copy h3 {
-  color: var(--ll-color-ink);
-  font: 600 var(--ll-text-md) / 1.25 var(--ll-font-control);
-}
-
-.execution-defaults__copy p {
-  color: var(--ll-color-text-muted);
-  font: 400 var(--ll-text-sm) / 1.45 var(--ll-font-control);
-}
-
-@media (max-width: 44rem) {
-  .execution-defaults__row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: var(--ll-space-3) var(--ll-space-5);
-    padding-inline: var(--ll-space-3);
-  }
-
-  .execution-defaults__row > :deep(.ui-text-field) {
-    grid-column: 1 / -1;
-  }
-
-  .execution-defaults__toggle-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .execution-defaults__toggle-option {
-    min-height: 5.5rem;
-    padding-inline: var(--ll-space-3);
-    border-bottom: 1px solid var(--ll-color-divider);
-  }
-
-  .execution-defaults__toggle-option:nth-child(even) {
-    border-left: 0;
-  }
-
-  .execution-defaults__toggle-option:last-child {
-    border-bottom: 0;
-  }
-}
+.global-configuration { display: grid; gap: var(--ll-space-12); }
+.configuration-section { min-width: 0; }
+.configuration-section :deep(.ui-section-stage) { --ui-section-stage-shell-inset: 0rem; }
+.configuration-control { padding: var(--ll-space-6); }
 </style>

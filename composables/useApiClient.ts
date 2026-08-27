@@ -39,8 +39,9 @@ import type {
   SkillResponse,
   UserResponse,
   UserSettingsRequest,
-  WorkspaceDefaultsReplaceRequest,
-  WorkspaceDefaultsResponse,
+  WorkspaceCreateRequest,
+  WorkspacePatchRequest,
+  WorkspaceResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
@@ -99,8 +100,10 @@ export function useApiClient() {
       listSkills: (signal?: AbortSignal) => $fetch<CatalogSkillResponse[]>('/api/v1/catalog/skills', { signal }),
     },
     workspaces: {
-      getDefaults: () => $fetch<WorkspaceDefaultsResponse>('/api/v1/workspaces/defaults'),
-      replaceDefaults: (body: WorkspaceDefaultsReplaceRequest) => $fetch<WorkspaceDefaultsResponse>('/api/v1/workspaces/defaults', { method: 'PUT', body }),
+      list: () => $fetch<WorkspaceResponse[]>('/api/v1/workspaces'),
+      get: (id: string) => $fetch<WorkspaceResponse>(resourcePath('workspaces', id)),
+      create: (body: WorkspaceCreateRequest) => $fetch<WorkspaceResponse>('/api/v1/workspaces', { method: 'POST', body }),
+      patch: (id: string, body: WorkspacePatchRequest) => $fetch<WorkspaceResponse>(resourcePath('workspaces', id), { method: 'PATCH', body }),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),
