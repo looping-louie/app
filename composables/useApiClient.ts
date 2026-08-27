@@ -47,6 +47,11 @@ import type {
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
 
 export function useApiClient() {
+  const activeWorkspaceId = useCookie<string | null>('looping-louie-workspace-id')
+  const workspaceOptions = () => activeWorkspaceId.value
+    ? { headers: { 'X-Workspace-ID': activeWorkspaceId.value } }
+    : {}
+
   return {
     activities: {
       list: (query: ApiListQuery = {}) => $fetch<ActivityListResponse>('/api/v1/activities', { query }),
@@ -54,8 +59,8 @@ export function useApiClient() {
       create: (body: ActivityCreateRequest) => $fetch<ActivityResponse>('/api/v1/activities', { method: 'POST', body }),
       patch: (id: string, body: ActivityPatchRequest) => $fetch<ActivityResponse>(resourcePath('activities', id), { method: 'PATCH', body }),
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('activities', id), { method: 'DELETE' }),
-      listRuns: (id: string, query: ApiListQuery = {}) => $fetch<ActivityRunListResponse>(`${resourcePath('activities', id)}/runs`, { query }),
-      continueRun: (activityId: string, runId: string, body: ActivityRunContinueRequest) => $fetch<ActivityRunResponse>(`${resourcePath('activities', activityId)}/runs/${encodeURIComponent(runId)}/continue`, { method: 'POST', body }),
+      listRuns: (id: string, query: ApiListQuery = {}) => $fetch<ActivityRunListResponse>(`${resourcePath('activities', id)}/runs`, { ...workspaceOptions(), query }),
+      continueRun: (activityId: string, runId: string, body: ActivityRunContinueRequest) => $fetch<ActivityRunResponse>(`${resourcePath('activities', activityId)}/runs/${encodeURIComponent(runId)}/continue`, { ...workspaceOptions(), method: 'POST', body }),
     },
     pipelines: {
       list: (query: PipelineListQuery = {}) => $fetch<PipelineListResponse>('/api/v1/pipelines', { query }),
@@ -63,14 +68,14 @@ export function useApiClient() {
       create: (body: PipelineCreateRequest) => $fetch<PipelineResponse>('/api/v1/pipelines', { method: 'POST', body }),
       patch: (id: string, body: PipelinePatchRequest) => $fetch<PipelineResponse>(resourcePath('pipelines', id), { method: 'PATCH', body }),
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('pipelines', id), { method: 'DELETE' }),
-      createRun: (id: string, body: PipelineRunCreateRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', id)}/runs`, { method: 'POST', body }),
-      startRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { method: 'POST' }),
-      continueRun: (pipelineId: string, runId: string, body: PipelineRunContinueRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/continue`, { method: 'POST', body }),
-      getRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`),
-      listRunEvents: (pipelineId: string, runId: string) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`),
+      createRun: (id: string, body: PipelineRunCreateRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', id)}/runs`, { ...workspaceOptions(), method: 'POST', body }),
+      startRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { ...workspaceOptions(), method: 'POST' }),
+      continueRun: (pipelineId: string, runId: string, body: PipelineRunContinueRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/continue`, { ...workspaceOptions(), method: 'POST', body }),
+      getRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`, workspaceOptions()),
+      listRunEvents: (pipelineId: string, runId: string) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`, workspaceOptions()),
     },
     pipelineRuns: {
-      list: (query: PipelineRunListQuery = {}) => $fetch<PipelineRunListResponse>('/api/v1/pipeline-runs', { query }),
+      list: (query: PipelineRunListQuery = {}) => $fetch<PipelineRunListResponse>('/api/v1/pipeline-runs', { ...workspaceOptions(), query }),
     },
     personas: {
       list: (query: PersonaListQuery = {}) => $fetch<PersonaListResponse>('/api/v1/personas', { query }),
