@@ -4,7 +4,6 @@ import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiPagination from '~/components/ui/Pagination.vue'
 import UiPill from '~/components/ui/Pill.vue'
-import UiStatusText from '~/components/ui/StatusText.vue'
 import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 
@@ -217,7 +216,7 @@ useHead({
           icon-style="circle"
           :src="providerLogo(model.vendor, model.family) || undefined"
           alt=""
-          :description="model.name"
+          :description="model.vendor"
           toggle
           :toggle-value="modelPolicyEnabled(model.id)"
           :toggle-disabled="Boolean(policyMutatingId) || !user"
@@ -232,12 +231,7 @@ useHead({
           <template v-if="!providerLogo(model.vendor, model.family)" #icon>
             <span class="model-item__fallback">{{ vendorInitials(model.vendor) }}</span>
           </template>
-          <span class="model-item__label">
-            <span>{{ model.vendor }}</span>
-            <UiStatusText :tone="model.available ? 'enabled' : 'disabled'" class="model-item__availability">
-              {{ model.available ? 'available' : 'unavailable' }}
-            </UiStatusText>
-          </span>
+          {{ model.name }}
         </UiPill>
       </UiGrid>
     </UiAsyncStage>
@@ -274,24 +268,6 @@ useHead({
 .model-item__fallback {
   color: var(--ll-color-ink);
   font: 600 0.6875rem / 1 var(--ll-font-mono);
-}
-
-.model-item__label {
-  display: inline-flex;
-  max-width: 100%;
-  align-items: baseline;
-  gap: var(--ll-space-2);
-}
-
-.model-item__label > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.model-item__availability {
-  flex: none;
-  font-size: var(--ll-text-xs);
-  font-weight: 500;
 }
 
 .visually-hidden {
