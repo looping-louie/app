@@ -4,8 +4,11 @@ import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiPagination from '~/components/ui/Pagination.vue'
 import UiPill from '~/components/ui/Pill.vue'
+import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
+import UiToggle from '~/components/ui/Toggle.vue'
 import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
+import { apiErrorMessage } from '~/utils/api/errors'
 
 const api = useApiClient()
 const route = useRoute()
@@ -17,6 +20,8 @@ const modelLabs = ref<string[]>([])
 const modelSort = ref('alphabetical-asc')
 const modelOffset = ref(0)
 const modelPageSize = 24
+const policyMutatingId = ref<string | null>(null)
+const policyError = ref('')
 const arrowSquareOutIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
 
 const officialModelPages: Record<string, string> = {
@@ -57,6 +62,7 @@ const { data, status, refresh } = await useAsyncData(
   () => api.models.list(modelQuery.value),
   { watch: [modelQuery] },
 )
+const { data: user } = await useAsyncData('settings-model-policy', () => api.users.getCurrent())
 
 const models = computed(() => data.value?.items ?? [])
 const modelTotal = computed(() => data.value?.total ?? 0)
@@ -69,6 +75,14 @@ const modelSearchItems = computed(() => models.value.map(model => ({
   imageSrc: providerLogo(model.vendor, model.family) || undefined,
   imageAlt: '',
 })))
+const defaultAvailability = computed({
+  get: () => user.value?.settings.default_model_availability ?? 'enabled',
+  set: value => void updateDefaultAvailability(value),
+})
+const defaultAvailabilityOptions = [
+  { value: 'enabled', label: 'Enabled by default' },
+  { value: 'disabled', label: 'Disabled by default' },
+]
 
 watch([modelStatus, modelLabs, modelSort, modelSearchTerm], () => {
   modelOffset.value = 0
@@ -113,6 +127,50 @@ function officialModelPage(model: ModelSummary) {
   return officialModelPages[vendorKey] ?? officialModelPages[familyKey] ?? 'https://build.nvidia.com/models'
 }
 
+function modelPolicyEnabled(modelId: string) {
+  const configured = user.value?.settings.configured_models.find(model => model.id === modelId)
+  return (configured?.status ?? user.value?.settings.default_model_availability ?? 'enabled') === 'enabled'
+}
+
+async function updateDefaultAvailability(value: string | string[]) {
+  if (!user.value || policyMutatingId.value || typeof value !== 'string') return
+  if (value !== 'enabled' && value !== 'disabled') return
+  policyMutatingId.value = 'default'
+  policyError.value = ''
+  try {
+    user.value = await api.users.replaceSettings({
+      ...user.value.settings,
+      default_model_availability: value,
+    })
+    await refresh()
+  } catch (cause) {
+    policyError.value = apiErrorMessage(cause, 'The default model policy could not be updated.')
+  } finally {
+    policyMutatingId.value = null
+  }
+}
+
+async function updateModelPolicy(modelId: string, enabled: boolean) {
+  if (!user.value || policyMutatingId.value) return
+  policyMutatingId.value = modelId
+  policyError.value = ''
+  const status = enabled ? 'enabled' : 'disabled'
+  const defaultStatus = user.value.settings.default_model_availability
+  const configured = user.value.settings.configured_models.filter(model => model.id !== modelId)
+  if (status !== defaultStatus) configured.push({ id: modelId, status })
+  try {
+    user.value = await api.users.replaceSettings({
+      ...user.value.settings,
+      configured_models: configured,
+    })
+    await refresh()
+  } catch (cause) {
+    policyError.value = apiErrorMessage(cause, `The policy for ${modelId} could not be updated.`)
+  } finally {
+    policyMutatingId.value = null
+  }
+}
+
 function focusedModelId() {
   const value = Array.isArray(route.query.model) ? route.query.model[0] : route.query.model
   return typeof value === 'string' ? value : ''
@@ -148,10 +206,19 @@ useHead({
 <template>
   <section aria-labelledby="models-heading">
     <h2 id="models-heading" class="visually-hidden">Models</h2>
-    <p class="models-availability-note">
-      Availability is read-only and comes from enabled, configured connections in
-      <NuxtLink to="/settings/providers">Providers</NuxtLink>.
-    </p>
+    <div class="models-policy">
+      <div>
+        <strong>Model policy</strong>
+        <p>Choose the policy for unconfigured models, then override individual models below. A usable <NuxtLink to="/settings/providers">provider connection</NuxtLink> is still required for Louie.</p>
+      </div>
+      <UiSegmentedControl
+        v-model="defaultAvailability"
+        :options="defaultAvailabilityOptions"
+        :disabled="Boolean(policyMutatingId) || !user"
+        aria-label="Default model availability"
+      />
+    </div>
+    <p v-if="policyError" class="models-policy-error" role="alert">{{ policyError }}</p>
 
     <UiCatalogFilterBar
       v-model:status="modelStatus"
@@ -180,36 +247,45 @@ useHead({
       @retry="refresh"
     >
       <UiGrid :columns="3" gap="lg" class="models-grid">
-        <UiPill
+        <div
           v-for="model in models"
           :id="`model-${model.id}`"
           :key="model.id"
-          variant="catalog"
-          icon-style="circle"
-          :src="providerLogo(model.vendor, model.family) || undefined"
-          alt=""
-          :description="model.name"
-          :action-icon-path="arrowSquareOutIconPath"
-          :action-href="officialModelPage(model)"
-          :action-label="`View official information about ${model.name}`"
-          action-target="_blank"
-          action-visibility="hover"
           class="model-item"
           :class="{ 'model-item--focused': focusedModelId() === model.id }"
         >
-          <template v-if="!providerLogo(model.vendor, model.family)" #icon>
-            <span class="model-item__fallback">{{ vendorInitials(model.vendor) }}</span>
-          </template>
-          <span class="model-item__label">
-            <span>{{ model.vendor }}</span>
-            <UiStatusText
-              :tone="model.available ? 'enabled' : 'disabled'"
-              class="model-item__availability"
-            >
-              {{ model.available ? 'available' : 'unavailable' }}
-            </UiStatusText>
-          </span>
-        </UiPill>
+          <UiPill
+            variant="catalog"
+            icon-style="circle"
+            :src="providerLogo(model.vendor, model.family) || undefined"
+            alt=""
+            :description="model.name"
+            :action-icon-path="arrowSquareOutIconPath"
+            :action-href="officialModelPage(model)"
+            :action-label="`View official information about ${model.name}`"
+            action-target="_blank"
+            action-visibility="hover"
+          >
+            <template v-if="!providerLogo(model.vendor, model.family)" #icon>
+              <span class="model-item__fallback">{{ vendorInitials(model.vendor) }}</span>
+            </template>
+            <span class="model-item__label">
+              <span>{{ model.vendor }}</span>
+              <UiStatusText :tone="model.available ? 'enabled' : 'disabled'" class="model-item__availability">
+                {{ model.available ? 'available' : 'unavailable' }}
+              </UiStatusText>
+            </span>
+          </UiPill>
+          <div class="model-item__policy">
+            <span>{{ modelPolicyEnabled(model.id) ? 'Allowed by policy' : 'Blocked by policy' }}</span>
+            <UiToggle
+              :model-value="modelPolicyEnabled(model.id)"
+              :disabled="Boolean(policyMutatingId) || !user"
+              :aria-label="`${modelPolicyEnabled(model.id) ? 'Disable' : 'Enable'} ${model.name}`"
+              @update:model-value="updateModelPolicy(model.id, $event)"
+            />
+          </div>
+        </div>
       </UiGrid>
     </UiAsyncStage>
 
@@ -228,19 +304,22 @@ useHead({
   margin-bottom: var(--ll-space-10);
 }
 
-.models-availability-note {
-  margin: 0 0 var(--ll-space-5);
-  color: var(--ll-color-text-muted);
-  font-size: var(--ll-text-sm);
-}
-
-.models-availability-note a { color: var(--ll-color-ink); }
+.models-policy { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-6); padding: var(--ll-space-5); margin-bottom: var(--ll-space-6); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); }
+.models-policy > div { display: grid; gap: var(--ll-space-1); }
+.models-policy strong, .models-policy p { margin: 0; }
+.models-policy p { color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
+.models-policy a { color: var(--ll-color-ink); }
+.models-policy-error { margin: calc(-1 * var(--ll-space-3)) 0 var(--ll-space-5); color: var(--ll-color-brand-ink); font-size: var(--ll-text-sm); }
 
 .models-grid { column-gap: var(--ll-space-20); }
 
 .model-item {
+  display: grid;
   min-width: 0;
+  gap: var(--ll-space-2);
 }
+
+.model-item :deep(.ui-pill) { width: 100%; }
 
 .model-item--focused {
   background: var(--ll-color-primary-highlight);
@@ -270,6 +349,10 @@ useHead({
   font-size: var(--ll-text-xs);
   font-weight: 500;
 }
+
+.model-item__policy { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-3); padding-inline: var(--ll-space-2); color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); }
+
+@media (max-width: 48rem) { .models-policy { align-items: flex-start; flex-direction: column; } }
 
 .visually-hidden {
   position: absolute;
