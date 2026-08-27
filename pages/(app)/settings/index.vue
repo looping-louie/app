@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Ref, ShallowRef } from 'vue'
-import UiAsyncStage from '~/components/ui/AsyncStage.vue'
+import UiButton from '~/components/ui/Button.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
 import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiGrid from '~/components/ui/Grid.vue'
@@ -229,109 +229,116 @@ useHead({ title: 'Settings · Looping Louie' })
 </script>
 
 <template>
-  <UiAsyncStage :status="status" :error-label="errorLabel" :show-retry="true" @retry="refresh">
-    <div class="global-configuration">
-      <section class="configuration-section" aria-labelledby="default-model-title">
-        <UiCollectionGroupTitle id="default-model-title" title="Default model" heading-as="h2" />
-        <UiSectionStage inverse="bottom">
-          <div class="default-model-control">
-            <UiPill
-              class="default-model-pill"
-              :class="{ 'default-model-pill--empty': !selectedModel }"
-              :src="selectedModelLogo"
-              alt=""
-              clickable
-              aria-haspopup="dialog"
-              :aria-label="selectedModel ? `Change default model, currently ${selectedModel.name}` : 'Choose a default model'"
-              @click="openModelPalette"
-            >
-              <template v-if="!selectedModel" #icon>
-                <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                  <path d="M208,40H48A16,16,0,0,0,32,56V200a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V56A16,16,0,0,0,208,40Zm0,160H48V56H208ZM80,96A16,16,0,1,1,96,112,16,16,0,0,1,80,96Zm96,0a16,16,0,1,1,16,16A16,16,0,0,1,176,96ZM80,160a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,160Z" />
-                </svg>
-              </template>
-              {{ selectedModel?.name ?? 'No default model' }}
-            </UiPill>
-            <p>{{ selectedModel ? `${selectedModel.vendor} · ${selectedModel.family}` : 'Choose the model inherited by Louie runs without a narrower override.' }}</p>
+  <div v-if="status === 'pending' || status === 'idle'" class="configuration-state" role="status">
+    Loading execution settings…
+  </div>
+  <div v-else-if="status === 'error'" class="configuration-state configuration-state--error" role="alert">
+    <span>{{ errorLabel }}</span>
+    <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
+  </div>
+  <div v-else class="global-configuration">
+    <section class="configuration-section" aria-labelledby="default-harness-title">
+      <UiCollectionGroupTitle id="default-harness-title" title="Default harness" heading-as="h2" />
+      <UiSectionStage inverse="bottom">
+        <UiGrid :columns="4" gap="md" class="harness-grid" role="radiogroup" aria-label="Default harness">
+          <UiPill
+            v-for="harness in harnessOptions"
+            :key="harness.id"
+            variant="selectable"
+            icon-style="circle"
+            :src="harness.image"
+            alt=""
+            :description="harness.owner"
+            :selected="selectedHarnessId === harness.id"
+            :aria-label="`Use ${harness.name} by ${harness.owner} as the default harness`"
+            @click="selectHarness(harness)"
+          >
+            {{ harness.name }}
+          </UiPill>
+        </UiGrid>
+      </UiSectionStage>
+    </section>
+
+    <section class="configuration-section" aria-labelledby="default-model-title">
+      <UiCollectionGroupTitle id="default-model-title" title="Default model" heading-as="h2" />
+      <UiSectionStage inverse="bottom">
+        <div class="default-model-control">
+          <UiPill
+            class="default-model-pill"
+            :class="{ 'default-model-pill--empty': !selectedModel }"
+            :src="selectedModelLogo"
+            alt=""
+            clickable
+            aria-haspopup="dialog"
+            :aria-label="selectedModel ? `Change default model, currently ${selectedModel.name}` : 'Choose a default model'"
+            @click="openModelPalette"
+          >
+            <template v-if="!selectedModel" #icon>
+              <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M208,40H48A16,16,0,0,0,32,56V200a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V56A16,16,0,0,0,208,40Zm0,160H48V56H208ZM80,96A16,16,0,1,1,96,112,16,16,0,0,1,80,96Zm96,0a16,16,0,1,1,16,16A16,16,0,0,1,176,96ZM80,160a8,8,0,0,1,8-8h80a8,8,0,0,1,0,16H88A8,8,0,0,1,80,160Z" />
+              </svg>
+            </template>
+            {{ selectedModel?.name ?? 'No default model' }}
+          </UiPill>
+          <p>{{ selectedModel ? `${selectedModel.vendor} · ${selectedModel.family}` : 'Choose the model inherited by Louie runs without a narrower override.' }}</p>
+        </div>
+      </UiSectionStage>
+    </section>
+
+    <section class="configuration-section" aria-labelledby="execution-defaults-title">
+      <UiCollectionGroupTitle id="execution-defaults-title" title="Execution defaults" heading-as="h2" />
+      <UiSectionStage inverse="both">
+        <div class="execution-defaults">
+          <div class="execution-defaults__row">
+            <div class="execution-defaults__copy"><h3>Default branch</h3><p>The branch new runs use when no branch is specified.</p></div>
+            <UiTextField v-model="preferences.defaultBranch" label="Default branch" hide-label placeholder="main" autocomplete="off" />
           </div>
-        </UiSectionStage>
-      </section>
-
-      <section class="configuration-section" aria-labelledby="default-harness-title">
-        <UiCollectionGroupTitle id="default-harness-title" title="Default harness" heading-as="h2" />
-        <UiSectionStage inverse="bottom">
-          <UiGrid :columns="4" gap="md" class="harness-grid" role="radiogroup" aria-label="Default harness">
-            <UiPill
-              v-for="harness in harnessOptions"
-              :key="harness.id"
-              variant="selectable"
-              icon-style="circle"
-              :src="harness.image"
-              alt=""
-              :description="harness.owner"
-              :selected="selectedHarnessId === harness.id"
-              :aria-label="`Use ${harness.name} by ${harness.owner} as the default harness`"
-              @click="selectHarness(harness)"
-            >
-              {{ harness.name }}
-            </UiPill>
-          </UiGrid>
-        </UiSectionStage>
-      </section>
-
-      <section class="configuration-section" aria-labelledby="execution-defaults-title">
-        <UiCollectionGroupTitle id="execution-defaults-title" title="Execution defaults" heading-as="h2" />
-        <UiSectionStage inverse="both">
-          <div class="execution-defaults">
-            <div class="execution-defaults__row">
-              <div class="execution-defaults__copy"><h3>Default branch</h3><p>The branch new runs use when no branch is specified.</p></div>
-              <UiTextField v-model="preferences.defaultBranch" label="Default branch" hide-label placeholder="main" autocomplete="off" />
+          <div class="execution-defaults__row">
+            <div class="execution-defaults__copy"><h3>Protected branches</h3><p>Comma-separated branches that harnesses must not commit to directly.</p></div>
+            <UiTextField v-model="preferences.protectedBranches" label="Protected branches" hide-label placeholder="main, master" autocomplete="off" />
+          </div>
+          <div class="execution-defaults__toggle-grid">
+            <div class="execution-defaults__toggle-option">
+              <div class="execution-defaults__copy"><h3>Allow commits</h3><p>Let harnesses create commits after an approved execution.</p></div>
+              <UiToggle v-model="preferences.allowCommits" aria-label="Allow commits" />
             </div>
-            <div class="execution-defaults__row">
-              <div class="execution-defaults__copy"><h3>Protected branches</h3><p>Comma-separated branches that harnesses must not commit to directly.</p></div>
-              <UiTextField v-model="preferences.protectedBranches" label="Protected branches" hide-label placeholder="main, master" autocomplete="off" />
+            <div class="execution-defaults__toggle-option">
+              <div class="execution-defaults__copy"><h3>Allow pull requests</h3><p>Let harnesses open pull requests with their completed changes.</p></div>
+              <UiToggle v-model="preferences.allowPullRequests" aria-label="Allow pull requests" />
             </div>
-            <div class="execution-defaults__toggle-grid">
-              <div class="execution-defaults__toggle-option">
-                <div class="execution-defaults__copy"><h3>Allow commits</h3><p>Let harnesses create commits after an approved execution.</p></div>
-                <UiToggle v-model="preferences.allowCommits" aria-label="Allow commits" />
-              </div>
-              <div class="execution-defaults__toggle-option">
-                <div class="execution-defaults__copy"><h3>Allow pull requests</h3><p>Let harnesses open pull requests with their completed changes.</p></div>
-                <UiToggle v-model="preferences.allowPullRequests" aria-label="Allow pull requests" />
-              </div>
-              <div class="execution-defaults__toggle-option">
-                <div class="execution-defaults__copy"><h3>Create a branch for every run</h3><p>Keep each execution isolated from the default branch.</p></div>
-                <UiToggle v-model="preferences.createRunBranches" aria-label="Create a branch for every run" />
-              </div>
-              <div class="execution-defaults__toggle-option">
-                <div class="execution-defaults__copy"><h3>Require approval before merge</h3><p>Hold completed pull requests until a reviewer approves them.</p></div>
-                <UiToggle v-model="preferences.requireMergeApproval" aria-label="Require approval before merge" />
-              </div>
+            <div class="execution-defaults__toggle-option">
+              <div class="execution-defaults__copy"><h3>Create a branch for every run</h3><p>Keep each execution isolated from the default branch.</p></div>
+              <UiToggle v-model="preferences.createRunBranches" aria-label="Create a branch for every run" />
+            </div>
+            <div class="execution-defaults__toggle-option">
+              <div class="execution-defaults__copy"><h3>Require approval before merge</h3><p>Hold completed pull requests until a reviewer approves them.</p></div>
+              <UiToggle v-model="preferences.requireMergeApproval" aria-label="Require approval before merge" />
             </div>
           </div>
-        </UiSectionStage>
-      </section>
-    </div>
+        </div>
+      </UiSectionStage>
+    </section>
+  </div>
 
-    <UiCommandPalette
-      v-model:open="modelPaletteOpen"
-      v-model:query="modelPaletteQuery"
-      :items="modelPaletteItems"
-      placeholder="Search models…"
-      aria-label="Choose default model"
-      empty-title="No models found"
-      empty-description="Try another model, vendor, or family."
-      option-style="card"
-      size="wide"
-      :keyboard-shortcut="false"
-      @select="selectModel"
-    />
-  </UiAsyncStage>
+  <UiCommandPalette
+    v-model:open="modelPaletteOpen"
+    v-model:query="modelPaletteQuery"
+    :items="modelPaletteItems"
+    placeholder="Search models…"
+    aria-label="Choose default model"
+    empty-title="No models found"
+    empty-description="Try another model, vendor, or family."
+    option-style="card"
+    size="wide"
+    :keyboard-shortcut="false"
+    @select="selectModel"
+  />
 </template>
 
 <style scoped>
 .global-configuration { display: grid; gap: var(--ll-space-12); }
+.configuration-state { display: flex; min-height: 10rem; align-items: center; justify-content: center; gap: var(--ll-space-4); color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
+.configuration-state--error { color: var(--ll-color-brand-ink); }
 .configuration-section { min-width: 0; }
 .configuration-section :deep(.ui-section-stage) { --ui-section-stage-shell-inset: 0rem; }
 .default-model-control { display: flex; min-height: 5rem; align-items: center; gap: var(--ll-space-4); padding: var(--ll-space-4) var(--ll-space-5); }
