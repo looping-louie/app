@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Ref, ShallowRef } from 'vue'
 import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
-import ExecutionModelTargetSelector from '~/components/execution/ModelTargetSelector.vue'
+import ExecutionModelSelector from '~/components/execution/ModelSelector.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
@@ -109,7 +109,7 @@ useHead({ title: 'Settings · Looping Louie' })
         <UiCollectionGroupTitle id="default-model-title" title="Default model" heading-as="h2" />
         <UiSectionStage inverse="bottom">
           <div class="configuration-control">
-            <ExecutionModelTargetSelector
+            <ExecutionModelSelector
               v-model="defaultModelId"
               :models="executionSettings?.models ?? []"
               inherit-label="No default model"

@@ -23,7 +23,7 @@ const emit = defineEmits<{
 
 const { modelLogo, providerLogo } = useModelLogo()
 const selectableModels = computed(() => props.models.filter(model => model.available))
-const currentTargetUnavailable = computed(() => {
+const currentModelUnavailable = computed(() => {
   if (!props.modelValue) return false
   return !selectableModels.value.some(model => model.id === props.modelValue)
 })
@@ -75,7 +75,7 @@ function clearSelection() {
       <p v-else class="execution-model-target__empty">No model is currently available.</p>
     </section>
 
-    <p v-if="currentTargetUnavailable" class="execution-model-target__error" role="alert">
+    <p v-if="currentModelUnavailable" class="execution-model-target__error" role="alert">
       The saved model is no longer available. Choose another model or use inheritance.
     </p>
     <p v-if="error" class="execution-model-target__error" role="alert">{{ error }}</p>

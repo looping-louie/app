@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
-import ExecutionModelTargetSelector from '~/components/execution/ModelTargetSelector.vue'
+import ExecutionModelSelector from '~/components/execution/ModelSelector.vue'
 import PageShell from '~/components/layout/PageShell.vue'
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
 import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
@@ -427,7 +427,7 @@ useHead(() => ({
 
               <div v-else-if="item.kind === 'execution'" class="pipeline-execution">
                 <template v-if="editing">
-                  <ExecutionModelTargetSelector
+                  <ExecutionModelSelector
                     v-model="editModelId"
                     :models="executionOptions?.models ?? []"
                     inherit-label="Inherit user model"

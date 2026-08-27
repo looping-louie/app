@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
-import ExecutionModelTargetSelector from '~/components/execution/ModelTargetSelector.vue'
+import ExecutionModelSelector from '~/components/execution/ModelSelector.vue'
 import WizardShell from '~/components/layout/WizardShell.vue'
 import PipelineDesignEditor from '~/components/pipelines/PipelineDesignEditor.vue'
 import type { PipelineDesignDraft } from '~/components/pipelines/PipelineDesignEditor.vue'
@@ -334,7 +334,7 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
           <div v-if="executionOptionsStatus === 'pending'" class="pipeline-builder__execution-state" role="status">Loading execution defaults…</div>
           <div v-else-if="executionOptionsStatus === 'error'" class="pipeline-builder__execution-state pipeline-builder__execution-state--error" role="alert">Execution defaults could not be loaded.</div>
           <div v-else class="pipeline-builder__execution-options">
-            <ExecutionModelTargetSelector
+            <ExecutionModelSelector
               v-model="pipelineModelId"
               :models="executionOptions?.models ?? []"
               inherit-label="Inherit user model"
