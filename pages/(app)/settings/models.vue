@@ -6,6 +6,7 @@ import UiPagination from '~/components/ui/Pagination.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
+import { collectApiPages } from '~/utils/apiPagination'
 
 type ModelVisualState = 'unavailable' | 'available-enabled' | 'available-disabled'
 
@@ -48,7 +49,6 @@ const officialModelPages: Record<string, string> = {
 }
 
 const modelQuery = computed(() => ({
-  offset: modelOffset.value,
   status: modelStatus.value === 'all' ? undefined : modelStatus.value as ModelStatus,
   include_deprecated: modelStatus.value === 'all',
   lab: modelLabs.value.length ? modelLabs.value : undefined,
@@ -57,15 +57,19 @@ const modelQuery = computed(() => ({
 }))
 
 const { data, status, refresh } = await useAsyncData(
-  'settings-models',
-  () => api.models.list(modelQuery.value),
+  'settings-model-catalog',
+  () => collectApiPages(offset => api.models.list({ ...modelQuery.value, offset })),
   { watch: [modelQuery] },
 )
 const { data: user, refresh: refreshUser } = await useAsyncData('settings-model-policy', () => api.users.getCurrent())
 
-const models = computed(() => data.value?.items ?? [])
-const modelTotal = computed(() => data.value?.total ?? 0)
-const modelSearchItems = computed(() => models.value.map(model => ({
+const allModels = computed(() => data.value ?? [])
+const sortedModels = computed(() => [...allModels.value].sort((left, right) => (
+  Number(modelAvailable(right)) - Number(modelAvailable(left))
+)))
+const models = computed(() => sortedModels.value.slice(modelOffset.value, modelOffset.value + modelPageSize))
+const modelTotal = computed(() => allModels.value.length)
+const modelSearchItems = computed(() => allModels.value.map(model => ({
   id: model.id,
   label: model.name,
   description: `${model.vendor} · ${model.family}`,
@@ -213,7 +217,7 @@ useHead({
 
     <UiAsyncStage
       :status="status"
-      :empty="models.length === 0"
+      :empty="modelTotal === 0"
       loading-label="Loading models…"
       error-label="Models could not be loaded."
       empty-label="No models found."
