@@ -10,11 +10,11 @@ import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTable from '~/components/ui/Table.vue'
 import { collectApiPages } from '~/utils/apiPagination'
 import { observabilityDistributions, observabilityLogs, observabilityMetrics, type ObservabilityDistributionItem } from '~/utils/observability'
-import { needsTerminalEventRefresh, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 const activeView = ref('metrics')
 const dateRange = ref('7d')
 const api = useApiClient()
+const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
 
 const viewOptions = [
   { value: 'metrics', label: 'Metrics' },
@@ -48,13 +48,7 @@ const {
 } = usePipelineRunPolling(
   () => snapshots.value ?? [],
   async (updates) => {
-    const currentById = new Map((snapshots.value ?? []).map(snapshot => [snapshot.run.id, snapshot]))
-    const refreshed = await Promise.all(updates.map((run) => {
-      const current = currentById.get(run.id)
-      return snapshotNeedsEventRefresh(current, run) ? loadSnapshot(run) : { ...current!, run }
-    }))
-    const byId = new Map(refreshed.map(snapshot => [snapshot.run.id, snapshot]))
-    snapshots.value = (snapshots.value ?? []).map(snapshot => byId.get(snapshot.run.id) ?? snapshot)
+    snapshots.value = await mergeSnapshots(snapshots.value ?? [], updates)
   },
   { refreshCatalog: refreshObservabilityCatalog },
 )
@@ -71,23 +65,7 @@ async function loadObservabilitySnapshots() {
 
 async function refreshObservabilityCatalog() {
   const runs = await listRunsInRange()
-  const currentById = new Map((snapshots.value ?? []).map(snapshot => [snapshot.run.id, snapshot]))
-  snapshots.value = await Promise.all(runs.map((run) => {
-    const current = currentById.get(run.id)
-    return snapshotNeedsEventRefresh(current, run) ? loadSnapshot(run) : { ...current!, run }
-  }))
-}
-
-function snapshotNeedsEventRefresh(current: PipelineRunSnapshot | undefined, run: PipelineRunSnapshot['run']) {
-  return !current
-    || current.run.status !== run.status
-    || current.run.updated_at !== run.updated_at
-    || needsTerminalEventRefresh(current)
-}
-
-async function loadSnapshot(run: PipelineRunSnapshot['run']): Promise<PipelineRunSnapshot> {
-  const events = await collectApiPages(offset => api.pipelines.listRunEvents(run.pipeline_id, run.id, { offset }))
-  return { run, events }
+  snapshots.value = await mergeSnapshots(snapshots.value ?? [], runs, true)
 }
 
 const metrics = computed(() => observabilityMetrics(snapshots.value ?? []))

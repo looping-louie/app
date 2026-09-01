@@ -11,7 +11,7 @@ import UiTable from '~/components/ui/Table.vue'
 import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
-import { needsTerminalEventRefresh, runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
+import { runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
@@ -56,6 +56,7 @@ const dateRangeOptions = [
 const route = useRoute()
 const router = useRouter()
 const api = useApiClient()
+const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
 const { activeWorkspace } = useWorkspaceContext()
 const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
@@ -138,11 +139,6 @@ async function loadRuns() {
     pipelineNames: new Map(pipelines.map(pipeline => [pipeline.id, pipeline.name])),
     activitiesById: new Map(pipelines.flatMap(pipeline => pipeline.steps.map(step => [step.id, step] as const))),
   }
-}
-
-async function loadSnapshot(run: PipelineRunResponse): Promise<PipelineRunSnapshot> {
-  const events = await collectApiPages(offset => api.pipelines.listRunEvents(run.pipeline_id, run.id, { offset }))
-  return { run, events }
 }
 
 function selectRun(row: RunTableRow) {
@@ -251,20 +247,9 @@ function replaceCurrentActivity(runId: string, activityRun: NonNullable<Pipeline
 
 async function updateRunDetails(updates: PipelineRunResponse[]) {
   if (!data.value) return
-  const snapshots = await Promise.all(updates.map(async (run) => {
-    const current = data.value?.snapshots.find(snapshot => snapshot.run.id === run.id)
-    if (
-      current
-      && current.run.status === run.status
-      && current.run.updated_at === run.updated_at
-      && !needsTerminalEventRefresh(current)
-    ) return { ...current, run }
-    return loadSnapshot(run)
-  }))
-  const byId = new Map(snapshots.map(snapshot => [snapshot.run.id, snapshot]))
   data.value = {
     ...data.value,
-    snapshots: data.value.snapshots.map(snapshot => byId.get(snapshot.run.id) ?? snapshot),
+    snapshots: await mergeSnapshots(data.value.snapshots, updates),
   }
   if (selectedSnapshot.value?.run.status === 'queued') await refreshRunReadiness()
   else clearRunReadiness()
