@@ -2,7 +2,7 @@
 interface AccordionItem {
   id: string
   title: string
-  content: string
+  content?: string
 }
 
 const props = withDefaults(defineProps<{
@@ -52,7 +52,11 @@ function toggle(id: string) {
         role="region"
         :aria-labelledby="`${instanceId}-${item.id}-trigger`"
       >
-        <div><p>{{ item.content }}</p></div>
+        <div>
+          <slot name="content" :item="item">
+            <p>{{ item.content }}</p>
+          </slot>
+        </div>
       </div>
     </div>
   </div>
@@ -129,7 +133,7 @@ function toggle(id: string) {
   overflow: hidden;
 }
 
-.ui-accordion__panel p {
+.ui-accordion__panel > div > p {
   max-width: 48rem;
   margin: 0;
   padding: 0 var(--ll-space-6) var(--ll-space-5);

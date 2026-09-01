@@ -1,102 +1,139 @@
-import type { PipelineRunEventResponse } from '~/types/api'
-import { isSchedulerEvent, parseHarnessTurnEvent } from '~/utils/harnessObservations'
-import { eventErrorMessages, eventLatency, eventTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
+import type { PipelineRunResponse } from '~/types/api'
+import { eventErrorMessages, harnessTurns, runPrompt, turnUsage, type HarnessTurnRecord, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
-export interface ObservabilityChart {
+interface ObservableTurn extends HarnessTurnRecord {
+  run: PipelineRunResponse
+}
+
+export interface ObservabilityDistributionItem {
+  label: string
+  value: number
+}
+
+export interface ObservabilityDistribution {
   title: string
   description: string
   total: string
   totalLabel: string
-  legend: string
-  line: string
+  items: ObservabilityDistributionItem[]
 }
 
 export function observabilityMetrics(snapshots: PipelineRunSnapshot[]) {
-  const runs = snapshots.map(snapshot => snapshot.run)
-  const completed = runs.filter(run => run.status === 'completed')
-  const terminal = runs.filter(run => ['completed', 'failed'].includes(run.status))
-  const latencies = snapshots.flatMap(snapshot => snapshot.events.map(eventLatency)).filter(Boolean)
+  const turns = observableTurns(snapshots)
+  const completed = turns.filter(turn => turn.outcome === 'completed').length
+  const failed = turns.length - completed
+  const durations = turns.flatMap(turn => turn.observation.duration_ms === null ? [] : [turn.observation.duration_ms])
+  const tokens = turns.reduce((total, turn) => total + turnUsage(turn).total, 0)
+  const divergences = turns.filter((turn) => {
+    const { requested_model: requested, actual_model: actual } = turn.observation
+    return Boolean(requested && actual && requested !== actual)
+  }).length
   return [
-    { label: 'Completed runs', value: completed.length, trend: 'neutral' as const },
-    { label: 'Success rate', value: terminal.length ? ((completed.length / terminal.length) * 100).toFixed(1) : '0.0', suffix: '%', trend: 'neutral' as const },
-    { label: 'Average model latency', value: latencies.length ? (sum(latencies) / latencies.length / 1000).toFixed(2) : '0.00', suffix: 's', trend: 'neutral' as const },
-    { label: 'Failed runs', value: runs.filter(run => run.status === 'failed').length, trend: 'neutral' as const },
+    metric('Harness turns', turns.length),
+    metric('Successful turns', completed),
+    metric('Failed turns', failed),
+    metric('Success rate', turns.length ? ((completed / turns.length) * 100).toFixed(1) : '0.0', '%'),
+    metric('Average duration', durations.length ? (sum(durations) / durations.length / 1000).toFixed(2) : '0.00', 's'),
+    metric('P95 duration', durations.length ? (percentile(durations, 0.95) / 1000).toFixed(2) : '0.00', 's'),
+    metric('Total tokens', tokens.toLocaleString()),
+    metric('Model divergences', divergences),
   ]
 }
 
-export function observabilityCharts(snapshots: PipelineRunSnapshot[]): ObservabilityChart[] {
-  const buckets = weekBuckets()
-  const tokens = bucketEvents(snapshots, buckets, eventTokenCount)
-  const latency = bucketEvents(snapshots, buckets, eventLatency)
-  const volume = buckets.map(day => snapshots.filter(snapshot => dayKey(snapshot.run.created_at) === day).length)
+export function observabilityDistributions(snapshots: PipelineRunSnapshot[]): ObservabilityDistribution[] {
+  const turns = observableTurns(snapshots)
+  const usages = turns.map(turnUsage)
   return [
-    chart('Token usage', 'Harness token consumption reported by the execution ledger.', sum(tokens).toLocaleString(), 'Total tokens', 'Tokens', tokens),
-    chart('Model latency', 'Time spent waiting for Harness responses.', `${(sum(latency) / 1000).toFixed(2)}s`, 'Total latency', 'Milliseconds', latency),
-    chart('Run volume', 'Pipeline runs created during the last seven days.', String(sum(volume)), 'Created runs', 'Runs', volume),
+    distribution(
+      'Token usage',
+      'Reported token counters across Harness turns.',
+      [
+        { label: 'Input', value: sum(usages.map(usage => usage.input)) },
+        { label: 'Output', value: sum(usages.map(usage => usage.output)) },
+        { label: 'Cached', value: sum(usages.map(usage => usage.cached)) },
+      ],
+      'Reported tokens',
+    ),
+    countedDistribution('Requested models', 'Models frozen by the API for execution.', turns.map(turn => turn.observation.requested_model ?? 'Unknown'), 'Turns'),
+    countedDistribution('Actual models', 'Models reported by the Harness after execution.', turns.map(turn => turn.observation.actual_model ?? 'Unknown'), 'Turns'),
+    countedDistribution('Reasoning effort', 'Reported reasoning effort for compatible Harnesses.', turns.map(reasoningEffort), 'Turns'),
+    countedDistribution('Commit outcomes', 'Authorized Git outcomes without treating inapplicable commits as failures.', turns.map(commitOutcome), 'Turns'),
+    countedDistribution('Changed files', 'Most frequently changed files reported by Harness turns.', turns.flatMap(turn => turn.observation.changed_files), 'File changes'),
+    countedDistribution('Errors and diagnostics', 'Most frequent normalized errors and diagnostic messages.', turns.flatMap(turn => eventErrorMessages(turn.event)), 'Occurrences'),
   ]
 }
 
 export function observabilityLogs(snapshots: PipelineRunSnapshot[]) {
-  return snapshots.flatMap(({ run, events }) => events.map(event => ({
-    id: event.id,
-    created: new Date(event.created_at).toLocaleString(),
-    createdValue: event.created_at,
-    type: event.event_type.replaceAll('_', ' '),
-    run: run.id,
-    activity: event.activity_id ?? '—',
-    activityRun: activityRunId(event),
-    error: errorMessage(event),
-  }))).sort((first, second) => Date.parse(second.createdValue) - Date.parse(first.createdValue))
+  return observableTurns(snapshots).map((turn) => {
+    const usage = turnUsage(turn)
+    const requested = turn.observation.requested_model ?? 'Unknown'
+    const actual = turn.observation.actual_model
+    return {
+      id: turn.event.id,
+      created: new Date(turn.event.created_at).toLocaleString(),
+      createdValue: turn.event.created_at,
+      status: turn.outcome,
+      run: runPrompt(turn.run).split('\n')[0]!.slice(0, 70),
+      runId: turn.run.id,
+      pipelineId: turn.run.pipeline_id,
+      activityRun: turn.activityRunId,
+      model: actual && actual !== requested ? `${requested} → ${actual}` : actual ?? requested,
+      duration: turn.observation.duration_ms === null ? '—' : `${(turn.observation.duration_ms / 1000).toFixed(2)}s`,
+      tokens: usage.total.toLocaleString(),
+      error: eventErrorMessages(turn.event).join(' · ') || '—',
+    }
+  }).sort((first, second) => Date.parse(second.createdValue) - Date.parse(first.createdValue))
 }
 
-function bucketEvents(
-  snapshots: PipelineRunSnapshot[],
-  buckets: string[],
-  value: (event: PipelineRunEventResponse) => number,
-) {
-  return buckets.map(day => sum(snapshots.flatMap(snapshot => snapshot.events)
-    .filter(event => dayKey(event.created_at) === day)
-    .map(value)))
+function observableTurns(snapshots: PipelineRunSnapshot[]): ObservableTurn[] {
+  return snapshots.flatMap(snapshot => harnessTurns(snapshot.events).map(turn => ({ ...turn, run: snapshot.run })))
 }
 
-function errorMessage(event: PipelineRunEventResponse) {
-  const messages = eventErrorMessages(event)
-  if (messages.length) return messages.join(' · ')
-  if (isSchedulerEvent(event) && event.event_type === 'pipeline_step_failed') return 'Activity failed'
-  return '—'
+function commitOutcome(turn: HarnessTurnRecord) {
+  if (turn.observation.commit_error) return 'Failed'
+  if (turn.observation.committed === true) return 'Committed'
+  if (turn.observation.committed === false) return 'Not committed'
+  return 'Not applicable'
 }
 
-function activityRunId(event: PipelineRunEventResponse) {
-  const turn = parseHarnessTurnEvent(event)
-  if (turn) return turn.activityRunId
-  if (isSchedulerEvent(event) && event.event_type !== 'pipeline_run_created') return event.payload.activity_run_id
-  return '—'
+function reasoningEffort(turn: HarnessTurnRecord) {
+  return turn.observation.harness.kind === 'codex_cli'
+    ? turn.observation.reasoning_effort ?? 'Unknown'
+    : 'Not reported'
 }
 
-function chart(title: string, description: string, total: string, totalLabel: string, legend: string, values: number[]): ObservabilityChart {
-  return { title, description, total, totalLabel, legend, line: seriesPath(values) }
+function metric(label: string, value: string | number, suffix?: string) {
+  return { label, value, suffix, trend: 'neutral' as const }
 }
 
-function seriesPath(values: number[]) {
-  const maximum = Math.max(...values, 1)
-  return values.map((value, index) => {
-    const x = values.length === 1 ? 240 : (index / (values.length - 1)) * 480
-    const y = 160 - (value / maximum) * 130
-    return `${index ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`
-  }).join(' ')
+function countedDistribution(title: string, description: string, values: string[], totalLabel: string) {
+  const counts = new Map<string, number>()
+  values.forEach(value => counts.set(value, (counts.get(value) ?? 0) + 1))
+  return distribution(title, description, [...counts].map(([label, value]) => ({ label, value })), totalLabel)
 }
 
-function weekBuckets() {
-  const today = new Date()
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(today)
-    date.setDate(today.getDate() - (6 - index))
-    return dayKey(date.toISOString())
-  })
+function distribution(
+  title: string,
+  description: string,
+  items: ObservabilityDistributionItem[],
+  totalLabel: string,
+): ObservabilityDistribution {
+  const sorted = items.filter(item => item.value > 0).sort((first, second) => second.value - first.value || first.label.localeCompare(second.label))
+  const visible = sorted.slice(0, 8)
+  const remaining = sum(sorted.slice(8).map(item => item.value))
+  if (remaining) visible.push({ label: 'Other', value: remaining })
+  return {
+    title,
+    description,
+    total: sum(items.map(item => item.value)).toLocaleString(),
+    totalLabel,
+    items: visible,
+  }
 }
 
-function dayKey(value: string) {
-  return new Date(value).toISOString().slice(0, 10)
+function percentile(values: number[], value: number) {
+  const sorted = [...values].sort((first, second) => first - second)
+  return sorted[Math.max(0, Math.ceil(sorted.length * value) - 1)] ?? 0
 }
 
 function sum(values: number[]) {

@@ -1,9 +1,20 @@
 import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
-import { parseHarnessTurnEvent } from '~/utils/harnessObservations'
+import { parseHarnessTurnEvent, type ParsedHarnessTurnEvent } from '~/utils/harnessObservations'
 
 export interface PipelineRunSnapshot {
   run: PipelineRunResponse
   events: PipelineRunEventResponse[]
+}
+
+export interface HarnessTurnRecord extends ParsedHarnessTurnEvent {
+  event: PipelineRunEventResponse
+}
+
+export interface HarnessTurnUsageSummary {
+  input: number
+  output: number
+  cached: number
+  total: number
 }
 
 export function runPrompt(run: PipelineRunResponse) {
@@ -14,11 +25,25 @@ export function runTokenCount(events: PipelineRunEventResponse[]) {
   return events.reduce((total, event) => total + eventTokenCount(event), 0)
 }
 
+export function harnessTurns(events: PipelineRunEventResponse[]): HarnessTurnRecord[] {
+  return events.flatMap((event) => {
+    const turn = parseHarnessTurnEvent(event)
+    return turn ? [{ ...turn, event }] : []
+  })
+}
+
+export function turnUsage(turn: ParsedHarnessTurnEvent): HarnessTurnUsageSummary {
+  const usage = turn.observation.usage
+  const input = numberValue(usage.input_tokens) ?? 0
+  const output = numberValue(usage.output_tokens) ?? 0
+  const cached = numberValue(usage.cached_input_tokens) ?? numberValue(usage.cached_tokens) ?? 0
+  const total = numberValue(usage.total_tokens) ?? input + output
+  return { input, output, cached, total }
+}
+
 export function eventTokenCount(event: PipelineRunEventResponse) {
-  const usage = parseHarnessTurnEvent(event)?.observation.usage
-  const total = numberValue(usage?.total_tokens)
-  if (total !== undefined) return total
-  return (numberValue(usage?.input_tokens) ?? 0) + (numberValue(usage?.output_tokens) ?? 0)
+  const turn = parseHarnessTurnEvent(event)
+  return turn ? turnUsage(turn).total : 0
 }
 
 export function eventLatency(event: PipelineRunEventResponse) {

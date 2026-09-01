@@ -124,8 +124,8 @@ async function loadRuns() {
 }
 
 async function loadSnapshot(run: PipelineRunResponse): Promise<PipelineRunSnapshot> {
-  const events = await api.pipelines.listRunEvents(run.pipeline_id, run.id)
-  return { run, events: events.items }
+  const events = await collectApiPages(offset => api.pipelines.listRunEvents(run.pipeline_id, run.id, { offset }))
+  return { run, events }
 }
 
 function selectRun(row: RunTableRow) {
@@ -341,6 +341,8 @@ useHead({ title: 'Runs · Looping Louie' })
           v-if="selectedSnapshot"
           :run="selectedSnapshot.run"
           :events="selectedSnapshot.events"
+          :pipeline-name="data?.pipelineNames.get(selectedSnapshot.run.pipeline_id)"
+          :activities-by-id="data?.activitiesById"
         />
       </div>
     </UiAsyncStage>

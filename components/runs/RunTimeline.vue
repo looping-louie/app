@@ -1,13 +1,26 @@
 <script setup lang="ts">
+import HarnessTurnResult from '~/components/runs/HarnessTurnResult.vue'
 import UiPill from '~/components/ui/Pill.vue'
-import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
+import type { ActivityResponse, PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
 import { isSchedulerEvent, parseHarnessTurnEvent } from '~/utils/harnessObservations'
 import { eventErrorMessages, eventLabel, eventLatency, eventTokenCount } from '~/utils/pipelineRuns'
 
-defineProps<{
+const props = defineProps<{
   run: PipelineRunResponse
   events: PipelineRunEventResponse[]
+  pipelineName?: string
+  activitiesById?: Map<string, ActivityResponse>
 }>()
+
+function activityName(activityId: string | null) {
+  if (!activityId) return ''
+  return props.activitiesById?.get(activityId)?.name ?? activityId
+}
+
+function eventTurns(event: PipelineRunEventResponse) {
+  const turn = parseHarnessTurnEvent(event)
+  return turn ? [turn] : []
+}
 
 function eventDetail(event: PipelineRunEventResponse) {
   const turn = parseHarnessTurnEvent(event)
@@ -18,22 +31,24 @@ function eventDetail(event: PipelineRunEventResponse) {
       ...eventErrorMessages(event),
       tokens ? `${tokens.toLocaleString()} tokens` : '',
       latency ? `${(latency / 1000).toFixed(2)}s` : '',
+      activityName(event.activity_id),
       `Activity run ${turn.activityRunId}`,
     ]
       .filter(Boolean).join(' · ')
   }
   if (isSchedulerEvent(event) && event.event_type !== 'pipeline_run_created') {
-    if (event.event_type === 'pipeline_step_failed') return `Activity run ${event.payload.activity_run_id} failed`
-    return `Activity run ${event.payload.activity_run_id}`
+    const activity = activityName(event.activity_id)
+    if (event.event_type === 'pipeline_step_failed') return `${activity} · Activity run ${event.payload.activity_run_id} failed`
+    return `${activity} · Activity run ${event.payload.activity_run_id}`
   }
-  return event.activity_id ? `Activity ${event.activity_id}` : ''
+  return event.activity_id ? `Activity ${activityName(event.activity_id)}` : ''
 }
 </script>
 
 <template>
   <section class="run-timeline" aria-label="Run event timeline">
     <header class="run-timeline__heading">
-      <div><h2>Execution timeline</h2><p>{{ run.id }}</p></div>
+      <div><h2>Execution timeline</h2><p>{{ pipelineName ?? run.pipeline_id }} · {{ run.id }}</p></div>
       <div class="run-timeline__pills">
         <UiPill :focusable="false">{{ eventLabel(run.status) }}</UiPill>
         <UiPill :focusable="false">Commits {{ run.commit_mode === 'allow' ? 'allowed' : 'forbidden' }}</UiPill>
@@ -42,13 +57,13 @@ function eventDetail(event: PipelineRunEventResponse) {
 
     <div v-if="run.current_activity_run" class="run-timeline__current">
       <strong>Current activity</strong>
-      <span>{{ run.current_activity_run.activity_id }}</span>
+      <span>{{ activityName(run.current_activity_run.activity_id) }}</span>
       <span>{{ eventLabel(run.current_activity_run.state) }}</span>
     </div>
 
     <ol class="run-timeline__steps" aria-label="Pipeline steps">
       <li v-for="step in run.steps" :key="step.activity_id">
-        <span>{{ step.activity_id }}</span>
+        <span>{{ activityName(step.activity_id) }}</span>
         <UiPill :focusable="false">{{ eventLabel(step.status) }}</UiPill>
       </li>
     </ol>
@@ -62,6 +77,11 @@ function eventDetail(event: PipelineRunEventResponse) {
             <time :datetime="event.created_at">{{ new Date(event.created_at).toLocaleString() }}</time>
           </div>
           <p v-if="eventDetail(event)">{{ eventDetail(event) }}</p>
+          <HarnessTurnResult
+            v-for="turn in eventTurns(event)"
+            :key="`${event.id}:result`"
+            :turn="turn"
+          />
         </div>
       </li>
     </ol>
