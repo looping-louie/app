@@ -10,7 +10,7 @@ import UiToggle from '~/components/ui/Toggle.vue'
 import type { ExecutionHarness, ExecutionHarnessKind, ModelAvailabilityStatus, ModelSummary, UserResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
-import { executionHarnesses } from '~/utils/executionHarnesses'
+import { executionHarnesses, executionHarnessValue } from '~/utils/executionHarnesses'
 
 interface SettingsNavigationState {
   dirty: Ref<boolean>
@@ -61,7 +61,6 @@ const selectedHarnessId = ref('louie')
 const modelPaletteOpen = ref(false)
 const modelPaletteQuery = ref('')
 const savedRemoteSettings = ref('')
-const remoteSettingsSaving = ref(false)
 const initialized = ref(false)
 
 const {
@@ -103,17 +102,10 @@ const errorLabel = computed(() => apiErrorMessage(error.value, 'Execution settin
 
 watch(executionSettings, (value) => {
   if (!value || initialized.value) return
-  defaultModelId.value = value.user.settings.default_model_id
-  defaultModelAvailability.value = value.user.settings.default_model_availability
-  defaultHarness.value = cloneHarness(value.user.settings.default_harness)
-  selectedHarnessId.value = value.user.settings.default_harness?.kind ?? 'louie'
+  syncRemoteSettings(value.user)
   savedRemoteSettings.value = currentRemoteSettings.value
   initialized.value = true
 }, { immediate: true })
-
-function cloneHarness(value: ExecutionHarness | null) {
-  return value ? { ...value, config: {} } : null
-}
 
 function modelPaletteItem(model: ModelSummary): ModelPaletteItem {
   return {
@@ -135,86 +127,26 @@ function openModelPalette() {
 function syncRemoteSettings(user: UserResponse) {
   defaultModelId.value = user.settings.default_model_id
   defaultModelAvailability.value = user.settings.default_model_availability
-  defaultHarness.value = cloneHarness(user.settings.default_harness)
+  defaultHarness.value = user.settings.default_harness
   selectedHarnessId.value = user.settings.default_harness?.kind ?? 'louie'
 }
 
-async function persistRemoteSettings(successTitle: string, successDescription: string) {
-  if (remoteSettingsSaving.value || settingsNavigation?.saving.value) return false
-
-  remoteSettingsSaving.value = true
-  if (settingsNavigation) settingsNavigation.saving.value = true
-  try {
-    const currentUser = executionSettings.value?.user ?? await api.users.getCurrent()
-    const updated = await api.users.replaceSettings({
-      ...currentUser.settings,
-      default_model_id: defaultModelId.value,
-      default_model_availability: defaultModelAvailability.value,
-      default_harness: cloneHarness(defaultHarness.value),
-    })
-    if (executionSettings.value) executionSettings.value = { ...executionSettings.value, user: updated }
-    syncRemoteSettings(updated)
-    savedRemoteSettings.value = currentRemoteSettings.value
-    notifications.success(successTitle, successDescription)
-    return true
-  } catch (cause) {
-    notifications.error(
-      'Changes weren’t saved',
-      apiErrorMessage(cause, 'Your user settings could not be updated. Please try again.'),
-    )
-    return false
-  } finally {
-    remoteSettingsSaving.value = false
-    if (settingsNavigation) settingsNavigation.saving.value = false
-  }
-}
-
-async function selectModel(item: ModelPaletteItem) {
-  if (remoteSettingsSaving.value) return
-  const previousModelId = defaultModelId.value
+function selectModel(item: ModelPaletteItem) {
   defaultModelId.value = item.id === noDefaultModelId ? null : item.id
-  const saved = await persistRemoteSettings(
-    'Default model updated',
-    defaultModelId.value
-      ? `${selectedModel.value?.name ?? defaultModelId.value} is now the default execution model.`
-      : 'Executions will require a model from a narrower scope.',
-  )
-  if (!saved) defaultModelId.value = previousModelId
 }
 
-async function updateDefaultModelAvailability(enabled: boolean) {
-  if (remoteSettingsSaving.value) return
-  const previousAvailability = defaultModelAvailability.value
+function updateDefaultModelAvailability(enabled: boolean) {
   defaultModelAvailability.value = enabled ? 'enabled' : 'disabled'
-  const saved = await persistRemoteSettings(
-    'New model policy updated',
-    enabled
-      ? 'New models in available provider families will be enabled automatically.'
-      : 'New models in available provider families will remain disabled until you enable them.',
-  )
-  if (!saved) defaultModelAvailability.value = previousAvailability
 }
 
-async function selectHarness(harness: HarnessOption) {
-  if (remoteSettingsSaving.value) return
-  const previousHarnessId = selectedHarnessId.value
-  const previousHarness = cloneHarness(defaultHarness.value)
+function selectHarness(harness: HarnessOption) {
   selectedHarnessId.value = harness.id
   if (!harness.kind) return
-
-  defaultHarness.value = { kind: harness.kind, version: 'v1', config: {} }
-  const saved = await persistRemoteSettings(
-    'Default harness updated',
-    `${harness.name} is now the default execution harness.`,
-  )
-  if (!saved) {
-    selectedHarnessId.value = previousHarnessId
-    defaultHarness.value = previousHarness
-  }
+  defaultHarness.value = executionHarnessValue(harness.kind)
 }
 
 async function saveDefaults() {
-  if (!settingsNavigation || settingsNavigation.saving.value || remoteSettingsSaving.value) return
+  if (!settingsNavigation || settingsNavigation.saving.value) return
   const selectedHarness = harnessOptions.find(harness => harness.id === selectedHarnessId.value)
   if (!selectedHarness?.kind) {
     notifications.error(
@@ -231,7 +163,7 @@ async function saveDefaults() {
       ...currentUser.settings,
       default_model_id: defaultModelId.value,
       default_model_availability: defaultModelAvailability.value,
-      default_harness: cloneHarness(defaultHarness.value),
+      default_harness: defaultHarness.value,
     })
     if (executionSettings.value) executionSettings.value = { ...executionSettings.value, user: updated }
     syncRemoteSettings(updated)
@@ -289,7 +221,7 @@ useHead({ title: 'Settings · Looping Louie' })
             :description="harness.owner"
             :selected="selectedHarnessId === harness.id"
             :aria-label="`Use ${harness.name} by ${harness.owner} as the default harness`"
-            @click="void selectHarness(harness)"
+            @click="selectHarness(harness)"
           >
             {{ harness.name }}
           </UiPill>
@@ -323,9 +255,9 @@ useHead({ title: 'Settings · Looping Louie' })
             <UiToggle
               class="execution-defaults__model-policy-toggle"
               :model-value="defaultModelAvailability === 'enabled'"
-              :disabled="remoteSettingsSaving"
+              :disabled="settingsNavigation?.saving.value"
               aria-label="Enable new models by default"
-              @update:model-value="void updateDefaultModelAvailability($event)"
+              @update:model-value="updateDefaultModelAvailability($event)"
             />
           </div>
         </div>
@@ -344,7 +276,7 @@ useHead({ title: 'Settings · Looping Louie' })
     option-style="card"
     size="wide"
     :keyboard-shortcut="false"
-    @select="void selectModel($event)"
+    @select="selectModel($event)"
   />
 </template>
 
