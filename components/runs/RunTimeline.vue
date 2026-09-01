@@ -2,8 +2,8 @@
 import HarnessTurnResult from '~/components/runs/HarnessTurnResult.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import type { ActivityResponse, PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
-import { isSchedulerEvent, parseHarnessTurnEvent } from '~/utils/harnessObservations'
-import { eventErrorMessages, eventLabel, eventLatency, eventTokenCount } from '~/utils/pipelineRuns'
+import { isSchedulerEvent, parseHarnessTurnEvent, type ParsedHarnessTurnEvent } from '~/utils/harnessObservations'
+import { eventLabel, turnErrorMessages, turnUsage } from '~/utils/pipelineRuns'
 
 const props = defineProps<{
   run: PipelineRunResponse
@@ -17,18 +17,12 @@ function activityName(activityId: string | null) {
   return props.activitiesById?.get(activityId)?.name ?? activityId
 }
 
-function eventTurns(event: PipelineRunEventResponse) {
-  const turn = parseHarnessTurnEvent(event)
-  return turn ? [turn] : []
-}
-
-function eventDetail(event: PipelineRunEventResponse) {
-  const turn = parseHarnessTurnEvent(event)
+function eventDetail(event: PipelineRunEventResponse, turn: ParsedHarnessTurnEvent | null) {
   if (turn) {
-    const tokens = eventTokenCount(event)
-    const latency = eventLatency(event)
+    const tokens = turnUsage(turn).total
+    const latency = turn.observation.duration_ms ?? 0
     return [
-      ...eventErrorMessages(event),
+      ...turnErrorMessages(turn),
       tokens ? `${tokens.toLocaleString()} tokens` : '',
       latency ? `${(latency / 1000).toFixed(2)}s` : '',
       activityName(event.activity_id),
@@ -43,6 +37,11 @@ function eventDetail(event: PipelineRunEventResponse) {
   }
   return event.activity_id ? `Activity ${activityName(event.activity_id)}` : ''
 }
+
+const timelineEvents = computed(() => props.events.map((event) => {
+  const turn = parseHarnessTurnEvent(event)
+  return { event, turn, detail: eventDetail(event, turn) }
+}))
 </script>
 
 <template>
@@ -69,18 +68,17 @@ function eventDetail(event: PipelineRunEventResponse) {
     </ol>
 
     <ol v-if="events.length" class="run-timeline__events">
-      <li v-for="event in events" :key="event.id" class="run-timeline__event">
+      <li v-for="entry in timelineEvents" :key="entry.event.id" class="run-timeline__event">
         <span class="run-timeline__marker" aria-hidden="true" />
         <div class="run-timeline__content">
           <div class="run-timeline__event-heading">
-            <strong>{{ eventLabel(event.event_type) }}</strong>
-            <time :datetime="event.created_at">{{ new Date(event.created_at).toLocaleString() }}</time>
+            <strong>{{ eventLabel(entry.event.event_type) }}</strong>
+            <time :datetime="entry.event.created_at">{{ new Date(entry.event.created_at).toLocaleString() }}</time>
           </div>
-          <p v-if="eventDetail(event)">{{ eventDetail(event) }}</p>
+          <p v-if="entry.detail">{{ entry.detail }}</p>
           <HarnessTurnResult
-            v-for="turn in eventTurns(event)"
-            :key="`${event.id}:result`"
-            :turn="turn"
+            v-if="entry.turn"
+            :turn="entry.turn"
             :commit-mode="run.commit_mode"
           />
         </div>

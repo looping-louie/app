@@ -110,18 +110,6 @@ export interface PipelineRunEventResponse<TPayload = unknown, TEventType extends
 }
 
 export type HarnessTurnOutcome = 'completed' | 'failed'
-export type HarnessTurnCompletedEventType = 'harness_turn_completed' | 'codex_turn_completed'
-export type HarnessTurnFailedEventType = 'harness_turn_failed' | 'codex_turn_failed'
-
-export type HarnessTurnEvent =
-  | PipelineRunEventResponse<
-    CodexCliTurnObservation & { activity_run_id: string },
-    HarnessTurnCompletedEventType
-  >
-  | PipelineRunEventResponse<
-    CodexCliTurnObservation & { activity_run_id: string },
-    HarnessTurnFailedEventType
-  >
 
 export type SchedulerEvent =
   | PipelineRunEventResponse<{ commit_mode: PipelineRunCommitMode }, 'pipeline_run_created'>

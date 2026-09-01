@@ -22,7 +22,7 @@ export function runPrompt(run: PipelineRunResponse) {
 }
 
 export function runTokenCount(events: PipelineRunEventResponse[]) {
-  return events.reduce((total, event) => total + eventTokenCount(event), 0)
+  return harnessTurns(events).reduce((total, turn) => total + turnUsage(turn).total, 0)
 }
 
 export function harnessTurns(events: PipelineRunEventResponse[]): HarnessTurnRecord[] {
@@ -58,19 +58,8 @@ export function turnUsage(turn: ParsedHarnessTurnEvent): HarnessTurnUsageSummary
   return { input, output, cached, total }
 }
 
-export function eventTokenCount(event: PipelineRunEventResponse) {
-  const turn = parseHarnessTurnEvent(event)
-  return turn ? turnUsage(turn).total : 0
-}
-
-export function eventLatency(event: PipelineRunEventResponse) {
-  return numberValue(parseHarnessTurnEvent(event)?.observation.duration_ms) ?? 0
-}
-
-export function eventErrorMessages(event: PipelineRunEventResponse) {
-  const observation = parseHarnessTurnEvent(event)?.observation
-  if (!observation) return []
-  return [...new Set([observation.error, ...observation.diagnostics]
+export function turnErrorMessages(turn: ParsedHarnessTurnEvent) {
+  return [...new Set([turn.observation.error, ...turn.observation.diagnostics]
     .filter((message): message is string => typeof message === 'string' && Boolean(message.trim())))]
 }
 

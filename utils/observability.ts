@@ -1,5 +1,6 @@
 import type { PipelineRunResponse } from '~/types/api'
-import { eventErrorMessages, harnessTurns, runPrompt, turnUsage, type HarnessTurnRecord, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
+import { harnessCommitSummary } from '~/utils/harnessObservations'
+import { harnessTurns, runPrompt, turnErrorMessages, turnUsage, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 interface ObservableTurn extends HarnessTurnRecord {
   run: PipelineRunResponse
@@ -59,7 +60,7 @@ export function observabilityDistributions(snapshots: PipelineRunSnapshot[]): Ob
     countedDistribution('Reasoning effort', 'Reported reasoning effort for compatible Harnesses.', turns.map(reasoningEffort), 'Turns'),
     countedDistribution('Commit outcomes', 'Authorized Git outcomes without treating inapplicable commits as failures.', turns.map(commitOutcome), 'Turns'),
     countedDistribution('Changed files', 'Most frequently changed files reported by Harness turns.', turns.flatMap(turn => turn.observation.changed_files), 'File changes'),
-    countedDistribution('Errors and diagnostics', 'Most frequent normalized errors and diagnostic messages.', turns.flatMap(turn => eventErrorMessages(turn.event)), 'Occurrences'),
+    countedDistribution('Errors and diagnostics', 'Most frequent normalized errors and diagnostic messages.', turns.flatMap(turnErrorMessages), 'Occurrences'),
   ]
 }
 
@@ -80,7 +81,7 @@ export function observabilityLogs(snapshots: PipelineRunSnapshot[]) {
       model: actual && actual !== requested ? `${requested} → ${actual}` : actual ?? requested,
       duration: turn.observation.duration_ms === null ? '—' : `${(turn.observation.duration_ms / 1000).toFixed(2)}s`,
       tokens: usage.total.toLocaleString(),
-      error: eventErrorMessages(turn.event).join(' · ') || '—',
+      error: turnErrorMessages(turn).join(' · ') || '—',
     }
   }).sort((first, second) => Date.parse(second.createdValue) - Date.parse(first.createdValue))
 }
@@ -89,11 +90,16 @@ function observableTurns(snapshots: PipelineRunSnapshot[]): ObservableTurn[] {
   return snapshots.flatMap(snapshot => harnessTurns(snapshot.events).map(turn => ({ ...turn, run: snapshot.run })))
 }
 
-function commitOutcome(turn: HarnessTurnRecord) {
-  if (turn.observation.commit_error) return 'Failed'
-  if (turn.observation.committed === true) return 'Committed'
-  if (turn.observation.committed === false) return 'Not committed'
-  return 'Not applicable'
+function commitOutcome(turn: ObservableTurn) {
+  const commit = harnessCommitSummary(turn.observation, turn.run.commit_mode)
+  if (commit.authorization === 'forbidden') return 'Forbidden by policy'
+  if (commit.authorization === 'not_reached') return 'Not reached'
+  return {
+    committed: 'Committed',
+    failed: 'Failed',
+    not_committed: 'Not committed',
+    not_attempted: 'Not attempted',
+  }[commit.outcome]
 }
 
 function reasoningEffort(turn: HarnessTurnRecord) {

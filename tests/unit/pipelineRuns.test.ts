@@ -7,11 +7,10 @@ import type {
 } from '~/types/api'
 import { observabilityLogs, observabilityMetrics } from '~/utils/observability'
 import {
-  eventErrorMessages,
   eventLabel,
-  eventLatency,
   harnessTurns,
   needsTerminalEventRefresh,
+  turnErrorMessages,
   turnUsage,
 } from '~/utils/pipelineRuns'
 import completedObservationFixture from '../fixtures/harness_observations/codex_cli_v1_completed.json'
@@ -39,7 +38,7 @@ describe('Pipeline run transformations', () => {
     expect(turn).toBeDefined()
     if (!turn) return
 
-    expect(eventLatency(eventWithExplicitTotal)).toBe(250)
+    expect(turn.observation.duration_ms).toBe(250)
     expect(turnUsage(turn)).toEqual({ input: 2, output: 3, cached: 1, total: 99 })
   })
 
@@ -49,7 +48,7 @@ describe('Pipeline run transformations', () => {
     if (!turn) return
 
     expect(turnUsage(turn)).toEqual({ input: 10, output: 3, cached: 4, total: 13 })
-    expect(eventErrorMessages(failedEvent)).toEqual([
+    expect(turnErrorMessages(turn)).toEqual([
       'boom',
       'Codex emitted a partial response.',
     ])

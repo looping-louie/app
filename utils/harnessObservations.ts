@@ -1,6 +1,5 @@
 import type {
   CodexCliTurnObservation,
-  HarnessTurnEvent,
   HarnessTurnObservation,
   HarnessTurnOutcome,
   PipelineRunCommitMode,
@@ -107,18 +106,6 @@ export function isCodexCliTurnObservation(value: unknown): value is CodexCliTurn
     && optionalString(observation.commit_message)
     && optionalBoolean(observation.committed)
     && optionalString(observation.commit_error),
-  )
-}
-
-export function isHarnessTurnEvent(event: PipelineRunEventResponse): event is HarnessTurnEvent {
-  const outcome = harnessTurnOutcome(event.event_type)
-  const payload = recordValue(event.payload)
-  return Boolean(
-    outcome
-    && payload
-    && nonEmptyString(payload.activity_run_id)
-    && isCodexCliTurnObservation(payload)
-    && payload.completed === (outcome === 'completed'),
   )
 }
 
