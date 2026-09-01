@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import type {
-  HarnessTurnObservation,
   PipelineRunEventResponse,
   PipelineRunResponse,
 } from '~/types/api'
@@ -13,11 +12,7 @@ import {
   turnErrorMessages,
   turnUsage,
 } from '~/utils/pipelineRuns'
-import completedObservationFixture from '../fixtures/harness_observations/codex_cli_v1_completed.json'
-import failedObservationFixture from '../fixtures/harness_observations/codex_cli_v1_failed.json'
-
-const completedObservation = completedObservationFixture as unknown as HarnessTurnObservation
-const failedObservation = failedObservationFixture as unknown as HarnessTurnObservation
+import { completedObservation, failedObservation, harnessEvent as event } from '../helpers/harnessFixtures'
 
 const completedEvent = event(
   'harness_turn_completed',
@@ -111,20 +106,6 @@ describe('Pipeline run transformations', () => {
     expect(needsTerminalEventRefresh(snapshot)).toBe(false)
   })
 })
-
-function event(
-  eventType: string,
-  observation: HarnessTurnObservation,
-): PipelineRunEventResponse {
-  return {
-    id: `event-${eventType}`,
-    event_type: eventType,
-    activity_id: 'activity-1',
-    actor_id: 'worker-1',
-    payload: { ...observation, activity_run_id: 'activity-run-1' },
-    created_at: '2026-08-31T10:00:02+00:00',
-  }
-}
 
 function pipelineRun(): PipelineRunResponse {
   return {
