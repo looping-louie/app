@@ -24,7 +24,7 @@ function eventDetail(event: PipelineRunEventResponse, turn: ParsedHarnessTurnEve
     const tokens = turnUsage(turn).total
     const latency = turn.observation.duration_ms ?? 0
     return [
-      ...turnErrorMessages(turn),
+      ...(turn.outcome === 'failed' ? turnErrorMessages(turn) : []),
       tokens ? `${tokens.toLocaleString()} tokens` : '',
       latency ? `${(latency / 1000).toFixed(2)}s` : '',
       activityName(event.activity_id),

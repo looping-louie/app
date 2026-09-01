@@ -189,6 +189,8 @@ async function submitHumanDecision(decision: ActivityRunHumanDecision, comment: 
     if (!decisionRecorded) {
       if (!activityRun.continuation_token) throw new Error('The activity continuation token is missing.')
       const continuedActivity = await api.activities.continueRun(activityRun.activity_id, activityRun.id, {
+        pipeline_run_id: run.id,
+        lease_token: null,
         continuation_token: activityRun.continuation_token,
         idempotency_key: attempt.idempotencyKey,
         result: {

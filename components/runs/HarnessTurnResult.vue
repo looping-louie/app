@@ -21,6 +21,7 @@ const accordionItems = computed(() => [{
   title: props.turn.outcome === 'completed' ? 'View Harness result' : 'Inspect Harness failure',
 }])
 const commit = computed(() => harnessCommitSummary(observation.value, props.commitMode))
+const hasErrors = computed(() => Boolean(observation.value.error || observation.value.commit_error))
 const isWriterTurn = computed(() => !observation.value.phase || ['execute', 'aggregate'].includes(observation.value.phase))
 const responseTitle = computed(() => observation.value.phase === 'proposal'
   ? 'Proposal'
@@ -95,11 +96,16 @@ function boundedDiff(value: string) {
           </div>
         </section>
 
-        <section v-if="observation.error || observation.commit_error || observation.diagnostics.length" class="harness-result__section harness-result__section--error">
-          <h4>Errors and diagnostics</h4>
+        <section v-if="hasErrors" class="harness-result__section harness-result__section--error">
+          <h4>Errors</h4>
           <p v-if="observation.error"><strong>Error:</strong> {{ observation.error }}</p>
           <p v-if="observation.commit_error"><strong>Commit error:</strong> {{ observation.commit_error }}</p>
-          <ul v-if="observation.diagnostics.length">
+        </section>
+
+        <section v-if="observation.diagnostics.length" class="harness-result__section harness-result__section--diagnostics">
+          <h4>{{ turn.outcome === 'completed' ? 'Non-fatal diagnostics' : 'Diagnostics' }}</h4>
+          <p v-if="turn.outcome === 'completed'" class="harness-result__empty">The Harness reported these messages but completed successfully.</p>
+          <ul>
             <li v-for="(diagnostic, index) in observation.diagnostics" :key="`${index}:${diagnostic}`">{{ diagnostic }}</li>
           </ul>
         </section>
@@ -153,6 +159,7 @@ function boundedDiff(value: string) {
 .harness-result__section h4 { color: var(--ll-color-ink); font-family: var(--ll-font-display); font-size: var(--ll-text-md); }
 .harness-result__section h5 { color: var(--ll-color-text-faint); font: 550 var(--ll-text-xs) / 1.3 var(--ll-font-mono); text-transform: uppercase; }
 .harness-result__section--error { padding: var(--ll-space-4); color: var(--ll-color-brand-ink); background: var(--ll-color-brand-highlight); border-radius: var(--ll-radius-sm); }
+.harness-result__section--diagnostics { padding: var(--ll-space-4); background: var(--ll-color-metal-025); border-radius: var(--ll-radius-sm); }
 .harness-result__section ul { padding-left: var(--ll-space-5); }
 .harness-result__files { display: grid; gap: var(--ll-space-2); }
 .harness-result__files code { overflow-wrap: anywhere; font: 500 var(--ll-text-sm) / 1.4 var(--ll-font-mono); }
