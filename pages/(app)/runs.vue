@@ -5,11 +5,12 @@ import RunTimeline from '~/components/runs/RunTimeline.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
+import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
 import UiTable from '~/components/ui/Table.vue'
 import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
-import { runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
+import { needsTerminalEventRefresh, runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
@@ -76,8 +77,13 @@ const selectedDateRangeLabel = computed(() => (
 
 const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
 watch([runStatus, dateRange], () => void refresh())
-usePipelineRunPolling(
-  () => data.value?.snapshots.map(snapshot => snapshot.run) ?? [],
+const {
+  applyRunUpdates,
+  isRefreshing: isPollingRefreshing,
+  isStale,
+  refresh: retryPolling,
+} = usePipelineRunPolling(
+  () => data.value?.snapshots ?? [],
   updateRunDetails,
 )
 const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
@@ -140,7 +146,7 @@ async function startPreparedRun() {
   runActionError.value = ''
   try {
     const started = await api.pipelines.startRun(run.pipeline_id, run.id)
-    await updateRunDetails([started])
+    await applyRunUpdates([started])
   } catch (cause) {
     runActionError.value = apiErrorMessage(cause, 'This prepared run could not be started. Please try again.')
   } finally {
@@ -219,7 +225,7 @@ async function continueSelectedPipeline() {
   const run = selectedSnapshot.value?.run
   if (!run) return
   const continued = await api.pipelines.continueRun(run.pipeline_id, run.id, { lease_token: null })
-  await updateRunDetails([continued])
+  await applyRunUpdates([continued])
 }
 
 function replaceCurrentActivity(runId: string, activityRun: NonNullable<PipelineRunResponse['current_activity_run']>) {
@@ -235,14 +241,14 @@ function replaceCurrentActivity(runId: string, activityRun: NonNullable<Pipeline
 async function updateRunDetails(updates: PipelineRunResponse[]) {
   if (!data.value) return
   const snapshots = await Promise.all(updates.map(async (run) => {
-    try {
-      return await loadSnapshot(run)
-    } catch {
-      return {
-        run,
-        events: data.value?.snapshots.find(snapshot => snapshot.run.id === run.id)?.events ?? [],
-      }
-    }
+    const current = data.value?.snapshots.find(snapshot => snapshot.run.id === run.id)
+    if (
+      current
+      && current.run.status === run.status
+      && current.run.updated_at === run.updated_at
+      && !needsTerminalEventRefresh(current)
+    ) return { ...current, run }
+    return loadSnapshot(run)
   }))
   const byId = new Map(snapshots.map(snapshot => [snapshot.run.id, snapshot]))
   data.value = {
@@ -306,6 +312,7 @@ useHead({ title: 'Runs · Looping Louie' })
 
     <UiAsyncStage :status="status" loading-label="Loading runs…" error-label="Runs could not be loaded." @retry="refresh">
       <div class="runs-content">
+        <UiDataFreshnessNotice v-if="isStale" :loading="isPollingRefreshing" @retry="retryPolling" />
         <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
           <template #cell-name="{ row }">
             <button type="button" class="runs-link" @click="selectRun(row as RunTableRow)">{{ row.name }}</button>

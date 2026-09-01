@@ -1,5 +1,5 @@
 import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
-import { parseHarnessTurnEvent, type ParsedHarnessTurnEvent } from '~/utils/harnessObservations'
+import { isSchedulerEvent, parseHarnessTurnEvent, type ParsedHarnessTurnEvent } from '~/utils/harnessObservations'
 
 export interface PipelineRunSnapshot {
   run: PipelineRunResponse
@@ -29,6 +29,23 @@ export function harnessTurns(events: PipelineRunEventResponse[]): HarnessTurnRec
   return events.flatMap((event) => {
     const turn = parseHarnessTurnEvent(event)
     return turn ? [{ ...turn, event }] : []
+  })
+}
+
+export function needsTerminalEventRefresh(snapshot: PipelineRunSnapshot) {
+  if (!['completed', 'failed'].includes(snapshot.run.status)) return false
+  return snapshot.run.steps.some((step) => {
+    if (!step.activity_run_id || !['completed', 'failed'].includes(step.status)) return false
+    return !snapshot.events.some((event) => {
+      if (!isSchedulerEvent(event)) return false
+      if (step.status === 'completed' && event.event_type === 'pipeline_step_completed') {
+        return event.payload.activity_run_id === step.activity_run_id
+      }
+      if (step.status === 'failed' && event.event_type === 'pipeline_step_failed') {
+        return event.payload.activity_run_id === step.activity_run_id
+      }
+      return false
+    })
   })
 }
 

@@ -3,13 +3,14 @@ import PageShell from '~/components/layout/PageShell.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiChartCard from '~/components/ui/ChartCard.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
+import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
 import UiMetricCard from '~/components/ui/MetricCard.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTable from '~/components/ui/Table.vue'
 import { collectApiPages } from '~/utils/apiPagination'
 import { observabilityDistributions, observabilityLogs, observabilityMetrics, type ObservabilityDistributionItem } from '~/utils/observability'
-import type { PipelineRunSnapshot } from '~/utils/pipelineRuns'
+import { needsTerminalEventRefresh, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 const activeView = ref('metrics')
 const dateRange = ref('7d')
@@ -37,19 +38,52 @@ const logColumns = [
 ]
 
 const { data: snapshots, status, refresh } = await useAsyncData('observability-runs', async () => {
-  const createdFrom = new Date(Date.now() - rangeDuration(dateRange.value)).toISOString()
-  const runs = await collectApiPages(offset => api.pipelineRuns.list({ offset, created_from: createdFrom }))
-  return Promise.all(runs.map(loadSnapshot))
+  return loadObservabilitySnapshots()
 })
 watch(dateRange, () => void refresh())
-usePipelineRunPolling(
-  () => snapshots.value?.map(snapshot => snapshot.run) ?? [],
+const {
+  isRefreshing: isPollingRefreshing,
+  isStale,
+  refresh: retryPolling,
+} = usePipelineRunPolling(
+  () => snapshots.value ?? [],
   async (updates) => {
-    const refreshed = await Promise.all(updates.map(loadSnapshot))
+    const currentById = new Map((snapshots.value ?? []).map(snapshot => [snapshot.run.id, snapshot]))
+    const refreshed = await Promise.all(updates.map((run) => {
+      const current = currentById.get(run.id)
+      return snapshotNeedsEventRefresh(current, run) ? loadSnapshot(run) : { ...current!, run }
+    }))
     const byId = new Map(refreshed.map(snapshot => [snapshot.run.id, snapshot]))
     snapshots.value = (snapshots.value ?? []).map(snapshot => byId.get(snapshot.run.id) ?? snapshot)
   },
+  { refreshCatalog: refreshObservabilityCatalog },
 )
+
+async function listRunsInRange() {
+  const createdFrom = new Date(Date.now() - rangeDuration(dateRange.value)).toISOString()
+  return collectApiPages(offset => api.pipelineRuns.list({ offset, created_from: createdFrom }))
+}
+
+async function loadObservabilitySnapshots() {
+  const runs = await listRunsInRange()
+  return Promise.all(runs.map(loadSnapshot))
+}
+
+async function refreshObservabilityCatalog() {
+  const runs = await listRunsInRange()
+  const currentById = new Map((snapshots.value ?? []).map(snapshot => [snapshot.run.id, snapshot]))
+  snapshots.value = await Promise.all(runs.map((run) => {
+    const current = currentById.get(run.id)
+    return snapshotNeedsEventRefresh(current, run) ? loadSnapshot(run) : { ...current!, run }
+  }))
+}
+
+function snapshotNeedsEventRefresh(current: PipelineRunSnapshot | undefined, run: PipelineRunSnapshot['run']) {
+  return !current
+    || current.run.status !== run.status
+    || current.run.updated_at !== run.updated_at
+    || needsTerminalEventRefresh(current)
+}
 
 async function loadSnapshot(run: PipelineRunSnapshot['run']): Promise<PipelineRunSnapshot> {
   const events = await collectApiPages(offset => api.pipelines.listRunEvents(run.pipeline_id, run.id, { offset }))
@@ -111,45 +145,49 @@ useHead({ title: 'Observability · Looping Louie' })
     </template>
 
     <UiAsyncStage :status="status" loading-label="Loading execution ledger…" error-label="Observability could not be loaded." @retry="refresh">
-      <div v-if="activeView === 'metrics'" class="observability-metrics">
-        <UiCollectionGroupTitle heading-as="h2" title="Metrics" />
-        <UiSectionStage inverse="bottom" class="observability-stage">
-          <div class="observability-grid">
-            <UiMetricCard v-for="metric in metrics" :key="metric.label" v-bind="metric" class="observability-grid__metric" />
-            <UiChartCard
-              v-for="distribution in distributions"
-              :key="distribution.title"
-              :title="distribution.title"
-              :description="distribution.description"
-              :total="distribution.total"
-              :total-label="distribution.totalLabel"
-              class="observability-grid__chart"
-            >
-              <template #chart>
-                <ol v-if="distribution.items.length" class="observability-bars">
-                  <li v-for="item in distribution.items" :key="item.label">
-                    <span class="observability-bars__label">{{ item.label }}</span>
-                    <span class="observability-bars__track" aria-hidden="true"><i :style="{ width: `${(item.value / distributionMaximum(distribution.items)) * 100}%` }" /></span>
-                    <strong>{{ item.value.toLocaleString() }}</strong>
-                  </li>
-                </ol>
-                <p v-else class="observability-empty">No Harness turn data in this range.</p>
-              </template>
-              <template #legend><span>Harness turns in the selected range</span></template>
-            </UiChartCard>
-          </div>
-        </UiSectionStage>
+      <div class="observability-content">
+        <UiDataFreshnessNotice v-if="isStale" :loading="isPollingRefreshing" @retry="retryPolling" />
+        <div v-if="activeView === 'metrics'" class="observability-metrics">
+          <UiCollectionGroupTitle heading-as="h2" title="Metrics" />
+          <UiSectionStage inverse="bottom" class="observability-stage">
+            <div class="observability-grid">
+              <UiMetricCard v-for="metric in metrics" :key="metric.label" v-bind="metric" class="observability-grid__metric" />
+              <UiChartCard
+                v-for="distribution in distributions"
+                :key="distribution.title"
+                :description="distribution.description"
+                :title="distribution.title"
+                :total="distribution.total"
+                :total-label="distribution.totalLabel"
+                class="observability-grid__chart"
+              >
+                <template #chart>
+                  <ol v-if="distribution.items.length" class="observability-bars">
+                    <li v-for="item in distribution.items" :key="item.label">
+                      <span class="observability-bars__label">{{ item.label }}</span>
+                      <span class="observability-bars__track" aria-hidden="true"><i :style="{ width: `${(item.value / distributionMaximum(distribution.items)) * 100}%` }" /></span>
+                      <strong>{{ item.value.toLocaleString() }}</strong>
+                    </li>
+                  </ol>
+                  <p v-else class="observability-empty">No Harness turn data in this range.</p>
+                </template>
+                <template #legend><span>Harness turns in the selected range</span></template>
+              </UiChartCard>
+            </div>
+          </UiSectionStage>
+        </div>
+        <UiTable v-else :columns="logColumns" :rows="logs" caption="Harness turn events">
+          <template #cell-run="{ row }"><NuxtLink class="observability-run-link" :to="runLink(row)">{{ row.run }}</NuxtLink></template>
+          <template #empty>No Harness turns have been reported in this range.</template>
+        </UiTable>
       </div>
-      <UiTable v-else :columns="logColumns" :rows="logs" caption="Harness turn events">
-        <template #cell-run="{ row }"><NuxtLink class="observability-run-link" :to="runLink(row)">{{ row.run }}</NuxtLink></template>
-        <template #empty>No Harness turns have been reported in this range.</template>
-      </UiTable>
     </UiAsyncStage>
   </PageShell>
 </template>
 
 <style scoped>
 .observability-controls { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-5); }
+.observability-content { display: grid; min-width: 0; gap: var(--ll-space-6); }
 .observability-metrics { display: grid; min-width: 0; background: var(--ll-color-canvas); }
 .observability-stage :deep(.ui-section-stage__shell) { width: 100%; }
 .observability-grid { display: grid; min-width: 0; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--ll-space-5); }
