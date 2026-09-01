@@ -1,6 +1,6 @@
 import type { PipelineRunEventResponse } from '~/types/api'
-import { harnessObservationFromEvent } from '~/utils/harnessObservations'
-import { eventLatency, eventTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
+import { isSchedulerEvent, parseHarnessTurnEvent } from '~/utils/harnessObservations'
+import { eventErrorMessages, eventLatency, eventTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 export interface ObservabilityChart {
   title: string
@@ -30,8 +30,8 @@ export function observabilityCharts(snapshots: PipelineRunSnapshot[]): Observabi
   const latency = bucketEvents(snapshots, buckets, eventLatency)
   const volume = buckets.map(day => snapshots.filter(snapshot => dayKey(snapshot.run.created_at) === day).length)
   return [
-    chart('Token usage', 'Codex token consumption reported by the execution ledger.', sum(tokens).toLocaleString(), 'Total tokens', 'Tokens', tokens),
-    chart('Model latency', 'Time spent waiting for Codex responses.', `${(sum(latency) / 1000).toFixed(2)}s`, 'Total latency', 'Milliseconds', latency),
+    chart('Token usage', 'Harness token consumption reported by the execution ledger.', sum(tokens).toLocaleString(), 'Total tokens', 'Tokens', tokens),
+    chart('Model latency', 'Time spent waiting for Harness responses.', `${(sum(latency) / 1000).toFixed(2)}s`, 'Total latency', 'Milliseconds', latency),
     chart('Run volume', 'Pipeline runs created during the last seven days.', String(sum(volume)), 'Created runs', 'Runs', volume),
   ]
 }
@@ -44,6 +44,7 @@ export function observabilityLogs(snapshots: PipelineRunSnapshot[]) {
     type: event.event_type.replaceAll('_', ' '),
     run: run.id,
     activity: event.activity_id ?? '—',
+    activityRun: activityRunId(event),
     error: errorMessage(event),
   }))).sort((first, second) => Date.parse(second.createdValue) - Date.parse(first.createdValue))
 }
@@ -59,7 +60,17 @@ function bucketEvents(
 }
 
 function errorMessage(event: PipelineRunEventResponse) {
-  return harnessObservationFromEvent(event)?.error ?? '—'
+  const messages = eventErrorMessages(event)
+  if (messages.length) return messages.join(' · ')
+  if (isSchedulerEvent(event) && event.event_type === 'pipeline_step_failed') return 'Activity failed'
+  return '—'
+}
+
+function activityRunId(event: PipelineRunEventResponse) {
+  const turn = parseHarnessTurnEvent(event)
+  if (turn) return turn.activityRunId
+  if (isSchedulerEvent(event) && event.event_type !== 'pipeline_run_created') return event.payload.activity_run_id
+  return '—'
 }
 
 function chart(title: string, description: string, total: string, totalLabel: string, legend: string, values: number[]): ObservabilityChart {

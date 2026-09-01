@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import UiPill from '~/components/ui/Pill.vue'
 import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
-import { harnessObservationFromEvent, isSchedulerEvent } from '~/utils/harnessObservations'
-import { eventLabel, eventLatency, eventTokenCount } from '~/utils/pipelineRuns'
+import { isSchedulerEvent, parseHarnessTurnEvent } from '~/utils/harnessObservations'
+import { eventErrorMessages, eventLabel, eventLatency, eventTokenCount } from '~/utils/pipelineRuns'
 
 defineProps<{
   run: PipelineRunResponse
@@ -10,14 +10,22 @@ defineProps<{
 }>()
 
 function eventDetail(event: PipelineRunEventResponse) {
-  const observation = harnessObservationFromEvent(event)
-  if (observation) {
+  const turn = parseHarnessTurnEvent(event)
+  if (turn) {
     const tokens = eventTokenCount(event)
     const latency = eventLatency(event)
-    return [observation.error ?? '', tokens ? `${tokens.toLocaleString()} tokens` : '', latency ? `${(latency / 1000).toFixed(2)}s` : '']
+    return [
+      ...eventErrorMessages(event),
+      tokens ? `${tokens.toLocaleString()} tokens` : '',
+      latency ? `${(latency / 1000).toFixed(2)}s` : '',
+      `Activity run ${turn.activityRunId}`,
+    ]
       .filter(Boolean).join(' · ')
   }
-  if (isSchedulerEvent(event) && event.event_type === 'pipeline_step_failed') return 'Activity failed'
+  if (isSchedulerEvent(event) && event.event_type !== 'pipeline_run_created') {
+    if (event.event_type === 'pipeline_step_failed') return `Activity run ${event.payload.activity_run_id} failed`
+    return `Activity run ${event.payload.activity_run_id}`
+  }
   return event.activity_id ? `Activity ${event.activity_id}` : ''
 }
 </script>

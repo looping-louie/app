@@ -24,6 +24,7 @@ const logColumns = [
   { key: 'type', label: 'Event' },
   { key: 'run', label: 'Run', width: '24%' },
   { key: 'activity', label: 'Activity' },
+  { key: 'activityRun', label: 'Activity run' },
   { key: 'error', label: 'Error', width: '25%' },
 ]
 

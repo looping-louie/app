@@ -2,9 +2,16 @@ import type {
   CodexCliTurnObservation,
   HarnessTurnEvent,
   HarnessTurnObservation,
+  HarnessTurnOutcome,
   PipelineRunEventResponse,
   SchedulerEvent,
 } from '~/types/api'
+
+export interface ParsedHarnessTurnEvent {
+  outcome: HarnessTurnOutcome
+  activityRunId: string
+  observation: HarnessTurnObservation
+}
 
 export function isHarnessTurnObservation(value: unknown): value is HarnessTurnObservation {
   return isCodexCliTurnObservation(value)
@@ -61,20 +68,30 @@ export function isCodexCliTurnObservation(value: unknown): value is CodexCliTurn
 }
 
 export function isHarnessTurnEvent(event: PipelineRunEventResponse): event is HarnessTurnEvent {
-  if (!['codex_turn_completed', 'codex_turn_failed'].includes(event.event_type)) return false
+  const outcome = harnessTurnOutcome(event.event_type)
   const payload = recordValue(event.payload)
-  if (!payload || !nonEmptyString(payload.activity_run_id) || !isCodexCliTurnObservation(payload)) return false
-  return event.event_type === 'codex_turn_completed' ? payload.completed : !payload.completed
+  return Boolean(
+    outcome
+    && payload
+    && nonEmptyString(payload.activity_run_id)
+    && isCodexCliTurnObservation(payload)
+    && payload.completed === (outcome === 'completed'),
+  )
 }
 
-export function harnessObservationFromEvent(event: PipelineRunEventResponse) {
-  if (!['codex_turn_completed', 'codex_turn_failed'].includes(event.event_type)) return null
+export function parseHarnessTurnEvent(event: PipelineRunEventResponse): ParsedHarnessTurnEvent | null {
+  const outcome = harnessTurnOutcome(event.event_type)
+  if (!outcome) return null
   const payload = recordValue(event.payload)
   if (!payload || !nonEmptyString(payload.activity_run_id)) return null
   const observation = parseHarnessTurnObservation(payload)
   if (!observation) return null
-  const completed = event.event_type === 'codex_turn_completed'
-  return observation.completed === completed ? observation : null
+  if (observation.completed !== (outcome === 'completed')) return null
+  return {
+    outcome,
+    activityRunId: payload.activity_run_id,
+    observation,
+  }
 }
 
 export function isSchedulerEvent(event: PipelineRunEventResponse): event is SchedulerEvent {
@@ -98,11 +115,21 @@ export function isSchedulerEvent(event: PipelineRunEventResponse): event is Sche
         && payload.status === event.event_type.replace('pipeline_step_', '')
         && nonEmptyString(payload.started_at)
         && nonEmptyString(payload.completed_at)
-    case 'codex_turn_completed':
-    case 'codex_turn_failed':
-      return isHarnessTurnEvent(event)
     default:
       return false
+  }
+}
+
+function harnessTurnOutcome(eventType: string): HarnessTurnOutcome | null {
+  switch (eventType) {
+    case 'harness_turn_completed':
+    case 'codex_turn_completed':
+      return 'completed'
+    case 'harness_turn_failed':
+    case 'codex_turn_failed':
+      return 'failed'
+    default:
+      return null
   }
 }
 
