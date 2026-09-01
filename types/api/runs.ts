@@ -162,6 +162,24 @@ export interface PipelineRunResponse {
   updated_at: string
 }
 
+export type PipelineRunReadinessStatus =
+  | 'not_applicable'
+  | 'no_registered_workers'
+  | 'no_active_workers'
+  | 'no_compatible_workers'
+  | 'ready'
+
+export interface PipelineRunReadinessResponse {
+  status: PipelineRunReadinessStatus
+  project_id: string
+  required_harness: HarnessTurnIdentity | null
+  registered_worker_count: number
+  active_worker_count: number
+  compatible_worker_count: number
+  latest_heartbeat_at: string | null
+  observed_at: string
+}
+
 export interface PipelineRunCreateRequest {
   input: string
   commit_mode?: PipelineRunCommitMode

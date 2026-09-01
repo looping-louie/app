@@ -7,11 +7,36 @@ export interface ExecutionHarnessCatalogItem {
   name: string
   owner: string
   image: string
+  availabilityNote: string
+  setupSteps: string[]
 }
 
 export const executionHarnesses: ExecutionHarnessCatalogItem[] = [
-  { id: 'louie', name: 'Louie', owner: 'Looping Louie', image: '/brand/looping-louie-biplane.png' },
-  { id: 'codex_cli', name: 'Codex CLI', owner: 'OpenAI', image: '/images/harnesses/codex.webp' },
+  {
+    id: 'louie',
+    name: 'Louie',
+    owner: 'Looping Louie',
+    image: '/brand/looping-louie-biplane.png',
+    availabilityNote: 'The runtime reports this capability in its workspace heartbeat.',
+    setupSteps: [
+      'Configure the execution workspace and its repository checkout.',
+      'Keep the checkout clean before starting the runtime.',
+      'Validate the runtime configuration, then keep the runtime running.',
+    ],
+  },
+  {
+    id: 'codex_cli',
+    name: 'Codex CLI',
+    owner: 'OpenAI',
+    image: '/images/harnesses/codex.webp',
+    availabilityNote: 'The runtime advertises Codex only while the CLI is installed and its local login check succeeds.',
+    setupSteps: [
+      'Install Codex CLI and confirm that codex login status succeeds.',
+      'Configure the execution workspace and keep its repository checkout clean.',
+      'Run looping-louie-runtime --config runtime.json --check.',
+      'Start the runtime and keep it running so its heartbeat stays current.',
+    ],
+  },
 ]
 
 export function executionHarnessCatalogId(harness: ExecutionHarness | null | undefined): ExecutionHarnessCatalogId {

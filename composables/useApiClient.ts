@@ -26,6 +26,7 @@ import type {
   PipelineRunEventListResponse,
   PipelineRunListQuery,
   PipelineRunListResponse,
+  PipelineRunReadinessResponse,
   PipelineRunResponse,
   CatalogProviderResponse,
   CatalogPersonaResponse,
@@ -72,6 +73,7 @@ export function useApiClient() {
       startRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { ...workspaceOptions(), method: 'POST' }),
       continueRun: (pipelineId: string, runId: string, body: PipelineRunContinueRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/continue`, { ...workspaceOptions(), method: 'POST', body }),
       getRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`, workspaceOptions()),
+      getRunReadiness: (pipelineId: string, runId: string) => $fetch<PipelineRunReadinessResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/readiness`, workspaceOptions()),
       listRunEvents: (pipelineId: string, runId: string, query: ApiListQuery = {}) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`, { ...workspaceOptions(), query }),
     },
     pipelineRuns: {

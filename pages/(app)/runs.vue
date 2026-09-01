@@ -2,12 +2,13 @@
 import PageShell from '~/components/layout/PageShell.vue'
 import HumanDecisionPanel from '~/components/runs/HumanDecisionPanel.vue'
 import RunTimeline from '~/components/runs/RunTimeline.vue'
+import WorkerReadinessPanel from '~/components/runs/WorkerReadinessPanel.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
+import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 import { needsTerminalEventRefresh, runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
@@ -55,12 +56,17 @@ const dateRangeOptions = [
 const route = useRoute()
 const router = useRouter()
 const api = useApiClient()
+const { activeWorkspace } = useWorkspaceContext()
 const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
 const runSort = ref('newest')
 const startingRun = ref(false)
 const continuingRun = ref(false)
 const runActionError = ref('')
+const runReadiness = ref<PipelineRunReadinessResponse | null>(null)
+const runReadinessLoading = ref(false)
+const runReadinessError = ref('')
+let readinessRequest = 0
 
 interface HumanDecisionAttempt {
   activityRunId: string
@@ -77,6 +83,7 @@ const selectedDateRangeLabel = computed(() => (
 
 const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
 watch([runStatus, dateRange], () => void refresh())
+const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
 const {
   applyRunUpdates,
   isRefreshing: isPollingRefreshing,
@@ -86,7 +93,11 @@ const {
   () => data.value?.snapshots ?? [],
   updateRunDetails,
 )
-const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
+const readinessWorkspaceName = computed(() => {
+  const workspace = activeWorkspace.value
+  if (workspace && workspace.id === runReadiness.value?.project_id) return workspace.name
+  return 'Current workspace'
+})
 const selectedActivity = computed<ActivityResponse | null>(() => {
   const activityId = selectedSnapshot.value?.run.current_activity_run?.activity_id
   return activityId ? data.value?.activitiesById.get(activityId) ?? null : null
@@ -255,6 +266,37 @@ async function updateRunDetails(updates: PipelineRunResponse[]) {
     ...data.value,
     snapshots: data.value.snapshots.map(snapshot => byId.get(snapshot.run.id) ?? snapshot),
   }
+  if (selectedSnapshot.value?.run.status === 'queued') await refreshRunReadiness()
+  else clearRunReadiness()
+}
+
+async function refreshRunReadiness() {
+  const run = selectedSnapshot.value?.run
+  const request = ++readinessRequest
+  if (!run || run.status !== 'queued') {
+    clearRunReadiness()
+    return
+  }
+  runReadinessLoading.value = true
+  runReadinessError.value = ''
+  try {
+    const readiness = await api.pipelines.getRunReadiness(run.pipeline_id, run.id)
+    if (request !== readinessRequest) return
+    runReadiness.value = readiness
+  } catch (cause) {
+    if (request !== readinessRequest) return
+    runReadiness.value = null
+    runReadinessError.value = apiErrorMessage(cause, 'Worker readiness could not be loaded. The run will remain queued and retry automatically.')
+  } finally {
+    if (request === readinessRequest) runReadinessLoading.value = false
+  }
+}
+
+function clearRunReadiness() {
+  readinessRequest += 1
+  runReadiness.value = null
+  runReadinessLoading.value = false
+  runReadinessError.value = ''
 }
 
 function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRow {
@@ -287,6 +329,12 @@ function formatDateTime(value: string) {
     day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
   }).format(date)
 }
+
+watch(
+  () => [selectedSnapshot.value?.run.id, selectedSnapshot.value?.run.status],
+  () => void refreshRunReadiness(),
+)
+onMounted(() => void refreshRunReadiness())
 
 definePageMeta({ layout: 'app', alias: ['/'] })
 useHead({ title: 'Runs · Looping Louie' })
@@ -323,12 +371,14 @@ useHead({ title: 'Runs · Looping Louie' })
           <p>This run is prepared and will not execute until it is started.</p>
           <UiButton :loading="startingRun" @click="startPreparedRun">Start run</UiButton>
         </div>
-        <div v-else-if="selectedSnapshot?.run.status === 'queued'" class="runs-action runs-action--informative" role="status">
-          <div>
-            <strong>Waiting for a runtime worker</strong>
-            <p>This run will remain queued until the runtime claims it. Worker availability is managed outside the web app.</p>
-          </div>
-        </div>
+        <WorkerReadinessPanel
+          v-else-if="selectedSnapshot?.run.status === 'queued'"
+          :readiness="runReadiness"
+          :loading="runReadinessLoading"
+          :error="runReadinessError"
+          :workspace-name="readinessWorkspaceName"
+          @retry="refreshRunReadiness"
+        />
         <div v-else-if="selectedSnapshot?.run.status === 'claimed'" class="runs-action runs-action--informative" role="status">
           <div>
             <strong>Claimed by the runtime</strong>
