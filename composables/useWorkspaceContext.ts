@@ -8,6 +8,7 @@ export function useWorkspaceContext() {
   const workspaces = useState<WorkspaceResponse[]>('workspace-context-items', () => [])
   const status = useState<WorkspaceContextStatus>('workspace-context-status', () => 'idle')
   const error = useState<string>('workspace-context-error', () => '')
+  const userRegistered = useState('workspace-context-user-registered', () => false)
   const activeWorkspaceId = useCookie<string | null>('looping-louie-workspace-id', {
     default: () => null,
     sameSite: 'lax',
@@ -22,7 +23,10 @@ export function useWorkspaceContext() {
     status.value = 'pending'
     error.value = ''
     try {
-      await api.users.registerCurrent()
+      if (!userRegistered.value) {
+        await api.users.registerCurrent()
+        userRegistered.value = true
+      }
       workspaces.value = await api.workspaces.list()
       const activeIsAccessible = workspaces.value.some(workspace => workspace.id === activeWorkspaceId.value)
       if (!activeIsAccessible) activeWorkspaceId.value = workspaces.value[0]?.id ?? null

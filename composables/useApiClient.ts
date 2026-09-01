@@ -50,7 +50,7 @@ const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/
 export function useApiClient() {
   const activeWorkspaceId = useCookie<string | null>('looping-louie-workspace-id')
   const workspaceOptions = () => activeWorkspaceId.value
-    ? { headers: { 'X-Workspace-ID': activeWorkspaceId.value } }
+    ? { headers: { 'X-Project-ID': activeWorkspaceId.value } }
     : {}
 
   return {
@@ -107,10 +107,10 @@ export function useApiClient() {
       listSkills: (signal?: AbortSignal) => $fetch<CatalogSkillResponse[]>('/api/v1/catalog/skills', { signal }),
     },
     workspaces: {
-      list: () => $fetch<WorkspaceResponse[]>('/api/v1/workspaces'),
-      get: (id: string) => $fetch<WorkspaceResponse>(resourcePath('workspaces', id)),
-      create: (body: WorkspaceCreateRequest) => $fetch<WorkspaceResponse>('/api/v1/workspaces', { method: 'POST', body }),
-      patch: (id: string, body: WorkspacePatchRequest) => $fetch<WorkspaceResponse>(resourcePath('workspaces', id), { method: 'PATCH', body }),
+      list: () => $fetch<WorkspaceResponse[]>('/api/v1/projects'),
+      get: (id: string) => $fetch<WorkspaceResponse>(resourcePath('projects', id)),
+      create: (body: WorkspaceCreateRequest) => $fetch<WorkspaceResponse>('/api/v1/projects', { method: 'POST', body }),
+      patch: (id: string, body: WorkspacePatchRequest) => $fetch<WorkspaceResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),
