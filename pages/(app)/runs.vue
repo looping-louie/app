@@ -8,7 +8,7 @@ import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
+import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 import { runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
@@ -119,14 +119,10 @@ const displayedRuns = computed(() => {
 
 async function loadRuns() {
   const cutoff = new Date(Date.now() - rangeDuration(dateRange.value)).toISOString()
-  const statusFilter = runStatus.value === 'all'
-    ? undefined
-    : runStatus.value as PipelineRunStatus
   const [pipelines, discoveredRuns] = await Promise.all([
     collectApiPages(offset => api.pipelines.list({ offset })),
     collectApiPages(offset => api.pipelineRuns.list({
       offset,
-      status: statusFilter,
       created_from: cutoff,
     })),
   ])
