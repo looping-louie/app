@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
-import ExecutionModelSelector from '~/components/execution/ModelSelector.vue'
 import PageShell from '~/components/layout/PageShell.vue'
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
 import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
@@ -19,7 +18,6 @@ import type {
 } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
-import { modelIdLabel } from '~/utils/executionDefaults'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
@@ -40,7 +38,6 @@ const saving = ref(false)
 const editName = ref('')
 const editDescription = ref('')
 const editEnabled = ref(true)
-const editModelId = ref<string | null>(null)
 const editHarness = ref<ExecutionHarness | null>(null)
 const editSteps = ref<PipelineActivityStepRequest[]>([])
 const editDesignDirty = ref(false)
@@ -73,14 +70,11 @@ const { data: pipeline, status, error, refresh } = await useAsyncData(
   () => `pipeline-${pipelineId.value}`,
   () => api.pipelines.get(pipelineId.value),
 )
-const { data: executionOptions, refresh: refreshExecutionOptions } = await useAsyncData(
+const { data: executionDefaults, refresh: refreshExecutionDefaults } = await useAsyncData(
   'pipeline-detail-execution-options',
   async () => {
-    const [user, models] = await Promise.all([
-      api.users.getCurrent(),
-      api.models.list({ sort: 'alphabetical-asc' }),
-    ])
-    return { defaults: user.settings, models: models.items }
+    const user = await api.users.getCurrent()
+    return user.settings
   },
 )
 
@@ -99,10 +93,9 @@ const detailItems = computed<DetailRow[]>(() => {
     { id: 'design', title: 'Design', kind: 'design' },
   ]
 })
-const editInheritedModelId = computed(() => editModelId.value ?? executionOptions.value?.defaults.default_model_id ?? null)
-const editInheritedHarness = computed(() => editHarness.value ?? executionOptions.value?.defaults.default_harness ?? null)
-const displayedModelId = computed(() => pipeline.value?.model_id ?? executionOptions.value?.defaults.default_model_id ?? null)
-const displayedHarness = computed(() => pipeline.value?.harness ?? executionOptions.value?.defaults.default_harness ?? null)
+const editInheritedModelId = computed(() => pipeline.value?.model_id ?? executionDefaults.value?.default_model_id ?? null)
+const editInheritedHarness = computed(() => editHarness.value ?? executionDefaults.value?.default_harness ?? null)
+const displayedHarness = computed(() => pipeline.value?.harness ?? executionDefaults.value?.default_harness ?? null)
 const canSaveEditing = computed(() => (
   editDesignValid.value
   && Boolean(editName.value.trim())
@@ -124,6 +117,7 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
           id: activity.id,
           title: activity.name,
           flow: activity.type.replace('_loop', ''),
+          model_id: activity.model_id ?? pipeline.value?.model_id ?? executionDefaults.value?.default_model_id ?? null,
           agents: config.agents,
           stop_conditions: config.stop_conditions,
         },
@@ -151,7 +145,6 @@ function beginEditing() {
   editName.value = pipeline.value.name
   editDescription.value = pipeline.value.description
   editEnabled.value = pipeline.value.enabled
-  editModelId.value = pipeline.value.model_id
   editHarness.value = pipeline.value.harness
   editSteps.value = pipelineStepRequestsFromResponse(pipeline.value.steps)
   editDesignDirty.value = false
@@ -214,7 +207,6 @@ async function saveEditing() {
       name,
       description,
       enabled: editEnabled.value,
-      model_id: editModelId.value,
       harness: editHarness.value,
     }
     if (editDesignDirty.value) body.steps = editSteps.value
@@ -223,7 +215,7 @@ async function saveEditing() {
     clearNuxtData('pipelines-catalog')
   } catch (cause) {
     editError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
-    await refreshExecutionOptions()
+    await refreshExecutionDefaults()
   } finally {
     saving.value = false
   }
@@ -413,26 +405,15 @@ useHead(() => ({
 
               <div v-else-if="item.kind === 'execution'" class="pipeline-execution">
                 <template v-if="editing">
-                  <ExecutionModelSelector
-                    v-model="editModelId"
-                    :models="executionOptions?.models ?? []"
-                    :harness="editInheritedHarness"
-                    inherit-label="Inherit user model"
-                    :inherit-description="executionOptions?.defaults.default_model_id ? `Currently ${executionOptions.defaults.default_model_id}.` : 'No user model is configured.'"
-                    @update:model-value="markEditDirty"
-                  />
                   <ExecutionHarnessSelector
                     v-model="editHarness"
                     inherit-label="Inherit user default"
-                    :inherit-description="executionOptions?.defaults.default_harness ? `Currently ${executionOptions.defaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
+                    :inherit-description="executionDefaults?.default_harness ? `Currently ${executionDefaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
                     @update:model-value="markEditDirty"
                   />
                 </template>
                 <dl v-else>
-                  <div><dt>Model</dt><dd>{{ modelIdLabel(displayedModelId) }}</dd></div>
-                  <div><dt>Source</dt><dd>{{ pipeline.model_id ? 'Pipeline override' : displayedModelId ? 'User default' : 'Not configured' }}</dd></div>
                   <div><dt>Harness</dt><dd>{{ displayedHarness?.kind ?? 'louie' }} v1</dd></div>
-                  <div><dt>Source</dt><dd>{{ pipeline.harness ? 'Pipeline override' : executionOptions?.defaults.default_harness ? 'User default' : 'Compatibility default' }}</dd></div>
                 </dl>
               </div>
 

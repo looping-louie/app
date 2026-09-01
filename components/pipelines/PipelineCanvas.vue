@@ -2,6 +2,7 @@
 export type PipelineCanvasHumanGateKind = 'human-review' | 'multiple-choice-quiz'
 
 export interface PipelineCanvasLoopAgent {
+  model_id?: string | null
   persona_id: string
   role: string
 }
@@ -16,6 +17,7 @@ export interface PipelineCanvasLoop {
   id: string
   title: string
   flow: string | null
+  model_id?: string | null
   agents: PipelineCanvasLoopAgent[]
   stop_conditions: PipelineCanvasLoopStopConditions | null
 }

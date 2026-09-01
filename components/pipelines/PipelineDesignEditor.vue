@@ -132,7 +132,14 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
   for (const activity of activities.value) {
     if (activity.type === 'loop') {
       const loop = loopById.value.get(activity.loopId)
-      if (loop) result.push({ instanceId: activity.instanceId, type: 'loop', loop })
+      if (loop) result.push({
+        instanceId: activity.instanceId,
+        type: 'loop',
+        loop: {
+          ...loop,
+          model_id: loop.model_id ?? props.inheritedModelId,
+        },
+      })
       continue
     }
     const gate = gateById.get(activity.gate)
