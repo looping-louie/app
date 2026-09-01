@@ -12,6 +12,11 @@ export function apiErrorCode(cause: unknown) {
   return isApiErrorEnvelope(data) ? data.error.code : undefined
 }
 
+export function apiErrorDetails(cause: unknown) {
+  const data = cause && typeof cause === 'object' ? (cause as { data?: unknown }).data : undefined
+  return isApiErrorEnvelope(data) ? data.error.details : null
+}
+
 function isApiErrorEnvelope(value: unknown): value is ApiErrorEnvelope {
   if (!value || typeof value !== 'object') return false
   const error = (value as { error?: unknown }).error

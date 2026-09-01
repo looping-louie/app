@@ -23,6 +23,7 @@ export interface ModelSummary {
   released_at: string
   capabilities: ModelCapability[]
   status: ModelStatus
+  enabled: boolean
   available: boolean
   offerings: ModelOffering[]
   tags: string[]

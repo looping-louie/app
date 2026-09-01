@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import UiButton from '~/components/ui/Button.vue'
 import UiDirectoryOption from '~/components/ui/DirectoryOption.vue'
-import type { ModelSummary } from '~/types/api'
+import type { ExecutionHarness, ModelSummary } from '~/types/api'
 
 const props = withDefaults(defineProps<{
   models: ModelSummary[]
   modelValue: string | null
+  harness?: ExecutionHarness | null
   inheritLabel?: string
   inheritDescription?: string
   error?: string
@@ -22,7 +23,12 @@ const emit = defineEmits<{
 }>()
 
 const { modelLogo, providerLogo } = useModelLogo()
-const selectableModels = computed(() => props.models.filter(model => model.available))
+const usesCodex = computed(() => props.harness?.kind === 'codex_cli')
+const selectableModels = computed(() => props.models.filter(model => (
+  usesCodex.value
+    ? model.enabled && model.status !== 'deprecated'
+    : model.available
+)))
 const currentModelUnavailable = computed(() => {
   if (!props.modelValue) return false
   return !selectableModels.value.some(model => model.id === props.modelValue)
@@ -54,7 +60,8 @@ function clearSelection() {
     <section class="execution-model-target__group" aria-label="Model">
       <div class="execution-model-target__heading">
         <h3>Model</h3>
-        <p>Choose an available logical model. Louie selects a usable connection when the run is created.</p>
+        <p v-if="usesCodex">Choose an enabled logical model. Final availability depends on the authenticated Codex CLI in the worker.</p>
+        <p v-else>Choose an available logical model. Louie selects a usable connection when the run is created.</p>
       </div>
       <div v-if="selectableModels.length" class="execution-model-target__options" role="radiogroup" aria-label="Model">
         <UiDirectoryOption
@@ -72,7 +79,9 @@ function clearSelection() {
           <template #media><img :src="providerLogo(model.vendor, model.family) || modelLogo(model.id)" alt=""></template>
         </UiDirectoryOption>
       </div>
-      <p v-else class="execution-model-target__empty">No model is currently available.</p>
+      <p v-else class="execution-model-target__empty">
+        {{ usesCodex ? 'No model is currently enabled for Codex CLI.' : 'No model is currently available.' }}
+      </p>
     </section>
 
     <p v-if="currentModelUnavailable" class="execution-model-target__error" role="alert">

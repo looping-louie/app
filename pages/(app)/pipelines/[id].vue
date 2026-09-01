@@ -78,7 +78,7 @@ const { data: executionOptions, refresh: refreshExecutionOptions } = await useAs
   async () => {
     const [user, models] = await Promise.all([
       api.users.getCurrent(),
-      api.models.list({ available: true, sort: 'alphabetical-asc' }),
+      api.models.list({ sort: 'alphabetical-asc' }),
     ])
     return { defaults: user.settings, models: models.items }
   },
@@ -430,6 +430,7 @@ useHead(() => ({
                   <ExecutionModelSelector
                     v-model="editModelId"
                     :models="executionOptions?.models ?? []"
+                    :harness="editInheritedHarness"
                     inherit-label="Inherit user model"
                     :inherit-description="executionOptions?.defaults.default_model_id ? `Currently ${executionOptions.defaults.default_model_id}.` : 'No user model is configured.'"
                     @update:model-value="markEditDirty"

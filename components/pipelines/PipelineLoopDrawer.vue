@@ -132,7 +132,9 @@ const paletteItems = computed<CommandPaletteItem[]>(() => {
     const preferredIds = [currentAssignment?.model_id, activityModelId.value, props.inheritedModelId]
       .filter((value): value is string => Boolean(value))
     return props.models
-      .filter(model => model.available)
+      .filter(model => selectedHarnessId.value === 'codex_cli'
+        ? model.enabled && model.status !== 'deprecated'
+        : model.available)
       .map(model => ({
         id: model.id,
         label: model.name,

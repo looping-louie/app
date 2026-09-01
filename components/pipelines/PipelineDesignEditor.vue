@@ -118,7 +118,7 @@ const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
   async () => {
     const [personas, models] = await Promise.all([
       api.personas.list({ status: 'enabled' }),
-      api.models.list({ available: true, sort: 'alphabetical-asc' }),
+      api.models.list({ sort: 'alphabetical-asc' }),
     ])
     return { personas: personas.items, models: models.items }
   },
