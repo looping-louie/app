@@ -17,6 +17,12 @@ export interface HarnessTurnUsage {
 export interface HarnessTurnObservationBase<THarness extends HarnessTurnIdentity = HarnessTurnIdentity> {
   schema_version: 'v1'
   harness: THarness
+  turn_id?: string
+  phase?: 'execute' | 'proposal' | 'aggregate' | 'review'
+  agent_id?: string
+  role?: 'generator' | 'reviewer' | 'aggregator'
+  iteration?: number
+  output?: Record<string, unknown>
   completed: boolean
   started_at: string | null
   completed_at: string | null
@@ -135,6 +141,7 @@ export type SchedulerEvent =
     status: 'failed'
     started_at: string
     completed_at: string
+    error?: string
   }, 'pipeline_step_failed'>
 
 export interface PipelineRunResponse {

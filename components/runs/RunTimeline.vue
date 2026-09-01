@@ -34,7 +34,11 @@ function eventDetail(event: PipelineRunEventResponse, turn: ParsedHarnessTurnEve
   }
   if (isSchedulerEvent(event) && event.event_type !== 'pipeline_run_created') {
     const activity = activityName(event.activity_id)
-    if (event.event_type === 'pipeline_step_failed') return `${activity} · Activity run ${event.payload.activity_run_id} failed`
+    if (event.event_type === 'pipeline_step_failed') return [
+      activity,
+      `Activity run ${event.payload.activity_run_id} failed`,
+      event.payload.error,
+    ].filter(Boolean).join(' · ')
     return `${activity} · Activity run ${event.payload.activity_run_id}`
   }
   return event.activity_id ? `Activity ${activityName(event.activity_id)}` : ''

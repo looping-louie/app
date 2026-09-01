@@ -78,6 +78,7 @@ describe('Pipeline run transformations', () => {
       ['Model divergences', 1],
     ])
     expect(logs).toHaveLength(2)
+    expect(logs.every(log => log.phase === 'execute')).toBe(true)
     expect(logs.find(log => log.status === 'completed')?.model).toBe(
       'gpt-5-codex → gpt-5.1-codex',
     )

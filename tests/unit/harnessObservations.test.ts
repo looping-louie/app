@@ -39,6 +39,25 @@ describe('Harness observation contracts', () => {
     )).toBeNull()
   })
 
+  it('retains common multi-agent turn identity and structured output', () => {
+    const parsed = parseHarnessTurnEvent(event('harness_turn_completed', {
+      ...completedObservation,
+      turn_id: '2:review:reviewer-1',
+      phase: 'review',
+      agent_id: 'reviewer-1',
+      role: 'reviewer',
+      iteration: 2,
+      output: { approved: false, feedback: 'Add a regression test.' },
+    }))
+
+    expect(parsed?.observation).toMatchObject({
+      phase: 'review',
+      agent_id: 'reviewer-1',
+      iteration: 2,
+      output: { approved: false, feedback: 'Add a regression test.' },
+    })
+  })
+
   it('separates commit policy, authorization, and Git outcome', () => {
     const committed = harnessCommitSummary({
       ...completedObservation,

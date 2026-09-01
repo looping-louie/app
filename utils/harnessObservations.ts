@@ -85,6 +85,12 @@ export function isCodexCliTurnObservation(value: unknown): value is CodexCliTurn
     && harness.kind === 'codex_cli'
     && harness.version === 'v1'
     && isRecord(harness.config)
+    && optionalString(observation.turn_id)
+    && optionalTurnPhase(observation.phase)
+    && optionalString(observation.agent_id)
+    && optionalAgentRole(observation.role)
+    && optionalPositiveInteger(observation.iteration)
+    && (observation.output === undefined || isRecord(observation.output))
     && typeof observation.completed === 'boolean'
     && nullableString(observation.started_at)
     && nullableString(observation.completed_at)
@@ -145,6 +151,7 @@ export function isSchedulerEvent(event: PipelineRunEventResponse): event is Sche
         && payload.status === event.event_type.replace('pipeline_step_', '')
         && nonEmptyString(payload.started_at)
         && nonEmptyString(payload.completed_at)
+        && optionalString(payload.error)
     default:
       return false
   }
@@ -209,6 +216,18 @@ function optionalString(value: unknown) {
 
 function optionalBoolean(value: unknown) {
   return value === undefined || typeof value === 'boolean'
+}
+
+function optionalTurnPhase(value: unknown) {
+  return value === undefined || ['execute', 'proposal', 'aggregate', 'review'].includes(String(value))
+}
+
+function optionalAgentRole(value: unknown) {
+  return value === undefined || ['generator', 'reviewer', 'aggregator'].includes(String(value))
+}
+
+function optionalPositiveInteger(value: unknown) {
+  return value === undefined || (Number.isInteger(value) && Number(value) > 0)
 }
 
 function nullableNumber(value: unknown) {

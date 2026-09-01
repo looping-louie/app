@@ -21,6 +21,10 @@ const accordionItems = computed(() => [{
   title: props.turn.outcome === 'completed' ? 'View Harness result' : 'Inspect Harness failure',
 }])
 const commit = computed(() => harnessCommitSummary(observation.value, props.commitMode))
+const isWriterTurn = computed(() => !observation.value.phase || ['execute', 'aggregate'].includes(observation.value.phase))
+const responseTitle = computed(() => observation.value.phase === 'proposal'
+  ? 'Proposal'
+  : observation.value.phase === 'review' ? 'Review feedback' : 'Final response')
 const harnessName = computed(() => executionHarnessItem(observation.value.harness).name)
 const commitPolicyLabel = computed(() => commit.value.policy === 'allow' ? 'Allow runtime commit' : 'Leave uncommitted')
 const commitAuthorizationLabel = computed(() => ({
@@ -61,12 +65,14 @@ function boundedDiff(value: string) {
         <div class="harness-result__pills">
           <UiPill :focusable="false">{{ eventLabel(turn.outcome) }}</UiPill>
           <UiPill :focusable="false">{{ observation.harness.kind }} {{ observation.harness.version }}</UiPill>
-          <UiPill :focusable="false">{{ commitOutcomeLabel }}</UiPill>
+          <UiPill v-if="observation.phase" :focusable="false">{{ observation.phase }} · iteration {{ observation.iteration ?? 1 }}</UiPill>
+          <UiPill v-if="isWriterTurn" :focusable="false">{{ commitOutcomeLabel }}</UiPill>
         </div>
 
         <dl class="harness-result__facts">
           <div><dt>Requested model</dt><dd>{{ observation.requested_model ?? '—' }}</dd></div>
           <div><dt>Actual model</dt><dd>{{ observation.actual_model ?? '—' }}</dd></div>
+          <div v-if="observation.agent_id"><dt>Agent</dt><dd>{{ observation.agent_id }} · {{ observation.role }}</dd></div>
           <div v-if="codexObservation"><dt>Reasoning effort</dt><dd>{{ codexObservation.reasoning_effort ?? '—' }}</dd></div>
           <div><dt>Duration</dt><dd>{{ formatDuration(observation.duration_ms) }}</dd></div>
           <div><dt>Started</dt><dd>{{ formatPreciseDateTime(observation.started_at) || '—' }}</dd></div>
@@ -98,7 +104,7 @@ function boundedDiff(value: string) {
           </ul>
         </section>
 
-        <section class="harness-result__section">
+        <section v-if="isWriterTurn" class="harness-result__section">
           <h4>Commit policy and outcome</h4>
           <dl class="harness-result__facts">
             <div><dt>Run policy</dt><dd>{{ commitPolicyLabel }}</dd></div>
@@ -111,12 +117,12 @@ function boundedDiff(value: string) {
         </section>
 
         <section class="harness-result__section">
-          <h4>Final response</h4>
+          <h4>{{ responseTitle }}</h4>
           <UiMarkdownContent v-if="observation.final_response" :content="observation.final_response" />
           <p v-else class="harness-result__empty">No final response was reported.</p>
         </section>
 
-        <section class="harness-result__section">
+        <section v-if="isWriterTurn" class="harness-result__section">
           <h4>Changes produced by {{ harnessName }}</h4>
           <template v-if="observation.changed_files.length || diff.text">
             <h5 v-if="observation.changed_files.length">Changed files</h5>

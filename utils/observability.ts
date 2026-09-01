@@ -43,6 +43,7 @@ export function observabilityMetrics(snapshots: PipelineRunSnapshot[]) {
 
 export function observabilityDistributions(snapshots: PipelineRunSnapshot[]): ObservabilityDistribution[] {
   const turns = observableTurns(snapshots)
+  const writerTurns = turns.filter(turn => !turn.observation.phase || ['execute', 'aggregate'].includes(turn.observation.phase))
   const usages = turns.map(turnUsage)
   return [
     distribution(
@@ -58,7 +59,7 @@ export function observabilityDistributions(snapshots: PipelineRunSnapshot[]): Ob
     countedDistribution('Requested models', 'Models frozen by the API for execution.', turns.map(turn => turn.observation.requested_model ?? 'Unknown'), 'Turns'),
     countedDistribution('Actual models', 'Models reported by the Harness after execution.', turns.map(turn => turn.observation.actual_model ?? 'Unknown'), 'Turns'),
     countedDistribution('Reasoning effort', 'Reported reasoning effort for compatible Harnesses.', turns.map(reasoningEffort), 'Turns'),
-    countedDistribution('Commit outcomes', 'Authorized Git outcomes without treating inapplicable commits as failures.', turns.map(commitOutcome), 'Turns'),
+    countedDistribution('Commit outcomes', 'Authorized Git outcomes for repository-writing turns.', writerTurns.map(commitOutcome), 'Writer turns'),
     countedDistribution('Changed files', 'Most frequently changed files reported by Harness turns.', turns.flatMap(turn => turn.observation.changed_files), 'File changes'),
     countedDistribution('Errors and diagnostics', 'Most frequent normalized errors and diagnostic messages.', turns.flatMap(turnErrorMessages), 'Occurrences'),
   ]
@@ -78,6 +79,9 @@ export function observabilityLogs(snapshots: PipelineRunSnapshot[]) {
       runId: turn.run.id,
       pipelineId: turn.run.pipeline_id,
       activityRun: turn.activityRunId,
+      phase: turn.observation.phase
+        ? `${turn.observation.phase} · ${turn.observation.role ?? 'agent'} · iteration ${turn.observation.iteration ?? 1}`
+        : 'execute',
       model: actual && actual !== requested ? `${requested} → ${actual}` : actual ?? requested,
       duration: turn.observation.duration_ms === null ? '—' : `${(turn.observation.duration_ms / 1000).toFixed(2)}s`,
       tokens: usage.total.toLocaleString(),

@@ -30,6 +30,7 @@ const logColumns = [
   { key: 'created', label: 'Time' },
   { key: 'status', label: 'Status', type: 'option' as const },
   { key: 'run', label: 'Run', width: '20%' },
+  { key: 'phase', label: 'Turn' },
   { key: 'model', label: 'Model' },
   { key: 'duration', label: 'Duration' },
   { key: 'tokens', label: 'Tokens', align: 'end' as const },
