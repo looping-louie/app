@@ -2,10 +2,8 @@
 import PageShell from '~/components/layout/PageShell.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiChartCard from '~/components/ui/ChartCard.vue'
-import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
 import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
 import UiMetricCard from '~/components/ui/MetricCard.vue'
-import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTable from '~/components/ui/Table.vue'
 import { collectApiPages } from '~/utils/apiPagination'
@@ -128,33 +126,30 @@ useHead({ title: 'Observability · Looping Louie' })
       <div class="observability-content">
         <UiDataFreshnessNotice v-if="isStale" :description="staleMessage" :loading="isPollingRefreshing" @retry="retryPolling" />
         <div v-if="activeView === 'metrics'" class="observability-metrics">
-          <UiCollectionGroupTitle heading-as="h2" title="Metrics" />
-          <UiSectionStage inverse="bottom" class="observability-stage">
-            <div class="observability-grid">
-              <UiMetricCard v-for="metric in metrics" :key="metric.label" v-bind="metric" class="observability-grid__metric" />
-              <UiChartCard
-                v-for="distribution in distributions"
-                :key="distribution.title"
-                :description="distribution.description"
-                :title="distribution.title"
-                :total="distribution.total"
-                :total-label="distribution.totalLabel"
-                class="observability-grid__chart"
-              >
-                <template #chart>
-                  <ol v-if="distribution.items.length" class="observability-bars">
-                    <li v-for="item in distribution.items" :key="item.label">
-                      <span class="observability-bars__label">{{ item.label }}</span>
-                      <span class="observability-bars__track" aria-hidden="true"><i :style="{ width: `${(item.value / distributionMaximum(distribution.items)) * 100}%` }" /></span>
-                      <strong>{{ item.value.toLocaleString() }}</strong>
-                    </li>
-                  </ol>
-                  <p v-else class="observability-empty">No Harness turn data in this range.</p>
-                </template>
-                <template #legend><span>Harness turns in the selected range</span></template>
-              </UiChartCard>
-            </div>
-          </UiSectionStage>
+          <div class="observability-grid">
+            <UiMetricCard v-for="metric in metrics" :key="metric.label" v-bind="metric" class="observability-grid__metric" />
+            <UiChartCard
+              v-for="distribution in distributions"
+              :key="distribution.title"
+              :description="distribution.description"
+              :title="distribution.title"
+              :total="distribution.total"
+              :total-label="distribution.totalLabel"
+              class="observability-grid__chart"
+            >
+              <template #chart>
+                <ol v-if="distribution.items.length" class="observability-bars">
+                  <li v-for="item in distribution.items" :key="item.label">
+                    <span class="observability-bars__label">{{ item.label }}</span>
+                    <span class="observability-bars__track" aria-hidden="true"><i :style="{ width: `${(item.value / distributionMaximum(distribution.items)) * 100}%` }" /></span>
+                    <strong>{{ item.value.toLocaleString() }}</strong>
+                  </li>
+                </ol>
+                <p v-else class="observability-empty">No Harness turn data in this range.</p>
+              </template>
+              <template #legend><span>Harness turns in the selected range</span></template>
+            </UiChartCard>
+          </div>
         </div>
         <UiTable v-else :columns="logColumns" :rows="logs" caption="Harness turn events">
           <template #cell-run="{ row }"><NuxtLink class="observability-run-link" :to="runLink(row)">{{ row.run }}</NuxtLink></template>
@@ -168,8 +163,7 @@ useHead({ title: 'Observability · Looping Louie' })
 <style scoped>
 .observability-controls { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-5); }
 .observability-content { display: grid; min-width: 0; gap: var(--ll-space-6); }
-.observability-metrics { display: grid; min-width: 0; background: var(--ll-color-canvas); }
-.observability-stage :deep(.ui-section-stage__shell) { width: 100%; }
+.observability-metrics { min-width: 0; }
 .observability-grid { display: grid; min-width: 0; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--ll-space-5); }
 .observability-grid__metric { grid-column: span 3; }
 .observability-grid__chart { grid-column: span 4; }
