@@ -60,6 +60,9 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
     <UiCard variant="editorial" class="pipeline-loop-card__main">
       <template #eyebrow>{{ eyebrow }}</template>
       <template #title><h3>{{ loop.title }}</h3></template>
+    </UiCard>
+
+    <UiCard variant="editorial" class="pipeline-loop-card__review">
       <template #description>
         <PipelineLoopSummary :loop="loop" :show-title="false" :show-flow="false" layout="team-stop" />
       </template>
@@ -78,9 +81,13 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
   outline: none;
 }
 
-.pipeline-loop-card__main {
-  width: min(100%, 32rem);
+.pipeline-loop-card__main,
+.pipeline-loop-card__review {
   min-height: 7.5rem;
+}
+
+.pipeline-loop-card__main {
+  width: min(100%, 26rem);
   transition:
     border-color var(--ll-duration-normal) var(--ll-ease-out),
     background var(--ll-duration-normal) var(--ll-ease-out),
@@ -92,15 +99,36 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
   padding: var(--ll-space-5) var(--ll-space-6);
 }
 
-.pipeline-loop-card__main :deep(.ui-card__description) {
+.pipeline-loop-card__review {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: calc(50% + 14rem);
+  overflow: visible;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-0.5rem);
+  transition:
+    opacity var(--ll-duration-normal) var(--ll-ease-out),
+    transform var(--ll-duration-normal) var(--ll-ease-out),
+    box-shadow var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.pipeline-loop-card__review :deep(.ui-card__content) {
+  justify-content: center;
+  padding: var(--ll-space-4) var(--ll-space-5);
+}
+
+.pipeline-loop-card__review :deep(.ui-card__description) {
   width: 100%;
+  margin-top: 0;
 }
 
 .pipeline-loop-card__remove {
   position: absolute;
   z-index: 3;
   top: 50%;
-  right: calc(50% - 18rem);
+  right: calc(50% + 14rem);
   opacity: 0;
   transform: translate(0.5rem, -50%);
   transition:
@@ -114,10 +142,16 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
   box-shadow: var(--ll-shadow-raised);
 }
 
+.pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__review,
 .pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__remove {
   opacity: 1;
   pointer-events: auto;
   transform: translate(0, -50%);
+}
+
+.pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__review {
+  box-shadow: var(--ll-shadow-raised);
+  transform: translateX(0);
 }
 
 .pipeline-loop-card:focus-visible .pipeline-loop-card__main {
@@ -132,9 +166,15 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
     gap: var(--ll-space-3);
   }
 
-  .pipeline-loop-card__main {
+  .pipeline-loop-card__main,
+  .pipeline-loop-card__review {
     position: static;
     width: 100%;
+  }
+
+  .pipeline-loop-card__review {
+    display: none;
+    transform: translateY(-0.375rem);
   }
 
   .pipeline-loop-card__remove {
@@ -144,6 +184,11 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
   }
 
   .pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__remove {
+    transform: translateY(0);
+  }
+
+  .pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__review {
+    display: flex;
     transform: translateY(0);
   }
 }
@@ -157,6 +202,7 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
 
 @media (prefers-reduced-motion: reduce) {
   .pipeline-loop-card__main,
+  .pipeline-loop-card__review,
   .pipeline-loop-card__remove {
     transition: none;
   }
