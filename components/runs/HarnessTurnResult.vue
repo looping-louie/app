@@ -12,6 +12,7 @@ const props = defineProps<{
   commitMode: PipelineRunCommitMode
 }>()
 
+const { formatPreciseDateTime } = useDateTime()
 const observation = computed(() => props.turn.observation)
 const codexObservation = computed(() => observation.value.harness.kind === 'codex_cli' ? observation.value : null)
 const usage = computed(() => turnUsage(props.turn))
@@ -37,12 +38,6 @@ const proposedMessage = computed(() => commit.value.proposedMessage ?? (
   commit.value.policy === 'forbid' ? 'Not requested by policy' : 'Not reported'
 ))
 const diff = computed(() => boundedDiff(observation.value.final_diff))
-
-function formatDateTime(value: string | null) {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
-}
 
 function formatDuration(value: number | null) {
   return value === null ? '—' : `${(value / 1000).toFixed(2)}s`
@@ -74,8 +69,8 @@ function boundedDiff(value: string) {
           <div><dt>Actual model</dt><dd>{{ observation.actual_model ?? '—' }}</dd></div>
           <div v-if="codexObservation"><dt>Reasoning effort</dt><dd>{{ codexObservation.reasoning_effort ?? '—' }}</dd></div>
           <div><dt>Duration</dt><dd>{{ formatDuration(observation.duration_ms) }}</dd></div>
-          <div><dt>Started</dt><dd>{{ formatDateTime(observation.started_at) }}</dd></div>
-          <div><dt>Completed</dt><dd>{{ formatDateTime(observation.completed_at) }}</dd></div>
+          <div><dt>Started</dt><dd>{{ formatPreciseDateTime(observation.started_at) || '—' }}</dd></div>
+          <div><dt>Completed</dt><dd>{{ formatPreciseDateTime(observation.completed_at) || '—' }}</dd></div>
           <div><dt>Input tokens</dt><dd>{{ usage.input.toLocaleString() }}</dd></div>
           <div><dt>Output tokens</dt><dd>{{ usage.output.toLocaleString() }}</dd></div>
           <div><dt>Cached tokens</dt><dd>{{ usage.cached.toLocaleString() }}</dd></div>

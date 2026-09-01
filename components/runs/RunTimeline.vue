@@ -12,6 +12,8 @@ const props = defineProps<{
   activitiesById?: Map<string, ActivityResponse>
 }>()
 
+const { formatPreciseDateTime } = useDateTime()
+
 function activityName(activityId: string | null) {
   if (!activityId) return ''
   return props.activitiesById?.get(activityId)?.name ?? activityId
@@ -73,7 +75,7 @@ const timelineEvents = computed(() => props.events.map((event) => {
         <div class="run-timeline__content">
           <div class="run-timeline__event-heading">
             <strong>{{ eventLabel(entry.event.event_type) }}</strong>
-            <time :datetime="entry.event.created_at">{{ new Date(entry.event.created_at).toLocaleString() }}</time>
+            <time :datetime="entry.event.created_at">{{ formatPreciseDateTime(entry.event.created_at) }}</time>
           </div>
           <p v-if="entry.detail">{{ entry.detail }}</p>
           <HarnessTurnResult

@@ -16,6 +16,7 @@ const props = defineProps<{
 
 defineEmits<{ retry: [] }>()
 
+const { formatPreciseDateTime } = useDateTime()
 const harness = computed(() => executionHarnesses.find(candidate => (
   candidate.id === props.readiness?.required_harness?.kind
 )) ?? null)
@@ -42,15 +43,6 @@ const statusDescription = computed(() => {
   return 'Queued diagnostics are no longer applicable.'
 })
 const isReady = computed(() => props.readiness?.status === 'ready')
-
-function formatHeartbeat(value: string | null | undefined) {
-  if (!value) return 'No heartbeat received'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return new Intl.DateTimeFormat('en-US', {
-    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit',
-  }).format(date)
-}
 </script>
 
 <template>
@@ -85,7 +77,7 @@ function formatHeartbeat(value: string | null | undefined) {
             </div>
             <div>
               <dt>Latest heartbeat</dt>
-              <dd>{{ formatHeartbeat(readiness.latest_heartbeat_at) }}</dd>
+              <dd>{{ formatPreciseDateTime(readiness.latest_heartbeat_at) || 'No heartbeat received' }}</dd>
             </div>
           </dl>
           <p v-if="harness" class="worker-readiness__note">{{ harness.availabilityNote }}</p>

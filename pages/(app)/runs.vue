@@ -57,6 +57,7 @@ const route = useRoute()
 const router = useRouter()
 const api = useApiClient()
 const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
+const { formatDateTime } = useDateTime()
 const { activeWorkspace } = useWorkspaceContext()
 const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
@@ -306,13 +307,6 @@ function rangeDuration(value: string) {
   if (value === 'last-month') return 30 * day
   if (value === 'last-quarter') return 90 * day
   return day
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', {
-    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
-  }).format(date)
 }
 
 watch(
