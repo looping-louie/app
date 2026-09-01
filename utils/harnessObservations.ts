@@ -3,6 +3,7 @@ import type {
   HarnessTurnEvent,
   HarnessTurnObservation,
   HarnessTurnOutcome,
+  PipelineRunCommitMode,
   PipelineRunEventResponse,
   SchedulerEvent,
 } from '~/types/api'
@@ -11,6 +12,48 @@ export interface ParsedHarnessTurnEvent {
   outcome: HarnessTurnOutcome
   activityRunId: string
   observation: HarnessTurnObservation
+}
+
+export type HarnessCommitAuthorization = 'forbidden' | 'authorized' | 'not_reached'
+export type HarnessCommitOutcome = 'committed' | 'failed' | 'not_committed' | 'not_attempted'
+
+export interface HarnessCommitSummary {
+  policy: PipelineRunCommitMode
+  authorization: HarnessCommitAuthorization
+  outcome: HarnessCommitOutcome
+  proposedMessage: string | null
+  resultingCommitSha: string | null
+}
+
+export function harnessCommitSummary(
+  observation: HarnessTurnObservation,
+  policy: PipelineRunCommitMode,
+): HarnessCommitSummary {
+  const proposedMessage = observation.commit_message?.trim() || null
+  if (policy === 'forbid') {
+    return {
+      policy,
+      authorization: 'forbidden',
+      outcome: 'not_attempted',
+      proposedMessage,
+      resultingCommitSha: null,
+    }
+  }
+  const authorized = observation.committed !== undefined || Boolean(observation.commit_error)
+  const outcome: HarnessCommitOutcome = observation.commit_error
+    ? 'failed'
+    : observation.committed === true
+      ? 'committed'
+      : observation.committed === false
+        ? 'not_committed'
+        : 'not_attempted'
+  return {
+    policy,
+    authorization: authorized ? 'authorized' : 'not_reached',
+    outcome,
+    proposedMessage,
+    resultingCommitSha: outcome === 'committed' ? observation.final_commit_sha : null,
+  }
 }
 
 export function isHarnessTurnObservation(value: unknown): value is HarnessTurnObservation {

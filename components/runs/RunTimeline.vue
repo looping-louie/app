@@ -81,6 +81,7 @@ function eventDetail(event: PipelineRunEventResponse) {
             v-for="turn in eventTurns(event)"
             :key="`${event.id}:result`"
             :turn="turn"
+            :commit-mode="run.commit_mode"
           />
         </div>
       </li>

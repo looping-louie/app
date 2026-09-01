@@ -25,7 +25,7 @@ const submitting = ref(false)
 const error = ref('')
 const unavailableModelId = ref('')
 const commitModeOptions = [
-  { value: 'allow', label: 'Allow commit' },
+  { value: 'allow', label: 'Allow runtime commit' },
   { value: 'forbid', label: 'Leave uncommitted' },
 ]
 
@@ -109,8 +109,8 @@ async function submit() {
         />
         <p>
           {{ commitMode === 'allow'
-            ? 'Allow the runtime to commit successful changes.'
-            : 'Apply successful changes without creating a commit.' }}
+            ? 'The Harness leaves changes uncommitted. After successful execution and review, the API authorizes the runtime to commit them with the proposed message.'
+            : 'The Harness may apply successful changes, but the API will not authorize a commit. Changes remain uncommitted.' }}
         </p>
       </fieldset>
     </form>
