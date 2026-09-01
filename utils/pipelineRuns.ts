@@ -1,4 +1,5 @@
 import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
+import { harnessObservationFromEvent } from '~/utils/harnessObservations'
 
 export interface PipelineRunSnapshot {
   run: PipelineRunResponse
@@ -14,14 +15,14 @@ export function runTokenCount(events: PipelineRunEventResponse[]) {
 }
 
 export function eventTokenCount(event: PipelineRunEventResponse) {
-  const usage = recordValue(event.payload.usage)
+  const usage = harnessObservationFromEvent(event)?.usage
   const total = numberValue(usage?.total_tokens)
   if (total !== undefined) return total
   return (numberValue(usage?.input_tokens) ?? 0) + (numberValue(usage?.output_tokens) ?? 0)
 }
 
 export function eventLatency(event: PipelineRunEventResponse) {
-  return numberValue(event.payload.latency_ms) ?? 0
+  return numberValue(harnessObservationFromEvent(event)?.duration_ms) ?? 0
 }
 
 export function eventLabel(type: string) {
@@ -30,10 +31,4 @@ export function eventLabel(type: string) {
 
 export function numberValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined
-}
-
-export function recordValue(value: unknown) {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : undefined
 }

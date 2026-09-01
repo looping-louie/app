@@ -1,4 +1,5 @@
 import type { PipelineRunEventResponse } from '~/types/api'
+import { harnessObservationFromEvent } from '~/utils/harnessObservations'
 import { eventLatency, eventTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 export interface ObservabilityChart {
@@ -58,7 +59,7 @@ function bucketEvents(
 }
 
 function errorMessage(event: PipelineRunEventResponse) {
-  return event.event_type === 'step_failed' ? String(event.payload.message || 'Activity failed') : '—'
+  return harnessObservationFromEvent(event)?.error ?? '—'
 }
 
 function chart(title: string, description: string, total: string, totalLabel: string, legend: string, values: number[]): ObservabilityChart {

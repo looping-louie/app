@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import UiPill from '~/components/ui/Pill.vue'
 import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
+import { harnessObservationFromEvent, isSchedulerEvent } from '~/utils/harnessObservations'
 import { eventLabel, eventLatency, eventTokenCount } from '~/utils/pipelineRuns'
 
 defineProps<{
@@ -9,13 +10,14 @@ defineProps<{
 }>()
 
 function eventDetail(event: PipelineRunEventResponse) {
-  if (event.event_type === 'step_failed') return String(event.payload.message || 'Activity failed')
-  if (event.event_type === 'agent_response_received') {
+  const observation = harnessObservationFromEvent(event)
+  if (observation) {
     const tokens = eventTokenCount(event)
     const latency = eventLatency(event)
-    return [tokens ? `${tokens.toLocaleString()} tokens` : '', latency ? `${(latency / 1000).toFixed(2)}s` : '']
+    return [observation.error ?? '', tokens ? `${tokens.toLocaleString()} tokens` : '', latency ? `${(latency / 1000).toFixed(2)}s` : '']
       .filter(Boolean).join(' · ')
   }
+  if (isSchedulerEvent(event) && event.event_type === 'pipeline_step_failed') return 'Activity failed'
   return event.activity_id ? `Activity ${event.activity_id}` : ''
 }
 </script>
