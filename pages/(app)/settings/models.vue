@@ -8,7 +8,7 @@ import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 
-type ModelVisualState = 'unavailable' | 'available-enabled' | 'available-disabled'
+type ModelVisualState = 'unavailable' | 'available'
 
 const api = useApiClient()
 const route = useRoute()
@@ -65,7 +65,7 @@ const { data: user, refresh: refreshUser } = await useAsyncData('settings-model-
 
 const allModels = computed(() => data.value ?? [])
 const sortedModels = computed(() => [...allModels.value].sort((left, right) => (
-  Number(modelAvailable(right)) - Number(modelAvailable(left))
+  Number(right.available) - Number(left.available)
 )))
 const models = computed(() => sortedModels.value.slice(modelOffset.value, modelOffset.value + modelPageSize))
 const modelTotal = computed(() => allModels.value.length)
@@ -121,21 +121,8 @@ function officialModelPage(model: ModelSummary) {
   return officialModelPages[vendorKey] ?? officialModelPages[familyKey] ?? 'https://build.nvidia.com/models'
 }
 
-function modelPolicyEnabled(modelId: string) {
-  const configured = user.value?.settings.configured_models.find(model => model.id === modelId)
-  return (configured?.status ?? user.value?.settings.default_model_availability ?? 'enabled') === 'enabled'
-}
-
-function modelAvailable(model: ModelSummary) {
-  // @TODO Remove this Codex/OpenAI frontend override once the API exposes harness-driven availability; then trust model.available directly.
-  const codexEnablesOpenAi = user.value?.settings.default_harness?.kind === 'codex_cli'
-    && model.vendor.trim().toLocaleLowerCase() === 'openai'
-  return model.available || codexEnablesOpenAi
-}
-
 function modelVisualState(model: ModelSummary): ModelVisualState {
-  if (!modelAvailable(model)) return 'unavailable'
-  return modelPolicyEnabled(model.id) ? 'available-enabled' : 'available-disabled'
+  return model.available ? 'available' : 'unavailable'
 }
 
 async function updateModelPolicy(modelId: string, enabled: boolean) {
@@ -151,6 +138,7 @@ async function updateModelPolicy(modelId: string, enabled: boolean) {
       ...user.value.settings,
       configured_models: configured,
     })
+    if (data.value) data.value = data.value.map(model => model.id === modelId ? { ...model, enabled } : model)
   } catch (cause) {
     policyError.value = apiErrorMessage(cause, `The policy for ${modelId} could not be updated.`)
   } finally {
@@ -237,10 +225,10 @@ useHead({
           :src="providerLogo(model.vendor, model.family) || undefined"
           alt=""
           :description="model.vendor"
-          :toggle="modelAvailable(model)"
-          :toggle-value="modelPolicyEnabled(model.id)"
+          :toggle="model.status !== 'deprecated'"
+          :toggle-value="model.enabled"
           :toggle-disabled="Boolean(policyMutatingId) || !user"
-          :toggle-label="`${modelPolicyEnabled(model.id) ? 'Disable' : 'Enable'} ${model.name}`"
+          :toggle-label="`${model.enabled ? 'Disable' : 'Enable'} ${model.name}`"
           :action-icon-path="arrowSquareOutIconPath"
           :action-href="officialModelPage(model)"
           :action-label="`View official information about ${model.name}`"
@@ -282,15 +270,12 @@ useHead({
 .model-item--unavailable {
   opacity: 0.42;
   transition: opacity var(--ll-duration-normal) var(--ll-ease-out);
-}
-
 .model-item--unavailable:hover,
 .model-item--unavailable:focus-within {
   opacity: 0.78;
 }
 
-.model-item--available-enabled,
-.model-item--available-disabled {
+.model-item--available {
   opacity: 1;
 }
 

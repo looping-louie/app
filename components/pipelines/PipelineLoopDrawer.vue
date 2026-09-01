@@ -10,6 +10,7 @@ import {
   executionHarnessCatalogId,
   executionHarnesses,
   executionHarnessValue,
+  isModelSelectableForHarness,
 } from '~/utils/executionHarnesses'
 import type { ExecutionHarnessCatalogId } from '~/utils/executionHarnesses'
 
@@ -132,9 +133,7 @@ const paletteItems = computed<CommandPaletteItem[]>(() => {
     const preferredIds = [currentAssignment?.model_id, activityModelId.value, props.inheritedModelId]
       .filter((value): value is string => Boolean(value))
     return props.models
-      .filter(model => selectedHarnessId.value === 'codex_cli'
-        ? model.enabled && model.status !== 'deprecated'
-        : model.available)
+      .filter(model => isModelSelectableForHarness(model, executionHarnessValue(selectedHarnessId.value)))
       .map(model => ({
         id: model.id,
         label: model.name,

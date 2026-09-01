@@ -10,6 +10,7 @@ import UiToggle from '~/components/ui/Toggle.vue'
 import type { ExecutionHarness, ExecutionHarnessKind, ModelAvailabilityStatus, ModelSummary, UserResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
+import { executionHarnesses } from '~/utils/executionHarnesses'
 
 interface SettingsNavigationState {
   dirty: Ref<boolean>
@@ -36,8 +37,9 @@ interface ModelPaletteItem {
 }
 
 const harnessOptions: HarnessOption[] = [
-  { id: 'louie', name: 'Louie', owner: 'Looping Louie', image: '/brand/looping-louie-biplane.png', kind: 'louie' },
-  { id: 'codex_cli', name: 'Codex CLI', owner: 'OpenAI', image: '/images/harnesses/codex.webp', kind: 'codex_cli' },
+  ...executionHarnesses.map(harness => ({
+    id: harness.id, name: harness.name, owner: harness.owner, image: harness.image, kind: harness.id,
+  })),
   { id: 'pi', name: 'Pi', owner: 'Badlogic', image: '/images/harnesses/pi.webp' },
   { id: 'cursor', name: 'Cursor', owner: 'Anysphere', image: '/images/harnesses/cursor.webp' },
   { id: 'copilot', name: 'Copilot', owner: 'Microsoft', image: '/images/harnesses/copilot.webp' },

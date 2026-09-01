@@ -4,6 +4,7 @@ import UiMarkdownContent from '~/components/ui/MarkdownContent.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import type { PipelineRunCommitMode } from '~/types/api'
 import { harnessCommitSummary, type ParsedHarnessTurnEvent } from '~/utils/harnessObservations'
+import { executionHarnessItem } from '~/utils/executionHarnesses'
 import { eventLabel, turnUsage } from '~/utils/pipelineRuns'
 
 const props = defineProps<{
@@ -19,7 +20,7 @@ const accordionItems = computed(() => [{
   title: props.turn.outcome === 'completed' ? 'View Harness result' : 'Inspect Harness failure',
 }])
 const commit = computed(() => harnessCommitSummary(observation.value, props.commitMode))
-const harnessName = computed(() => codexObservation.value ? 'Codex CLI' : observation.value.harness.kind)
+const harnessName = computed(() => executionHarnessItem(observation.value.harness).name)
 const commitPolicyLabel = computed(() => commit.value.policy === 'allow' ? 'Allow runtime commit' : 'Leave uncommitted')
 const commitAuthorizationLabel = computed(() => ({
   forbidden: 'Forbidden by run policy',

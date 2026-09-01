@@ -2,6 +2,7 @@
 import UiButton from '~/components/ui/Button.vue'
 import UiDirectoryOption from '~/components/ui/DirectoryOption.vue'
 import type { ExecutionHarness, ModelSummary } from '~/types/api'
+import { isModelSelectableForHarness } from '~/utils/executionHarnesses'
 
 const props = withDefaults(defineProps<{
   models: ModelSummary[]
@@ -25,9 +26,7 @@ const emit = defineEmits<{
 const { modelLogo, providerLogo } = useModelLogo()
 const usesCodex = computed(() => props.harness?.kind === 'codex_cli')
 const selectableModels = computed(() => props.models.filter(model => (
-  usesCodex.value
-    ? model.enabled && model.status !== 'deprecated'
-    : model.available
+  isModelSelectableForHarness(model, props.harness)
 )))
 const currentModelUnavailable = computed(() => {
   if (!props.modelValue) return false
