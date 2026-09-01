@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { apiErrorDetails, apiErrorMessage } from '~/utils/api/errors'
+import { apiErrorDetails, apiErrorMessage, apiErrorSummary } from '~/utils/api/errors'
 
 describe('Pipeline run API errors', () => {
   it('preserves the actionable Codex missing-model contract', () => {
@@ -24,5 +24,22 @@ describe('Pipeline run API errors', () => {
       pipeline_id: 'pipeline-1',
       activity_id: 'activity-1',
     })
+  })
+
+  it('summarizes the HTTP status and API error code for refresh failures', () => {
+    const cause = {
+      statusCode: 500,
+      data: {
+        error: {
+          code: 'activity_checkpoint_failed',
+          message: 'The activity checkpoint could not be persisted.',
+          details: null,
+        },
+      },
+    }
+
+    expect(apiErrorSummary(cause)).toBe(
+      'HTTP 500 · activity_checkpoint_failed — The activity checkpoint could not be persisted.',
+    )
   })
 })

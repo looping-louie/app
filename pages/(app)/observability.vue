@@ -45,6 +45,7 @@ watch(dateRange, () => void refresh())
 const {
   isRefreshing: isPollingRefreshing,
   isStale,
+  staleMessage,
   refresh: retryPolling,
 } = usePipelineRunPolling(
   () => snapshots.value ?? [],
@@ -125,7 +126,7 @@ useHead({ title: 'Observability · Looping Louie' })
 
     <UiAsyncStage :status="status" loading-label="Loading execution ledger…" error-label="Observability could not be loaded." @retry="refresh">
       <div class="observability-content">
-        <UiDataFreshnessNotice v-if="isStale" :loading="isPollingRefreshing" @retry="retryPolling" />
+        <UiDataFreshnessNotice v-if="isStale" :description="staleMessage" :loading="isPollingRefreshing" @retry="retryPolling" />
         <div v-if="activeView === 'metrics'" class="observability-metrics">
           <UiCollectionGroupTitle heading-as="h2" title="Metrics" />
           <UiSectionStage inverse="bottom" class="observability-stage">

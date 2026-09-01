@@ -90,6 +90,7 @@ const {
   applyRunUpdates,
   isRefreshing: isPollingRefreshing,
   isStale,
+  staleMessage,
   refresh: retryPolling,
 } = usePipelineRunPolling(
   () => data.value?.snapshots ?? [],
@@ -335,7 +336,7 @@ useHead({ title: 'Runs · Looping Louie' })
 
     <UiAsyncStage :status="status" loading-label="Loading runs…" error-label="Runs could not be loaded." @retry="refresh">
       <div class="runs-content">
-        <UiDataFreshnessNotice v-if="isStale" :loading="isPollingRefreshing" @retry="retryPolling" />
+        <UiDataFreshnessNotice v-if="isStale" :description="staleMessage" :loading="isPollingRefreshing" @retry="retryPolling" />
         <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
           <template #cell-name="{ row }">
             <button type="button" class="runs-link" @click="selectRun(row as RunTableRow)">{{ row.name }}</button>

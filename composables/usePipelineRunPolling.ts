@@ -1,4 +1,5 @@
 import type { PipelineRunResponse } from '~/types/api'
+import { apiErrorSummary } from '~/utils/api/errors'
 import { needsTerminalEventRefresh, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 const LIVE_POLL_DELAY = 2500
@@ -15,14 +16,15 @@ export function usePipelineRunPolling(
   options: PipelineRunPollingOptions = {},
 ) {
   const api = useApiClient()
-  const staleScopes = ref<string[]>([])
+  const staleFailures = ref<Record<string, string>>({})
   const isRefreshing = ref(false)
   let timer: ReturnType<typeof setTimeout> | undefined
   let polling = false
   let passivePollCount = 0
   let lastCatalogRefreshAt = Date.now()
 
-  const isStale = computed(() => staleScopes.value.length > 0)
+  const isStale = computed(() => Object.keys(staleFailures.value).length > 0)
+  const staleMessage = computed(() => Object.values(staleFailures.value).join(' '))
 
   function clearTimer() {
     if (timer) clearTimeout(timer)
@@ -67,21 +69,25 @@ export function usePipelineRunPolling(
     return api.pipelines.getRun(run.pipeline_id, run.id)
   }
 
-  function setScopeStale(scope: string, stale: boolean) {
-    const scopes = new Set(staleScopes.value)
-    if (stale) scopes.add(scope)
-    else scopes.delete(scope)
-    staleScopes.value = [...scopes]
+  function setScopeFailure(scope: string, message: string | null) {
+    const failures = { ...staleFailures.value }
+    if (message) failures[scope] = message
+    else delete failures[scope]
+    staleFailures.value = failures
+  }
+
+  function refreshFailure(operation: string, cause: unknown) {
+    return `${operation} failed: ${apiErrorSummary(cause)} Last known data remains visible.`
   }
 
   async function applyRunUpdates(updates: PipelineRunResponse[]) {
     if (!updates.length) return true
     try {
       await updateRuns(updates)
-      setScopeStale('runs', false)
+      setScopeFailure('events', null)
       return true
-    } catch {
-      setScopeStale('runs', true)
+    } catch (cause) {
+      setScopeFailure('events', refreshFailure('Run event refresh', cause))
       return false
     }
   }
@@ -98,17 +104,20 @@ export function usePipelineRunPolling(
       const results = await Promise.allSettled(candidates.map(snapshot => fetchRun(snapshot.run)))
       const updates = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : [])
       await applyRunUpdates(updates)
-      if (results.some(result => result.status === 'rejected')) setScopeStale('runs', true)
+      const failedRun = results.find(result => result.status === 'rejected')
+      setScopeFailure(
+        'runs',
+        failedRun?.status === 'rejected' ? refreshFailure('Run status refresh', failedRun.reason) : null,
+      )
 
       const catalogDue = forceCatalog || Date.now() - lastCatalogRefreshAt >= CATALOG_POLL_DELAY
       if (options.refreshCatalog && catalogDue) {
         lastCatalogRefreshAt = Date.now()
         try {
           await options.refreshCatalog()
-          setScopeStale('catalog', false)
-          setScopeStale('runs', false)
-        } catch {
-          setScopeStale('catalog', true)
+          setScopeFailure('catalog', null)
+        } catch (cause) {
+          setScopeFailure('catalog', refreshFailure('Run catalog refresh', cause))
         }
       }
     } finally {
@@ -122,11 +131,12 @@ export function usePipelineRunPolling(
     isRefreshing.value = true
     try {
       const refreshed = await fetchRun(run)
+      setScopeFailure('runs', null)
       await applyRunUpdates([refreshed])
       schedule()
       return refreshed
     } catch (cause) {
-      setScopeStale('runs', true)
+      setScopeFailure('runs', refreshFailure('Run status refresh', cause))
       throw cause
     } finally {
       isRefreshing.value = false
@@ -151,6 +161,7 @@ export function usePipelineRunPolling(
     applyRunUpdates,
     isRefreshing: readonly(isRefreshing),
     isStale,
+    staleMessage,
     refresh: () => poll(true),
     refreshRun,
   }

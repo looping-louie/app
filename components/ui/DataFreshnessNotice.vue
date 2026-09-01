@@ -3,8 +3,10 @@ import UiButton from '~/components/ui/Button.vue'
 import UiNotification from '~/components/ui/Notification.vue'
 
 withDefaults(defineProps<{
+  description?: string
   loading?: boolean
 }>(), {
+  description: 'The latest run or event refresh failed. Last known data remains visible.',
   loading: false,
 })
 
@@ -18,7 +20,7 @@ defineEmits<{
     <UiNotification
       tone="error"
       title="Data may be out of date"
-      description="The latest run or event refresh failed. Last known data remains visible."
+      :description="description"
       :dismissible="false"
     />
     <UiButton variant="stroke" size="sm" :loading="loading" @click="$emit('retry')">Retry refresh</UiButton>
