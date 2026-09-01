@@ -19,7 +19,7 @@ import type {
 } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
-import { modelIdLabel, pipelineStepsAreExecutable } from '~/utils/executionDefaults'
+import { modelIdLabel } from '~/utils/executionDefaults'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
@@ -101,21 +101,12 @@ const detailItems = computed<DetailRow[]>(() => {
 })
 const editInheritedModelId = computed(() => editModelId.value ?? executionOptions.value?.defaults.default_model_id ?? null)
 const editInheritedHarness = computed(() => editHarness.value ?? executionOptions.value?.defaults.default_harness ?? null)
-const editExecutionReady = computed(() => pipelineStepsAreExecutable(
-  editSteps.value,
-  editInheritedModelId.value,
-  editInheritedHarness.value,
-))
 const displayedModelId = computed(() => pipeline.value?.model_id ?? executionOptions.value?.defaults.default_model_id ?? null)
 const displayedHarness = computed(() => pipeline.value?.harness ?? executionOptions.value?.defaults.default_harness ?? null)
-const pipelineExecutionReady = computed(() => pipeline.value
-  ? pipelineStepsAreExecutable(pipeline.value.steps, displayedModelId.value, displayedHarness.value)
-  : false)
 const canSaveEditing = computed(() => (
   editDesignValid.value
   && Boolean(editName.value.trim())
   && Boolean(editDescription.value.trim())
-  && editExecutionReady.value
   && !saving.value
 ))
 
@@ -216,11 +207,6 @@ async function saveEditing() {
     editError.value = editDesignMessage.value || 'Complete the pipeline design before saving.'
     return
   }
-  if (!editExecutionReady.value) {
-    editError.value = 'Every Louie loop persona needs a model configured at the persona, activity, pipeline, or user level.'
-    return
-  }
-
   saving.value = true
   editError.value = ''
   try {
@@ -347,7 +333,7 @@ useHead(() => ({
           <UiButton type="button" variant="secondary" :disabled="saving" @click="cancelEditing">Cancel</UiButton>
         </template>
         <template v-else>
-          <UiButton type="button" :disabled="!pipelineExecutionReady" :title="pipelineExecutionReady ? undefined : 'Configure a model for every Louie loop persona before running.'" @click="runModalOpen = true">Run</UiButton>
+          <UiButton type="button" @click="runModalOpen = true">Run</UiButton>
           <UiButton
             type="button"
             variant="stroke"
@@ -441,7 +427,6 @@ useHead(() => ({
                     :inherit-description="executionOptions?.defaults.default_harness ? `Currently ${executionOptions.defaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
                     @update:model-value="markEditDirty"
                   />
-                  <p v-if="!editExecutionReady" class="pipeline-execution__error" role="alert">At least one Louie loop persona has no effective model configured.</p>
                 </template>
                 <dl v-else>
                   <div><dt>Model</dt><dd>{{ modelIdLabel(displayedModelId) }}</dd></div>
@@ -517,7 +502,6 @@ useHead(() => ({
 .pipeline-execution dl div { display: grid; gap: var(--ll-space-1); }
 .pipeline-execution dt { color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); }
 .pipeline-execution dd { margin: 0; color: var(--ll-color-ink); font: 500 var(--ll-text-sm) / 1.4 var(--ll-font-mono); }
-.pipeline-execution__error { margin: 0; color: var(--ll-color-brand-ink); }
 .pipeline-design { display: flex; width: 100%; min-width: 0; box-sizing: border-box; flex-direction: column; align-items: stretch; padding: var(--ll-space-2) 0 var(--ll-space-8); }
 .pipeline-design--editing { padding-top: 0; }
 .pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__item) { grid-template-columns: minmax(9rem, 0.36fr) minmax(0, 1fr) auto; }

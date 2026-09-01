@@ -13,7 +13,6 @@ import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import type { ExecutionHarness, PipelineActivityStepRequest } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
-import { pipelineStepsAreExecutable } from '~/utils/executionDefaults'
 
 type PipelineBuilderStep = 'design' | 'details'
 
@@ -54,11 +53,6 @@ const { data: executionOptions, status: executionOptionsStatus, refresh: refresh
 const builderStepIndex = computed(() => builderStep.value === 'design' ? 0 : 1)
 const inheritedModelId = computed(() => pipelineModelId.value ?? executionOptions.value?.defaults.default_model_id ?? null)
 const inheritedHarness = computed(() => pipelineHarness.value ?? executionOptions.value?.defaults.default_harness ?? null)
-const executionReady = computed(() => pipelineStepsAreExecutable(
-  designSteps.value,
-  inheritedModelId.value,
-  inheritedHarness.value,
-))
 const hasProgress = computed(() => Boolean(
   designSteps.value.length
   || pipelineTitle.value.trim()
@@ -70,7 +64,6 @@ const canSavePipeline = computed(() => (
   designValid.value
   && Boolean(pipelineTitle.value.trim())
   && Boolean(pipelineDescription.value.trim())
-  && executionReady.value
   && !savingPipeline.value
 ))
 const breadcrumbItems = computed(() => [
@@ -125,10 +118,6 @@ function validateDetails() {
 
 async function createPipeline() {
   if (!validateDetails() || !designValid.value || savingPipeline.value) return
-  if (!executionReady.value) {
-    saveError.value = 'Every Louie loop persona needs a model configured at the persona, activity, pipeline, or user level.'
-    return
-  }
   savingPipeline.value = true
   saveError.value = ''
   try {
@@ -348,7 +337,6 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
               :inherit-description="executionOptions?.defaults.default_harness ? `Currently ${executionOptions.defaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
               @update:model-value="saveError = ''; saveLocalDraft()"
             />
-            <p v-if="!executionReady" class="pipeline-builder__execution-error" role="alert">At least one Louie loop persona has no effective model configured.</p>
           </div>
         </UiSectionStage>
       </div>
@@ -385,8 +373,8 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
 .pipeline-builder__field-stage { min-width: 0; }
 .pipeline-builder__field-stage :deep(.ui-section-stage__shell) { width: 100%; margin-inline: 0; }
 .pipeline-builder__execution-options { display: grid; gap: var(--ll-space-8); }
-.pipeline-builder__execution-state, .pipeline-builder__execution-error { margin: 0; color: var(--ll-color-text-muted); }
-.pipeline-builder__execution-state--error, .pipeline-builder__execution-error { color: var(--ll-color-brand-ink); }
+.pipeline-builder__execution-state { margin: 0; color: var(--ll-color-text-muted); }
+.pipeline-builder__execution-state--error { color: var(--ll-color-brand-ink); }
 @media (max-width: 48rem) {
   .pipeline-builder__heading { margin-bottom: var(--ll-space-8); }
   .pipeline-builder__heading-actions { width: 100%; max-width: none; justify-items: start; }

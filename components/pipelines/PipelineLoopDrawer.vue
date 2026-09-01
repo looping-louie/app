@@ -170,16 +170,8 @@ const paletteItems = computed<CommandPaletteItem[]>(() => {
   })
 })
 
-const executionReady = computed(() => (
-  selectedHarnessId.value === 'codex_cli'
-  || assignments.value.every(assignment => Boolean(effectiveModelId(
-    assignment.model_id,
-    activityModelId.value,
-    props.inheritedModelId,
-  )))
-))
 const canAdd = computed(() => {
-  if (!name.value.trim() || !positiveInteger(maxIterations.value) || !executionReady.value) return false
+  if (!name.value.trim() || !positiveInteger(maxIterations.value)) return false
   return roleGroups.value.every((group) => {
     const count = assignments.value.filter(item => item.role === group.role).length
     return flow.value === 'roundtable' && group.role === 'generator' ? count >= 2 : count >= 1
