@@ -18,6 +18,7 @@ import type {
 } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
+import { executionHarnessItem } from '~/utils/executionHarnesses'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
@@ -88,14 +89,15 @@ const detailItems = computed<DetailRow[]>(() => {
   if (!pipeline.value) return []
   return [
     { id: 'status', title: 'Status', kind: 'status', value: statusValue.value },
-    ...(!editing.value ? [{ id: 'created', title: 'Created', kind: 'created' as const }] : []),
-    { id: 'execution', title: 'Execution', kind: 'execution' },
+    { id: 'execution', title: 'Harness', kind: 'execution' },
     { id: 'design', title: 'Design', kind: 'design' },
+    ...(!editing.value ? [{ id: 'created', title: 'Created', kind: 'created' as const }] : []),
   ]
 })
 const editInheritedModelId = computed(() => pipeline.value?.model_id ?? executionDefaults.value?.default_model_id ?? null)
 const editInheritedHarness = computed(() => editHarness.value ?? executionDefaults.value?.default_harness ?? null)
 const displayedHarness = computed(() => pipeline.value?.harness ?? executionDefaults.value?.default_harness ?? null)
+const displayedHarnessItem = computed(() => executionHarnessItem(displayedHarness.value))
 const canSaveEditing = computed(() => (
   editDesignValid.value
   && Boolean(editName.value.trim())
@@ -412,9 +414,17 @@ useHead(() => ({
                     @update:model-value="markEditDirty"
                   />
                 </template>
-                <dl v-else>
-                  <div><dt>Harness</dt><dd>{{ displayedHarness?.kind ?? 'louie' }} v1</dd></div>
-                </dl>
+                <UiPill
+                  v-else
+                  class="pipeline-execution__pill"
+                  variant="catalog"
+                  :src="displayedHarnessItem.image"
+                  alt=""
+                  :description="displayedHarnessItem.owner"
+                  :focusable="false"
+                >
+                  {{ displayedHarnessItem.name }}
+                </UiPill>
               </div>
 
               <div v-else-if="item.kind === 'design'" class="pipeline-design" :class="{ 'pipeline-design--editing': editing }">
@@ -479,10 +489,8 @@ useHead(() => ({
 .pipeline-status { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: var(--ll-space-2); }
 .pipeline-created { display: flex; min-height: 2rem; flex-wrap: wrap; align-items: center; gap: 0.3em; margin: 0; color: var(--ll-color-text); }
 .pipeline-execution { display: grid; width: 100%; gap: var(--ll-space-7); }
-.pipeline-execution dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ll-space-4); margin: 0; }
-.pipeline-execution dl div { display: grid; gap: var(--ll-space-1); }
-.pipeline-execution dt { color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); }
-.pipeline-execution dd { margin: 0; color: var(--ll-color-ink); font: 500 var(--ll-text-sm) / 1.4 var(--ll-font-mono); }
+.pipeline-execution__pill { width: 100%; max-width: 32rem; }
+.pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-execution) .ui-grid-list__item) { align-items: center; }
 .pipeline-design { display: flex; width: 100%; min-width: 0; box-sizing: border-box; flex-direction: column; align-items: stretch; padding: var(--ll-space-2) 0 var(--ll-space-8); }
 .pipeline-design--editing { padding-top: 0; }
 .pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__item) { grid-template-columns: minmax(9rem, 0.36fr) minmax(0, 1fr) auto; }

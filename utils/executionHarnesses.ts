@@ -28,7 +28,7 @@ export const executionHarnesses: ExecutionHarnessCatalogItem[] = [
   },
   {
     id: 'codex_cli',
-    name: 'Codex CLI',
+    name: 'Codex',
     owner: 'OpenAI',
     image: '/images/harnesses/codex.webp',
     modelSelection: 'local_policy',
