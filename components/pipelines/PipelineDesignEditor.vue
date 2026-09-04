@@ -1,5 +1,5 @@
 <script lang="ts">
-import type { ActivityLoopAgentInput, ActivityLoopFlow, ActivityLoopOutputContract, ActivityLoopStopConditions, ExecutionHarness, ModelTarget } from '~/types/api'
+import type { ActivityLoopAgentInput, ActivityLoopFlow, ActivityLoopOutputContract, ActivityLoopStopConditions, ExecutionHarness } from '~/types/api'
 
 export interface PipelineDesignDraft {
   activities: PipelineEditorActivity[]
@@ -13,7 +13,7 @@ export interface PipelineEditorLoop {
   flow: ActivityLoopFlow
   status: string
   agents: ActivityLoopAgentInput[]
-  model_target?: ModelTarget | null
+  model_id?: string | null
   harness?: ExecutionHarness | null
   stop_conditions: ActivityLoopStopConditions
   output_contract?: ActivityLoopOutputContract
@@ -66,14 +66,14 @@ const props = withDefaults(defineProps<{
   title?: string
   showTitle?: boolean
   useStage?: boolean
-  inheritedModelTarget?: ModelTarget | null
+  inheritedModelId?: string | null
   inheritedHarness?: ExecutionHarness | null
 }>(), {
   initialSteps: () => [],
   title: 'Your pipeline',
   showTitle: true,
   useStage: true,
-  inheritedModelTarget: null,
+  inheritedModelId: null,
   inheritedHarness: null,
 })
 
@@ -116,12 +116,11 @@ let stageResizeObserver: ResizeObserver | undefined
 const { data: loopOptionsData, status: loopOptionsStatus } = await useAsyncData(
   'pipeline-design-editor-options',
   async () => {
-    const [personas, models, linkedServices] = await Promise.all([
+    const [personas, models] = await Promise.all([
       api.personas.list({ status: 'enabled' }),
-      api.models.list({ available: true, sort: 'alphabetical-asc' }),
-      api.linkedServices.list(),
+      api.models.list({ sort: 'alphabetical-asc' }),
     ])
-    return { personas: personas.items, models: models.items, linkedServices }
+    return { personas: personas.items, models: models.items }
   },
 )
 
@@ -133,7 +132,14 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
   for (const activity of activities.value) {
     if (activity.type === 'loop') {
       const loop = loopById.value.get(activity.loopId)
-      if (loop) result.push({ instanceId: activity.instanceId, type: 'loop', loop })
+      if (loop) result.push({
+        instanceId: activity.instanceId,
+        type: 'loop',
+        loop: {
+          ...loop,
+          model_id: loop.model_id ?? props.inheritedModelId,
+        },
+      })
       continue
     }
     const gate = gateById.get(activity.gate)
@@ -202,10 +208,10 @@ function activityRequest(activity: PipelineEditorActivity): ActivityCreateReques
       name: loop.title,
       description: loop.description,
       type,
-      model_target: loop.model_target ?? null,
+      model_id: loop.model_id ?? null,
       harness: loop.harness ?? null,
       config: {
-        agents: loop.agents.map(({ persona_id, role, model_target }) => ({ persona_id, role, model_target })),
+        agents: loop.agents.map(({ persona_id, role, model_id }) => ({ persona_id, role, model_id })),
         stop_conditions: loop.stop_conditions,
         output_contract: loop.output_contract ?? {
           type: 'text',
@@ -275,7 +281,7 @@ function replaceSteps(steps: InitialStep[]) {
         flow: step.type.replace('_loop', '') as PipelineEditorLoop['flow'],
         status: 'active',
         agents: cloneValue(config.agents),
-        model_target: step.model_target,
+        model_id: step.model_id,
         harness: step.harness,
         stop_conditions: cloneValue(config.stop_conditions),
         output_contract: cloneValue(config.output_contract),
@@ -429,8 +435,7 @@ defineExpose({ getDraft, getSteps, restoreDraft })
     :loop="editingLoop"
     :personas="loopOptionsData?.personas ?? []"
     :models="loopOptionsData?.models ?? []"
-    :linked-services="loopOptionsData?.linkedServices ?? []"
-    :inherited-model-target="inheritedModelTarget"
+    :inherited-model-id="inheritedModelId"
     :inherited-harness="inheritedHarness"
     :loading="loopOptionsStatus === 'pending'"
     @add="addLocalLoop"

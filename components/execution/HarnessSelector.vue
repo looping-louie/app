@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import type { ExecutionHarness } from '~/types/api'
+import { executionHarnesses, executionHarnessItem, executionHarnessValue } from '~/utils/executionHarnesses'
 
 const props = withDefaults(defineProps<{
   modelValue: ExecutionHarness | null
@@ -19,8 +20,7 @@ const emit = defineEmits<{
 
 const options = computed(() => [
   { value: 'inherit', label: props.inheritLabel },
-  { value: 'louie', label: 'Louie' },
-  { value: 'codex_cli', label: 'Codex CLI' },
+  ...executionHarnesses.map(harness => ({ value: harness.id, label: harness.name })),
 ])
 const selected = computed({
   get: () => props.modelValue?.kind ?? 'inherit',
@@ -28,16 +28,16 @@ const selected = computed({
     if (props.disabled) return
     emit('update:modelValue', value === 'inherit'
       ? null
-      : { kind: value as ExecutionHarness['kind'], version: 'v1', config: {} })
+      : executionHarnessValue(value as ExecutionHarness['kind']))
   },
 })
+const selectedHarness = computed(() => props.modelValue ? executionHarnessItem(props.modelValue) : null)
 </script>
 
 <template>
   <div class="execution-harness-selector">
     <UiSegmentedControl v-model="selected" :options="options" :disabled="disabled" aria-label="Execution harness" />
-    <p v-if="modelValue?.kind === 'codex_cli'">Runs require a worker advertising the Codex CLI v1 harness.</p>
-    <p v-else-if="modelValue?.kind === 'louie'">Runs require a worker advertising the Louie v1 harness.</p>
+    <p v-if="selectedHarness">Runs require a worker advertising the {{ selectedHarness.name }} v1 harness.</p>
     <p v-else>{{ inheritDescription }}</p>
   </div>
 </template>

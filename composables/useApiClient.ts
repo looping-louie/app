@@ -26,6 +26,7 @@ import type {
   PipelineRunEventListResponse,
   PipelineRunListQuery,
   PipelineRunListResponse,
+  PipelineRunReadinessResponse,
   PipelineRunResponse,
   CatalogProviderResponse,
   CatalogPersonaResponse,
@@ -37,13 +38,21 @@ import type {
   SkillListQuery,
   SkillCreateRequest,
   SkillResponse,
-  WorkspaceDefaultsReplaceRequest,
-  WorkspaceDefaultsResponse,
+  UserResponse,
+  UserSettingsRequest,
+  WorkspaceCreateRequest,
+  WorkspacePatchRequest,
+  WorkspaceResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
 
 export function useApiClient() {
+  const activeWorkspaceId = useCookie<string | null>('looping-louie-workspace-id')
+  const workspaceOptions = () => activeWorkspaceId.value
+    ? { headers: { 'X-Project-ID': activeWorkspaceId.value } }
+    : {}
+
   return {
     activities: {
       list: (query: ApiListQuery = {}) => $fetch<ActivityListResponse>('/api/v1/activities', { query }),
@@ -51,8 +60,8 @@ export function useApiClient() {
       create: (body: ActivityCreateRequest) => $fetch<ActivityResponse>('/api/v1/activities', { method: 'POST', body }),
       patch: (id: string, body: ActivityPatchRequest) => $fetch<ActivityResponse>(resourcePath('activities', id), { method: 'PATCH', body }),
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('activities', id), { method: 'DELETE' }),
-      listRuns: (id: string, query: ApiListQuery = {}) => $fetch<ActivityRunListResponse>(`${resourcePath('activities', id)}/runs`, { query }),
-      continueRun: (activityId: string, runId: string, body: ActivityRunContinueRequest) => $fetch<ActivityRunResponse>(`${resourcePath('activities', activityId)}/runs/${encodeURIComponent(runId)}/continue`, { method: 'POST', body }),
+      listRuns: (id: string, query: ApiListQuery = {}) => $fetch<ActivityRunListResponse>(`${resourcePath('activities', id)}/runs`, { ...workspaceOptions(), query }),
+      continueRun: (activityId: string, runId: string, body: ActivityRunContinueRequest) => $fetch<ActivityRunResponse>(`${resourcePath('activities', activityId)}/runs/${encodeURIComponent(runId)}/continue`, { ...workspaceOptions(), method: 'POST', body }),
     },
     pipelines: {
       list: (query: PipelineListQuery = {}) => $fetch<PipelineListResponse>('/api/v1/pipelines', { query }),
@@ -60,14 +69,15 @@ export function useApiClient() {
       create: (body: PipelineCreateRequest) => $fetch<PipelineResponse>('/api/v1/pipelines', { method: 'POST', body }),
       patch: (id: string, body: PipelinePatchRequest) => $fetch<PipelineResponse>(resourcePath('pipelines', id), { method: 'PATCH', body }),
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('pipelines', id), { method: 'DELETE' }),
-      createRun: (id: string, body: PipelineRunCreateRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', id)}/runs`, { method: 'POST', body }),
-      startRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { method: 'POST' }),
-      continueRun: (pipelineId: string, runId: string, body: PipelineRunContinueRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/continue`, { method: 'POST', body }),
-      getRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`),
-      listRunEvents: (pipelineId: string, runId: string) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`),
+      createRun: (id: string, body: PipelineRunCreateRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', id)}/runs`, { ...workspaceOptions(), method: 'POST', body }),
+      startRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { ...workspaceOptions(), method: 'POST' }),
+      continueRun: (pipelineId: string, runId: string, body: PipelineRunContinueRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/continue`, { ...workspaceOptions(), method: 'POST', body }),
+      getRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`, workspaceOptions()),
+      getRunReadiness: (pipelineId: string, runId: string) => $fetch<PipelineRunReadinessResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/readiness`, workspaceOptions()),
+      listRunEvents: (pipelineId: string, runId: string, query: ApiListQuery = {}) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`, { ...workspaceOptions(), query }),
     },
     pipelineRuns: {
-      list: (query: PipelineRunListQuery = {}) => $fetch<PipelineRunListResponse>('/api/v1/pipeline-runs', { query }),
+      list: (query: PipelineRunListQuery = {}) => $fetch<PipelineRunListResponse>('/api/v1/pipeline-runs', { ...workspaceOptions(), query }),
     },
     personas: {
       list: (query: PersonaListQuery = {}) => $fetch<PersonaListResponse>('/api/v1/personas', { query }),
@@ -83,8 +93,13 @@ export function useApiClient() {
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('skills', id), { method: 'DELETE' }),
     },
     models: {
-      list: (query: ModelListQuery = {}) => $fetch<ModelListResponse>('/api/v1/models', { query }),
-      get: (id: string) => $fetch<ModelResponse>(resourcePath('models', id)),
+      list: (query: ModelListQuery = {}) => $fetch<ModelListResponse>('/api/v1/users/me/models', { query }),
+      get: (id: string) => $fetch<ModelResponse>(`/api/v1/users/me/models/${encodeURIComponent(id)}`),
+    },
+    users: {
+      registerCurrent: () => $fetch<UserResponse>('/api/v1/users', { method: 'POST' }),
+      getCurrent: () => $fetch<UserResponse>('/api/v1/users/me'),
+      replaceSettings: (body: UserSettingsRequest) => $fetch<UserResponse>('/api/v1/users/me', { method: 'PATCH', body }),
     },
     catalog: {
       listProviders: (signal?: AbortSignal) => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers', { signal }),
@@ -92,8 +107,10 @@ export function useApiClient() {
       listSkills: (signal?: AbortSignal) => $fetch<CatalogSkillResponse[]>('/api/v1/catalog/skills', { signal }),
     },
     workspaces: {
-      getDefaults: () => $fetch<WorkspaceDefaultsResponse>('/api/v1/workspaces/defaults'),
-      replaceDefaults: (body: WorkspaceDefaultsReplaceRequest) => $fetch<WorkspaceDefaultsResponse>('/api/v1/workspaces/defaults', { method: 'PUT', body }),
+      list: () => $fetch<WorkspaceResponse[]>('/api/v1/projects'),
+      get: (id: string) => $fetch<WorkspaceResponse>(resourcePath('projects', id)),
+      create: (body: WorkspaceCreateRequest) => $fetch<WorkspaceResponse>('/api/v1/projects', { method: 'POST', body }),
+      patch: (id: string, body: WorkspacePatchRequest) => $fetch<WorkspaceResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),

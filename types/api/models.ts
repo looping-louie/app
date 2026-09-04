@@ -23,13 +23,13 @@ export interface ModelSummary {
   released_at: string
   capabilities: ModelCapability[]
   status: ModelStatus
-  providers: ProviderId[]
+  enabled: boolean
   available: boolean
-  starting_price: ModelPricing | null
+  offerings: ModelOffering[]
   tags: string[]
 }
 
-export interface ModelDeployment {
+export interface ModelOffering {
   provider_id: ProviderId
   provider_model_id: string
   endpoint: ModelEndpoint
@@ -38,20 +38,14 @@ export interface ModelDeployment {
   pricing: ModelPricing | null
   status: ModelStatus
   deprecated_at: string | null
-}
-
-export interface ModelProviderAvailability {
-  provider_id: ProviderId
   configured: boolean
   enabled: boolean
   available: boolean
   reason: string | null
 }
 
-export interface ModelResponse extends Omit<ModelSummary, 'providers' | 'starting_price'> {
+export interface ModelResponse extends ModelSummary {
   replacement_model_id: string | null
-  deployments: ModelDeployment[]
-  availability: ModelProviderAvailability[]
 }
 
 export interface ModelListQuery {

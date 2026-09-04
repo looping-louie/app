@@ -6,6 +6,7 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "typecheck": "nuxt typecheck",
+    "test": "vitest run",
     "generate": "nuxt generate",
     "preview": "nuxt preview"
   },
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3",
+    "vitest": "^4.1.11",
     "vue-tsc": "^3.3.9"
   }
 }

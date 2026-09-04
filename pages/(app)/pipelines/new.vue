@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
-import ExecutionModelTargetSelector from '~/components/execution/ModelTargetSelector.vue'
 import WizardShell from '~/components/layout/WizardShell.vue'
 import PipelineDesignEditor from '~/components/pipelines/PipelineDesignEditor.vue'
 import type { PipelineDesignDraft } from '~/components/pipelines/PipelineDesignEditor.vue'
@@ -11,9 +9,8 @@ import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
 import UiModal from '~/components/ui/Modal.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiTextField from '~/components/ui/TextField.vue'
-import type { ExecutionHarness, ModelTarget, PipelineActivityStepRequest } from '~/types/api'
-import { apiErrorCode, apiErrorMessage } from '~/utils/api/errors'
-import { pipelineStepsHaveModelTargets } from '~/utils/executionDefaults'
+import type { PipelineActivityStepRequest } from '~/types/api'
+import { apiErrorMessage } from '~/utils/api/errors'
 
 type PipelineBuilderStep = 'design' | 'details'
 
@@ -24,8 +21,6 @@ const builderSteps = ['Design', 'Details']
 const builderStep = ref<PipelineBuilderStep>(route.query.step === 'details' ? 'details' : 'design')
 const pipelineTitle = ref('')
 const pipelineDescription = ref('')
-const pipelineModelTarget = ref<ModelTarget | null>(null)
-const pipelineHarness = ref<ExecutionHarness | null>(null)
 const detailErrors = reactive({ title: '', description: '' })
 const savingPipeline = ref(false)
 const saveError = ref('')
@@ -40,33 +35,16 @@ const allowRouteLeave = ref(false)
 const pendingDestination = ref('/pipelines')
 const localKey = 'looping-louie:pipeline-builder-draft:v2'
 
-const { data: executionOptions, status: executionOptionsStatus, refresh: refreshExecutionOptions } = await useAsyncData(
-  'pipeline-builder-execution-options',
-  async () => {
-    const [defaults, linkedServices] = await Promise.all([
-      api.workspaces.getDefaults(),
-      api.linkedServices.list(),
-    ])
-    return { defaults, linkedServices }
-  },
-)
-
 const builderStepIndex = computed(() => builderStep.value === 'design' ? 0 : 1)
-const inheritedModelTarget = computed(() => pipelineModelTarget.value ?? executionOptions.value?.defaults.model_target ?? null)
-const inheritedHarness = computed(() => pipelineHarness.value ?? executionOptions.value?.defaults.harness ?? null)
-const executionReady = computed(() => pipelineStepsHaveModelTargets(designSteps.value, inheritedModelTarget.value))
 const hasProgress = computed(() => Boolean(
   designSteps.value.length
   || pipelineTitle.value.trim()
-  || pipelineDescription.value.trim()
-  || pipelineModelTarget.value
-  || pipelineHarness.value,
+  || pipelineDescription.value.trim(),
 ))
 const canSavePipeline = computed(() => (
   designValid.value
   && Boolean(pipelineTitle.value.trim())
   && Boolean(pipelineDescription.value.trim())
-  && executionReady.value
   && !savingPipeline.value
 ))
 const breadcrumbItems = computed(() => [
@@ -97,8 +75,6 @@ function saveLocalDraft() {
     design: designEditor.value?.getDraft() ?? designDraft.value,
     title: pipelineTitle.value,
     description: pipelineDescription.value,
-    modelTarget: pipelineModelTarget.value,
-    harness: pipelineHarness.value,
     step: builderStep.value,
     updatedAt: new Date().toISOString(),
   }))
@@ -113,6 +89,14 @@ async function saveDesign() {
   if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+async function backToDesign() {
+  saveError.value = ''
+  builderStep.value = 'design'
+  saveLocalDraft()
+  await router.replace({ query: { ...route.query, step: 'design' } })
+  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 function validateDetails() {
   detailErrors.title = pipelineTitle.value.trim() ? '' : 'Give this pipeline a title.'
   detailErrors.description = pipelineDescription.value.trim() ? '' : 'Describe what this pipeline does.'
@@ -121,10 +105,6 @@ function validateDetails() {
 
 async function createPipeline() {
   if (!validateDetails() || !designValid.value || savingPipeline.value) return
-  if (!executionReady.value) {
-    saveError.value = 'Every loop persona needs a model configured at the persona, activity, pipeline, or workspace level.'
-    return
-  }
   savingPipeline.value = true
   saveError.value = ''
   try {
@@ -132,20 +112,13 @@ async function createPipeline() {
       name: pipelineTitle.value.trim(),
       description: pipelineDescription.value.trim(),
       steps: designEditor.value?.getSteps() ?? designSteps.value,
-      model_target: pipelineModelTarget.value,
-      harness: pipelineHarness.value,
     })
     localStorage.removeItem(localKey)
     clearNuxtData('pipelines-catalog')
     allowRouteLeave.value = true
     await router.push('/pipelines')
   } catch (cause) {
-    if (apiErrorCode(cause) === 'linked_service_selection_unavailable') {
-      saveError.value = 'One execution override uses a connection or model that is no longer available. Review the highlighted execution settings.'
-      await refreshExecutionOptions()
-    } else {
-      saveError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
-    }
+    saveError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
     saveLocalDraft()
   } finally {
     savingPipeline.value = false
@@ -160,8 +133,6 @@ function restoreLocalDraft() {
     const draft = JSON.parse(raw) as Record<string, unknown>
     pipelineTitle.value = typeof draft.title === 'string' ? draft.title : ''
     pipelineDescription.value = typeof draft.description === 'string' ? draft.description : ''
-    pipelineModelTarget.value = isModelTarget(draft.modelTarget) ? draft.modelTarget : null
-    pipelineHarness.value = isHarness(draft.harness) ? draft.harness : null
     const design = draft.design && typeof draft.design === 'object'
       ? draft.design as Partial<PipelineDesignDraft>
       : { activities: draft.activities, localLoops: draft.localLoops }
@@ -175,24 +146,6 @@ function restoreLocalDraft() {
   } catch {
     localStorage.removeItem(localKey)
   }
-}
-
-function isModelTarget(value: unknown): value is ModelTarget {
-  if (!value || typeof value !== 'object') return false
-  const target = value as Record<string, unknown>
-  return typeof target.linked_service_id === 'string' && typeof target.model_id === 'string'
-}
-
-function isHarness(value: unknown): value is ExecutionHarness {
-  if (!value || typeof value !== 'object') return false
-  const candidate = value as Record<string, unknown>
-  const config = candidate.config
-  return (candidate.kind === 'louie' || candidate.kind === 'codex_cli')
-    && candidate.version === 'v1'
-    && config !== null
-    && typeof config === 'object'
-    && !Array.isArray(config)
-    && Object.keys(config).length === 0
 }
 
 async function leaveBuilder() {
@@ -277,8 +230,13 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
       </template>
       <template #aside>
         <div class="pipeline-builder__heading-actions">
-          <UiButton v-if="builderStep === 'design'" :disabled="!designValid" @click="saveDesign">Save design</UiButton>
-          <UiButton v-else :disabled="!canSavePipeline" :loading="savingPipeline" @click="createPipeline">Save pipeline</UiButton>
+          <div class="pipeline-builder__heading-buttons">
+            <UiButton v-if="builderStep === 'design'" :disabled="!designValid" @click="saveDesign">Save design</UiButton>
+            <template v-else>
+              <UiButton variant="secondary" :disabled="savingPipeline" @click="backToDesign">Back to design</UiButton>
+              <UiButton :disabled="!canSavePipeline" :loading="savingPipeline" @click="createPipeline">Save pipeline</UiButton>
+            </template>
+          </div>
           <p v-if="builderStep === 'design' && designHint" class="pipeline-builder__design-hint">{{ designHint }}</p>
           <p v-if="saveError" class="pipeline-builder__save-error" role="alert">{{ saveError }}</p>
         </div>
@@ -289,8 +247,6 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
       v-if="builderStep === 'design'"
       ref="designEditor"
       :initial-steps="designSteps"
-      :inherited-model-target="inheritedModelTarget"
-      :inherited-harness="inheritedHarness"
       @update:steps="updateDesignSteps"
       @validity-change="updateDesignValidity"
       @change="handleDesignChange"
@@ -327,29 +283,6 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
           />
         </UiSectionStage>
       </div>
-      <div class="pipeline-builder__field-stage">
-        <UiCollectionGroupTitle title="Execution · Optional overrides" heading-as="h2" />
-        <UiSectionStage inverse="bottom">
-          <div v-if="executionOptionsStatus === 'pending'" class="pipeline-builder__execution-state" role="status">Loading execution defaults…</div>
-          <div v-else-if="executionOptionsStatus === 'error'" class="pipeline-builder__execution-state pipeline-builder__execution-state--error" role="alert">Execution defaults could not be loaded.</div>
-          <div v-else class="pipeline-builder__execution-options">
-            <ExecutionModelTargetSelector
-              v-model="pipelineModelTarget"
-              :services="executionOptions?.linkedServices ?? []"
-              inherit-label="Inherit workspace model"
-              :inherit-description="executionOptions?.defaults.model_target ? `Currently ${executionOptions.defaults.model_target.model_id}.` : 'No workspace model is configured.'"
-              @update:model-value="saveError = ''; saveLocalDraft()"
-            />
-            <ExecutionHarnessSelector
-              v-model="pipelineHarness"
-              inherit-label="Inherit workspace"
-              :inherit-description="executionOptions?.defaults.harness ? `Currently ${executionOptions.defaults.harness.kind} v1.` : 'No workspace override is configured; the API will use Louie v1.'"
-              @update:model-value="saveError = ''; saveLocalDraft()"
-            />
-            <p v-if="!executionReady" class="pipeline-builder__execution-error" role="alert">At least one loop persona has no effective model target.</p>
-          </div>
-        </UiSectionStage>
-      </div>
     </section>
 
     <UiModal
@@ -377,17 +310,16 @@ useHead({ title: 'Create a pipeline · Looping Louie' })
 .pipeline-builder__breadcrumb { margin-bottom: var(--ll-space-5); }
 .pipeline-builder__heading { margin-bottom: var(--ll-space-10); }
 .pipeline-builder__heading-actions { display: grid; max-width: 22rem; justify-items: end; gap: var(--ll-space-3); }
+.pipeline-builder__heading-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--ll-space-3); }
 .pipeline-builder__save-error { margin: 0; color: var(--ll-color-brand-ink); font: 500 var(--ll-text-xs) / 1.45 var(--ll-font-control); text-align: right; }
 .pipeline-builder__design-hint { margin: 0; color: var(--ll-color-text-muted); font: 500 var(--ll-text-xs) / 1.45 var(--ll-font-control); text-align: right; }
 .pipeline-builder__details { display: grid; gap: var(--ll-space-6); padding-bottom: var(--ll-space-12); }
 .pipeline-builder__field-stage { min-width: 0; }
 .pipeline-builder__field-stage :deep(.ui-section-stage__shell) { width: 100%; margin-inline: 0; }
-.pipeline-builder__execution-options { display: grid; gap: var(--ll-space-8); }
-.pipeline-builder__execution-state, .pipeline-builder__execution-error { margin: 0; color: var(--ll-color-text-muted); }
-.pipeline-builder__execution-state--error, .pipeline-builder__execution-error { color: var(--ll-color-brand-ink); }
 @media (max-width: 48rem) {
   .pipeline-builder__heading { margin-bottom: var(--ll-space-8); }
   .pipeline-builder__heading-actions { width: 100%; max-width: none; justify-items: start; }
+  .pipeline-builder__heading-buttons { justify-content: flex-start; }
   .pipeline-builder__save-error,
   .pipeline-builder__design-hint { text-align: left; }
 }

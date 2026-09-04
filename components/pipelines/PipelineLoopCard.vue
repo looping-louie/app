@@ -4,6 +4,7 @@ import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
 
 interface PipelineLoopAgent {
+  model_id?: string | null
   persona_id: string
   role: string
 }
@@ -18,6 +19,7 @@ interface PipelineLoop {
   id: string
   title: string
   flow: string | null
+  model_id?: string | null
   agents: PipelineLoopAgent[]
   stop_conditions: PipelineLoopStopConditions | null
 }
@@ -181,12 +183,12 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
     transform: translateY(-0.25rem);
   }
 
-  .pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__review {
-    display: flex;
+  .pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__remove {
     transform: translateY(0);
   }
 
-  .pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__remove {
+  .pipeline-loop-card:is(:hover, :focus, :focus-within) .pipeline-loop-card__review {
+    display: flex;
     transform: translateY(0);
   }
 }

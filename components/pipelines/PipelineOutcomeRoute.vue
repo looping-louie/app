@@ -90,19 +90,19 @@ const previousTipPath = computed(() => {
       <template v-if="failureMode === 'stop'">
         <path
           class="pipeline-outcome-route__line pipeline-outcome-route__line--failure"
-          d="M500 2V16Q500 40 524 40H798"
+          d="M500 2V12Q500 29 524 29H798"
           @pointerenter="emit('highlight', 'failure')"
           @pointerleave="emit('highlight', null)"
         />
         <path
           class="pipeline-outcome-route__tip pipeline-outcome-route__tip--failure"
-          d="M786 31C791 34 795 37 801 40C795 43 791 46 786 49"
+          d="M786 20C791 23 795 26 801 29C795 32 791 35 786 38"
           @pointerenter="emit('highlight', 'failure')"
           @pointerleave="emit('highlight', null)"
         />
         <path
           class="pipeline-outcome-route__hit"
-          d="M500 2V16Q500 40 524 40H798"
+          d="M500 2V12Q500 29 524 29H798"
           @pointerenter="emit('highlight', 'failure')"
           @pointerleave="emit('highlight', null)"
         />

@@ -170,7 +170,7 @@ function modelLabel(count: number) {
             </div>
 
             <div v-else class="provider-accordion__empty">
-              <p>No workspace connections yet.</p>
+              <p>No user connections yet.</p>
               <UiButton size="sm" @click="emit('connect', provider)">Connect {{ provider.name }}</UiButton>
             </div>
           </div>

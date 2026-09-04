@@ -1,8 +1,3 @@
-export interface ModelTarget {
-  linked_service_id: string
-  model_id: string
-}
-
 export type ExecutionHarnessKind = 'louie' | 'codex_cli'
 
 export interface ExecutionHarness {
@@ -12,6 +7,6 @@ export interface ExecutionHarness {
 }
 
 export interface ExecutionOverrides {
-  model_target?: ModelTarget | null
+  model_id?: string | null
   harness?: ExecutionHarness | null
 }

@@ -32,6 +32,7 @@
       </nav>
 
       <div class="sidebar-footer">
+        <WorkspaceSwitcher compact />
         <div class="user-avatar" title="Usuario" aria-label="Usuario">U</div>
       </div>
     </aside>
@@ -58,6 +59,7 @@
           <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor"><path d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5A.75.75 0 0 1 2.75 9h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 9.75ZM2.75 14a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75Z"/></svg>
         </button>
         <span class="topbar-title">{{ currentLabel }}</span>
+        <WorkspaceSwitcher class="topbar-workspace" />
       </header>
 
       <main class="app-content">
@@ -68,6 +70,8 @@
 </template>
 
 <script setup lang="ts">
+import WorkspaceSwitcher from '~/components/workspaces/WorkspaceSwitcher.vue'
+
 const route = useRoute()
 
 const mobileOpen = ref(false)
@@ -85,7 +89,6 @@ const navTooltipStyle = computed(() => ({
   left: `${navTooltip.left}px`,
   height: `${navTooltip.height}px`,
 }))
-
 function showNavTooltip(label: string, event: MouseEvent | FocusEvent) {
   const item = event.currentTarget
   const sidebar = sidebarRef.value
@@ -170,6 +173,10 @@ function closeMobile() {
   min-height: 100vh;
   color: var(--ll-color-text);
   background: var(--ll-color-canvas);
+}
+
+.topbar-workspace {
+  margin-left: auto;
 }
 
 .sidebar {
@@ -344,6 +351,9 @@ function closeMobile() {
   border-top: 1px solid var(--ll-color-divider);
   width: 100%;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ll-space-3);
   justify-content: center;
 }
 

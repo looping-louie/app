@@ -3,13 +3,14 @@ import PageShell from '~/components/layout/PageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
-type SettingsSection = 'global' | 'providers' | 'models' | 'mcps'
+type SettingsSection = 'global' | 'workspaces' | 'providers' | 'models' | 'mcps'
 
 const route = useRoute()
 const router = useRouter()
 
 const sectionRoutes: Record<SettingsSection, string> = {
   global: '/settings',
+  workspaces: '/settings/workspaces',
   providers: '/settings/providers',
   models: '/settings/models',
   mcps: '/settings/mcps',
@@ -17,12 +18,14 @@ const sectionRoutes: Record<SettingsSection, string> = {
 
 const sectionOptions = [
   { value: 'global', label: 'Global configuration' },
+  { value: 'workspaces', label: 'Workspaces' },
   { value: 'providers', label: 'Providers' },
   { value: 'models', label: 'Models' },
   { value: 'mcps', label: 'MCPs' },
 ]
 
 function sectionFromPath(path: string): SettingsSection {
+  if (path.startsWith(sectionRoutes.workspaces)) return 'workspaces'
   if (path.startsWith(sectionRoutes.providers)) return 'providers'
   if (path.startsWith(sectionRoutes.models)) return 'models'
   if (path.startsWith(sectionRoutes.mcps)) return 'mcps'
@@ -54,6 +57,7 @@ watch(() => route.path, path => {
 })
 
 onMounted(() => {
+  void preloadRouteComponents(sectionRoutes.workspaces)
   void preloadRouteComponents(sectionRoutes.providers)
   void preloadRouteComponents(sectionRoutes.models)
   void preloadRouteComponents(sectionRoutes.mcps)

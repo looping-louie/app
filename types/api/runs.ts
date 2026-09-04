@@ -4,6 +4,64 @@ export type ActivityRunStatus = 'in_progress' | 'failed' | 'completed' | 'stoppe
 export type ActivityRunState = 'awaiting_snapshot' | 'awaiting_generation' | 'awaiting_apply' | 'awaiting_harness' | 'awaiting_review_input' | 'awaiting_commit' | 'awaiting_human_decision' | 'completed' | 'failed'
 export type ActivityRunAction = 'collect_snapshot' | 'apply_operations' | 'run_harness' | 'submit_review_input' | 'commit_if_allowed' | 'submit_human_decision' | 'none'
 
+export interface HarnessTurnIdentity {
+  kind: string
+  version: string
+  config: Record<string, unknown>
+}
+
+export interface HarnessTurnUsage {
+  [counter: string]: number | undefined
+}
+
+export interface HarnessTurnObservationBase<THarness extends HarnessTurnIdentity = HarnessTurnIdentity> {
+  schema_version: 'v1'
+  harness: THarness
+  turn_id?: string
+  phase?: 'execute' | 'proposal' | 'aggregate' | 'review'
+  agent_id?: string
+  role?: 'generator' | 'reviewer' | 'aggregator'
+  iteration?: number
+  output?: Record<string, unknown>
+  completed: boolean
+  started_at: string | null
+  completed_at: string | null
+  duration_ms: number | null
+  requested_model: string | null
+  actual_model: string | null
+  usage: HarnessTurnUsage
+  exit_code: number | null
+  diagnostics: string[]
+  source_commit_sha: string | null
+  final_commit_sha: string | null
+  final_diff: string
+  changed_files: string[]
+  final_response: string
+  error: string | null
+  commit_message?: string
+  committed?: boolean
+  commit_error?: string
+}
+
+export interface CodexMaterializedSkill {
+  id: string
+  name: string
+  version: number
+}
+
+export interface CodexCliTurnObservation extends HarnessTurnObservationBase<{
+  kind: 'codex_cli'
+  version: 'v1'
+  config: Record<string, never>
+}> {
+  requested_model: string
+  reasoning_effort: string | null
+  session_reference: string | null
+  materialized_skills: CodexMaterializedSkill[]
+}
+
+export type HarnessTurnObservation = CodexCliTurnObservation
+
 export interface ActivityRunResponse {
   id: string
   activity_id: string
@@ -17,7 +75,7 @@ export interface ActivityRunResponse {
   created_at: string
   created_by: string
   updated_at: string
-  payload: Record<string, unknown>
+  payload: unknown
 }
 
 export type ActivityRunListResponse = ApiListResponse<ActivityRunResponse>
@@ -48,14 +106,43 @@ export interface PipelineRunStepResponse {
   activity_run_id: string | null
 }
 
-export interface PipelineRunEventResponse {
+export interface PipelineRunEventResponse<TPayload = unknown, TEventType extends string = string> {
   id: string
-  event_type: string
+  event_type: TEventType
   activity_id: string | null
   actor_id: string
-  payload: Record<string, unknown>
+  payload: TPayload
   created_at: string
 }
+
+export type HarnessTurnOutcome = 'completed' | 'failed'
+
+export type SchedulerEvent =
+  | PipelineRunEventResponse<{ commit_mode: PipelineRunCommitMode }, 'pipeline_run_created'>
+  | PipelineRunEventResponse<{
+    worker_id: string
+    attempt: number
+    activity_run_id: string
+    lease_expires_at: string | null
+  }, 'pipeline_run_claimed'>
+  | PipelineRunEventResponse<{
+    activity_run_id: string
+    position: number
+    harness: HarnessTurnIdentity | null
+  }, 'pipeline_step_started'>
+  | PipelineRunEventResponse<{
+    activity_run_id: string
+    status: 'completed'
+    started_at: string
+    completed_at: string
+  }, 'pipeline_step_completed'>
+  | PipelineRunEventResponse<{
+    activity_run_id: string
+    status: 'failed'
+    started_at: string
+    completed_at: string
+    error?: string
+  }, 'pipeline_step_failed'>
 
 export interface PipelineRunResponse {
   id: string
@@ -68,6 +155,24 @@ export interface PipelineRunResponse {
   created_at: string
   created_by: string
   updated_at: string
+}
+
+export type PipelineRunReadinessStatus =
+  | 'not_applicable'
+  | 'no_registered_workers'
+  | 'no_active_workers'
+  | 'no_compatible_workers'
+  | 'ready'
+
+export interface PipelineRunReadinessResponse {
+  status: PipelineRunReadinessStatus
+  project_id: string
+  required_harness: HarnessTurnIdentity | null
+  registered_worker_count: number
+  active_worker_count: number
+  compatible_worker_count: number
+  latest_heartbeat_at: string | null
+  observed_at: string
 }
 
 export interface PipelineRunCreateRequest {

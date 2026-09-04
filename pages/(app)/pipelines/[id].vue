@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
-import ExecutionModelTargetSelector from '~/components/execution/ModelTargetSelector.vue'
 import PageShell from '~/components/layout/PageShell.vue'
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
 import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
@@ -14,13 +13,12 @@ import UiSectionStage from '~/components/ui/SectionStage.vue'
 import type {
   ActivityLoopConfig,
   ExecutionHarness,
-  ModelTarget,
   PipelineActivityStepRequest,
   PipelinePatchRequest,
 } from '~/types/api'
-import { apiErrorCode, apiErrorMessage } from '~/utils/api/errors'
+import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
-import { modelTargetLabel, pipelineStepsHaveModelTargets } from '~/utils/executionDefaults'
+import { executionHarnessItem } from '~/utils/executionHarnesses'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
@@ -41,7 +39,6 @@ const saving = ref(false)
 const editName = ref('')
 const editDescription = ref('')
 const editEnabled = ref(true)
-const editModelTarget = ref<ModelTarget | null>(null)
 const editHarness = ref<ExecutionHarness | null>(null)
 const editSteps = ref<PipelineActivityStepRequest[]>([])
 const editDesignDirty = ref(false)
@@ -74,14 +71,11 @@ const { data: pipeline, status, error, refresh } = await useAsyncData(
   () => `pipeline-${pipelineId.value}`,
   () => api.pipelines.get(pipelineId.value),
 )
-const { data: executionOptions, refresh: refreshExecutionOptions } = await useAsyncData(
+const { data: executionDefaults, refresh: refreshExecutionDefaults } = await useAsyncData(
   'pipeline-detail-execution-options',
   async () => {
-    const [defaults, linkedServices] = await Promise.all([
-      api.workspaces.getDefaults(),
-      api.linkedServices.list(),
-    ])
-    return { defaults, linkedServices }
+    const user = await api.users.getCurrent()
+    return user.settings
   },
 )
 
@@ -95,24 +89,19 @@ const detailItems = computed<DetailRow[]>(() => {
   if (!pipeline.value) return []
   return [
     { id: 'status', title: 'Status', kind: 'status', value: statusValue.value },
-    ...(!editing.value ? [{ id: 'created', title: 'Created', kind: 'created' as const }] : []),
-    { id: 'execution', title: 'Execution', kind: 'execution' },
+    { id: 'execution', title: 'Harness', kind: 'execution' },
     { id: 'design', title: 'Design', kind: 'design' },
+    ...(!editing.value ? [{ id: 'created', title: 'Created', kind: 'created' as const }] : []),
   ]
 })
-const editInheritedModelTarget = computed(() => editModelTarget.value ?? executionOptions.value?.defaults.model_target ?? null)
-const editInheritedHarness = computed(() => editHarness.value ?? executionOptions.value?.defaults.harness ?? null)
-const editExecutionReady = computed(() => pipelineStepsHaveModelTargets(editSteps.value, editInheritedModelTarget.value))
-const displayedModelTarget = computed(() => pipeline.value?.model_target ?? executionOptions.value?.defaults.model_target ?? null)
-const displayedHarness = computed(() => pipeline.value?.harness ?? executionOptions.value?.defaults.harness ?? null)
-const pipelineExecutionReady = computed(() => pipeline.value
-  ? pipelineStepsHaveModelTargets(pipeline.value.steps, displayedModelTarget.value)
-  : false)
+const editInheritedModelId = computed(() => pipeline.value?.model_id ?? executionDefaults.value?.default_model_id ?? null)
+const editInheritedHarness = computed(() => editHarness.value ?? executionDefaults.value?.default_harness ?? null)
+const displayedHarness = computed(() => pipeline.value?.harness ?? executionDefaults.value?.default_harness ?? null)
+const displayedHarnessItem = computed(() => executionHarnessItem(displayedHarness.value))
 const canSaveEditing = computed(() => (
   editDesignValid.value
   && Boolean(editName.value.trim())
   && Boolean(editDescription.value.trim())
-  && editExecutionReady.value
   && !saving.value
 ))
 
@@ -130,6 +119,7 @@ const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
           id: activity.id,
           title: activity.name,
           flow: activity.type.replace('_loop', ''),
+          model_id: activity.model_id ?? pipeline.value?.model_id ?? executionDefaults.value?.default_model_id ?? null,
           agents: config.agents,
           stop_conditions: config.stop_conditions,
         },
@@ -157,7 +147,6 @@ function beginEditing() {
   editName.value = pipeline.value.name
   editDescription.value = pipeline.value.description
   editEnabled.value = pipeline.value.enabled
-  editModelTarget.value = pipeline.value.model_target
   editHarness.value = pipeline.value.harness
   editSteps.value = pipelineStepRequestsFromResponse(pipeline.value.steps)
   editDesignDirty.value = false
@@ -213,11 +202,6 @@ async function saveEditing() {
     editError.value = editDesignMessage.value || 'Complete the pipeline design before saving.'
     return
   }
-  if (!editExecutionReady.value) {
-    editError.value = 'Every loop persona needs a model configured at the persona, activity, pipeline, or workspace level.'
-    return
-  }
-
   saving.value = true
   editError.value = ''
   try {
@@ -225,7 +209,6 @@ async function saveEditing() {
       name,
       description,
       enabled: editEnabled.value,
-      model_target: editModelTarget.value,
       harness: editHarness.value,
     }
     if (editDesignDirty.value) body.steps = editSteps.value
@@ -233,12 +216,8 @@ async function saveEditing() {
     editing.value = false
     clearNuxtData('pipelines-catalog')
   } catch (cause) {
-    if (apiErrorCode(cause) === 'linked_service_selection_unavailable') {
-      editError.value = 'One execution override uses a connection or model that is no longer available. Review the execution settings.'
-      await refreshExecutionOptions()
-    } else {
-      editError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
-    }
+    editError.value = apiErrorMessage(cause, 'The pipeline could not be saved. Please try again.')
+    await refreshExecutionDefaults()
   } finally {
     saving.value = false
   }
@@ -253,7 +232,7 @@ async function duplicatePipeline() {
       name: `${pipeline.value.name} (Copy)`,
       description: pipeline.value.description,
       steps: pipelineStepRequestsFromResponse(pipeline.value.steps),
-      model_target: pipeline.value.model_target,
+      model_id: pipeline.value.model_id,
       harness: pipeline.value.harness,
     })
     clearNuxtData('pipelines-catalog')
@@ -348,7 +327,7 @@ useHead(() => ({
           <UiButton type="button" variant="secondary" :disabled="saving" @click="cancelEditing">Cancel</UiButton>
         </template>
         <template v-else>
-          <UiButton type="button" :disabled="!pipelineExecutionReady" :title="pipelineExecutionReady ? undefined : 'Configure a model target for every loop persona before running.'" @click="runModalOpen = true">Run</UiButton>
+          <UiButton type="button" @click="runModalOpen = true">Run</UiButton>
           <UiButton
             type="button"
             variant="stroke"
@@ -428,34 +407,31 @@ useHead(() => ({
 
               <div v-else-if="item.kind === 'execution'" class="pipeline-execution">
                 <template v-if="editing">
-                  <ExecutionModelTargetSelector
-                    v-model="editModelTarget"
-                    :services="executionOptions?.linkedServices ?? []"
-                    inherit-label="Inherit workspace model"
-                    :inherit-description="executionOptions?.defaults.model_target ? `Currently ${executionOptions.defaults.model_target.model_id}.` : 'No workspace model is configured.'"
-                    @update:model-value="markEditDirty"
-                  />
                   <ExecutionHarnessSelector
                     v-model="editHarness"
-                    inherit-label="Inherit workspace"
-                    :inherit-description="executionOptions?.defaults.harness ? `Currently ${executionOptions.defaults.harness.kind} v1.` : 'No workspace override is configured; the API will use Louie v1.'"
+                    inherit-label="Inherit user default"
+                    :inherit-description="executionDefaults?.default_harness ? `Currently ${executionDefaults.default_harness.kind} v1.` : 'No user override is configured; the API will use Louie v1.'"
                     @update:model-value="markEditDirty"
                   />
-                  <p v-if="!editExecutionReady" class="pipeline-execution__error" role="alert">At least one loop persona has no effective model target.</p>
                 </template>
-                <dl v-else>
-                  <div><dt>Model</dt><dd>{{ modelTargetLabel(displayedModelTarget) }}</dd></div>
-                  <div><dt>Source</dt><dd>{{ pipeline.model_target ? 'Pipeline override' : displayedModelTarget ? 'Workspace default' : 'Not configured' }}</dd></div>
-                  <div><dt>Harness</dt><dd>{{ displayedHarness?.kind ?? 'louie' }} v1</dd></div>
-                  <div><dt>Source</dt><dd>{{ pipeline.harness ? 'Pipeline override' : executionOptions?.defaults.harness ? 'Workspace default' : 'Compatibility default' }}</dd></div>
-                </dl>
+                <UiPill
+                  v-else
+                  class="pipeline-execution__pill"
+                  variant="catalog"
+                  :src="displayedHarnessItem.image"
+                  alt=""
+                  :description="displayedHarnessItem.owner"
+                  :focusable="false"
+                >
+                  {{ displayedHarnessItem.name }}
+                </UiPill>
               </div>
 
               <div v-else-if="item.kind === 'design'" class="pipeline-design" :class="{ 'pipeline-design--editing': editing }">
                 <PipelineDesignEditor
                   v-if="editing"
                   :initial-steps="pipeline.steps"
-                  :inherited-model-target="editInheritedModelTarget"
+                  :inherited-model-id="editInheritedModelId"
                   :inherited-harness="editInheritedHarness"
                   :show-title="false"
                   :use-stage="false"
@@ -513,11 +489,8 @@ useHead(() => ({
 .pipeline-status { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: var(--ll-space-2); }
 .pipeline-created { display: flex; min-height: 2rem; flex-wrap: wrap; align-items: center; gap: 0.3em; margin: 0; color: var(--ll-color-text); }
 .pipeline-execution { display: grid; width: 100%; gap: var(--ll-space-7); }
-.pipeline-execution dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--ll-space-4); margin: 0; }
-.pipeline-execution dl div { display: grid; gap: var(--ll-space-1); }
-.pipeline-execution dt { color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); }
-.pipeline-execution dd { margin: 0; color: var(--ll-color-ink); font: 500 var(--ll-text-sm) / 1.4 var(--ll-font-mono); }
-.pipeline-execution__error { margin: 0; color: var(--ll-color-brand-ink); }
+.pipeline-execution__pill { width: 100%; max-width: 32rem; }
+.pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-execution) .ui-grid-list__item) { align-items: center; }
 .pipeline-design { display: flex; width: 100%; min-width: 0; box-sizing: border-box; flex-direction: column; align-items: stretch; padding: var(--ll-space-2) 0 var(--ll-space-8); }
 .pipeline-design--editing { padding-top: 0; }
 .pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__item) { grid-template-columns: minmax(9rem, 0.36fr) minmax(0, 1fr) auto; }

@@ -195,7 +195,7 @@ useHead({
       <ProviderAccordion
         :providers="providers"
         :mutating-id="mutatingId"
-        aria-label="Provider catalog and workspace connections"
+        aria-label="Provider catalog and user connections"
         @connect="openConnectionModal"
         @manage="openConnectionModal"
         @toggle="updateConnection"

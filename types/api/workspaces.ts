@@ -1,12 +1,14 @@
-import type { ExecutionHarness, ModelTarget } from './execution'
-
-export interface WorkspaceDefaultsReplaceRequest {
-  model_target?: ModelTarget | null
-  harness?: ExecutionHarness | null
+export interface WorkspaceCreateRequest {
+  name: string
 }
 
-export interface WorkspaceDefaultsResponse {
-  model_target: ModelTarget | null
-  harness: ExecutionHarness | null
+export interface WorkspacePatchRequest {
+  name: string
+}
+
+export interface WorkspaceResponse {
+  id: string
+  name: string
+  created_at: string
   updated_at: string
 }

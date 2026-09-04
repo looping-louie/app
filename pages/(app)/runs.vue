@@ -2,11 +2,13 @@
 import PageShell from '~/components/layout/PageShell.vue'
 import HumanDecisionPanel from '~/components/runs/HumanDecisionPanel.vue'
 import RunTimeline from '~/components/runs/RunTimeline.vue'
+import WorkerReadinessPanel from '~/components/runs/WorkerReadinessPanel.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
+import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
+import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 import { runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
@@ -54,12 +56,19 @@ const dateRangeOptions = [
 const route = useRoute()
 const router = useRouter()
 const api = useApiClient()
+const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
+const { formatDateTime } = useDateTime()
+const { activeWorkspace } = useWorkspaceContext()
 const runStatus = ref('all')
 const dateRange = ref('last-24-hours')
 const runSort = ref('newest')
 const startingRun = ref(false)
 const continuingRun = ref(false)
 const runActionError = ref('')
+const runReadiness = ref<PipelineRunReadinessResponse | null>(null)
+const runReadinessLoading = ref(false)
+const runReadinessError = ref('')
+let readinessRequest = 0
 
 interface HumanDecisionAttempt {
   activityRunId: string
@@ -76,11 +85,22 @@ const selectedDateRangeLabel = computed(() => (
 
 const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
 watch([runStatus, dateRange], () => void refresh())
-usePipelineRunPolling(
-  () => data.value?.snapshots.map(snapshot => snapshot.run) ?? [],
+const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
+const {
+  applyRunUpdates,
+  isRefreshing: isPollingRefreshing,
+  isStale,
+  staleMessage,
+  refresh: retryPolling,
+} = usePipelineRunPolling(
+  () => data.value?.snapshots ?? [],
   updateRunDetails,
 )
-const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
+const readinessWorkspaceName = computed(() => {
+  const workspace = activeWorkspace.value
+  if (workspace && workspace.id === runReadiness.value?.project_id) return workspace.name
+  return 'Current workspace'
+})
 const selectedActivity = computed<ActivityResponse | null>(() => {
   const activityId = selectedSnapshot.value?.run.current_activity_run?.activity_id
   return activityId ? data.value?.activitiesById.get(activityId) ?? null : null
@@ -100,14 +120,10 @@ const displayedRuns = computed(() => {
 
 async function loadRuns() {
   const cutoff = new Date(Date.now() - rangeDuration(dateRange.value)).toISOString()
-  const statusFilter = runStatus.value === 'all'
-    ? undefined
-    : runStatus.value as PipelineRunStatus
   const [pipelines, discoveredRuns] = await Promise.all([
     collectApiPages(offset => api.pipelines.list({ offset })),
     collectApiPages(offset => api.pipelineRuns.list({
       offset,
-      status: statusFilter,
       created_from: cutoff,
     })),
   ])
@@ -123,11 +139,6 @@ async function loadRuns() {
   }
 }
 
-async function loadSnapshot(run: PipelineRunResponse): Promise<PipelineRunSnapshot> {
-  const events = await api.pipelines.listRunEvents(run.pipeline_id, run.id)
-  return { run, events: events.items }
-}
-
 function selectRun(row: RunTableRow) {
   runActionError.value = ''
   void router.replace({ query: { ...route.query, pipeline: row.pipelineId, run: row.id } })
@@ -140,7 +151,7 @@ async function startPreparedRun() {
   runActionError.value = ''
   try {
     const started = await api.pipelines.startRun(run.pipeline_id, run.id)
-    await updateRunDetails([started])
+    await applyRunUpdates([started])
   } catch (cause) {
     runActionError.value = apiErrorMessage(cause, 'This prepared run could not be started. Please try again.')
   } finally {
@@ -178,6 +189,8 @@ async function submitHumanDecision(decision: ActivityRunHumanDecision, comment: 
     if (!decisionRecorded) {
       if (!activityRun.continuation_token) throw new Error('The activity continuation token is missing.')
       const continuedActivity = await api.activities.continueRun(activityRun.activity_id, activityRun.id, {
+        pipeline_run_id: run.id,
+        lease_token: null,
         continuation_token: activityRun.continuation_token,
         idempotency_key: attempt.idempotencyKey,
         result: {
@@ -219,7 +232,7 @@ async function continueSelectedPipeline() {
   const run = selectedSnapshot.value?.run
   if (!run) return
   const continued = await api.pipelines.continueRun(run.pipeline_id, run.id, { lease_token: null })
-  await updateRunDetails([continued])
+  await applyRunUpdates([continued])
 }
 
 function replaceCurrentActivity(runId: string, activityRun: NonNullable<PipelineRunResponse['current_activity_run']>) {
@@ -234,21 +247,41 @@ function replaceCurrentActivity(runId: string, activityRun: NonNullable<Pipeline
 
 async function updateRunDetails(updates: PipelineRunResponse[]) {
   if (!data.value) return
-  const snapshots = await Promise.all(updates.map(async (run) => {
-    try {
-      return await loadSnapshot(run)
-    } catch {
-      return {
-        run,
-        events: data.value?.snapshots.find(snapshot => snapshot.run.id === run.id)?.events ?? [],
-      }
-    }
-  }))
-  const byId = new Map(snapshots.map(snapshot => [snapshot.run.id, snapshot]))
   data.value = {
     ...data.value,
-    snapshots: data.value.snapshots.map(snapshot => byId.get(snapshot.run.id) ?? snapshot),
+    snapshots: await mergeSnapshots(data.value.snapshots, updates),
   }
+  if (selectedSnapshot.value?.run.status === 'queued') await refreshRunReadiness()
+  else clearRunReadiness()
+}
+
+async function refreshRunReadiness() {
+  const run = selectedSnapshot.value?.run
+  const request = ++readinessRequest
+  if (!run || run.status !== 'queued') {
+    clearRunReadiness()
+    return
+  }
+  runReadinessLoading.value = true
+  runReadinessError.value = ''
+  try {
+    const readiness = await api.pipelines.getRunReadiness(run.pipeline_id, run.id)
+    if (request !== readinessRequest) return
+    runReadiness.value = readiness
+  } catch (cause) {
+    if (request !== readinessRequest) return
+    runReadiness.value = null
+    runReadinessError.value = apiErrorMessage(cause, 'Worker readiness could not be loaded. The run will remain queued and retry automatically.')
+  } finally {
+    if (request === readinessRequest) runReadinessLoading.value = false
+  }
+}
+
+function clearRunReadiness() {
+  readinessRequest += 1
+  runReadiness.value = null
+  runReadinessLoading.value = false
+  runReadinessError.value = ''
 }
 
 function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRow {
@@ -275,12 +308,11 @@ function rangeDuration(value: string) {
   return day
 }
 
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-US', {
-    day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit',
-  }).format(date)
-}
+watch(
+  () => [selectedSnapshot.value?.run.id, selectedSnapshot.value?.run.status],
+  () => void refreshRunReadiness(),
+)
+onMounted(() => void refreshRunReadiness())
 
 definePageMeta({ layout: 'app', alias: ['/'] })
 useHead({ title: 'Runs · Looping Louie' })
@@ -306,6 +338,7 @@ useHead({ title: 'Runs · Looping Louie' })
 
     <UiAsyncStage :status="status" loading-label="Loading runs…" error-label="Runs could not be loaded." @retry="refresh">
       <div class="runs-content">
+        <UiDataFreshnessNotice v-if="isStale" :description="staleMessage" :loading="isPollingRefreshing" @retry="retryPolling" />
         <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
           <template #cell-name="{ row }">
             <button type="button" class="runs-link" @click="selectRun(row as RunTableRow)">{{ row.name }}</button>
@@ -316,12 +349,14 @@ useHead({ title: 'Runs · Looping Louie' })
           <p>This run is prepared and will not execute until it is started.</p>
           <UiButton :loading="startingRun" @click="startPreparedRun">Start run</UiButton>
         </div>
-        <div v-else-if="selectedSnapshot?.run.status === 'queued'" class="runs-action runs-action--informative" role="status">
-          <div>
-            <strong>Waiting for a runtime worker</strong>
-            <p>This run will remain queued until the runtime claims it. Worker availability is managed outside the web app.</p>
-          </div>
-        </div>
+        <WorkerReadinessPanel
+          v-else-if="selectedSnapshot?.run.status === 'queued'"
+          :readiness="runReadiness"
+          :loading="runReadinessLoading"
+          :error="runReadinessError"
+          :workspace-name="readinessWorkspaceName"
+          @retry="refreshRunReadiness"
+        />
         <div v-else-if="selectedSnapshot?.run.status === 'claimed'" class="runs-action runs-action--informative" role="status">
           <div>
             <strong>Claimed by the runtime</strong>
@@ -341,6 +376,8 @@ useHead({ title: 'Runs · Looping Louie' })
           v-if="selectedSnapshot"
           :run="selectedSnapshot.run"
           :events="selectedSnapshot.events"
+          :pipeline-name="data?.pipelineNames.get(selectedSnapshot.run.pipeline_id)"
+          :activities-by-id="data?.activitiesById"
         />
       </div>
     </UiAsyncStage>

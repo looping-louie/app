@@ -4,8 +4,11 @@ import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiPagination from '~/components/ui/Pagination.vue'
 import UiPill from '~/components/ui/Pill.vue'
-import UiStatusText from '~/components/ui/StatusText.vue'
 import type { ModelSort, ModelStatus, ModelSummary } from '~/types/api'
+import { apiErrorMessage } from '~/utils/api/errors'
+import { collectApiPages } from '~/utils/apiPagination'
+
+type ModelVisualState = 'unavailable' | 'available'
 
 const api = useApiClient()
 const route = useRoute()
@@ -17,6 +20,8 @@ const modelLabs = ref<string[]>([])
 const modelSort = ref('alphabetical-asc')
 const modelOffset = ref(0)
 const modelPageSize = 24
+const policyMutatingId = ref<string | null>(null)
+const policyError = ref('')
 const arrowSquareOutIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
 
 const officialModelPages: Record<string, string> = {
@@ -44,7 +49,6 @@ const officialModelPages: Record<string, string> = {
 }
 
 const modelQuery = computed(() => ({
-  offset: modelOffset.value,
   status: modelStatus.value === 'all' ? undefined : modelStatus.value as ModelStatus,
   include_deprecated: modelStatus.value === 'all',
   lab: modelLabs.value.length ? modelLabs.value : undefined,
@@ -53,14 +57,19 @@ const modelQuery = computed(() => ({
 }))
 
 const { data, status, refresh } = await useAsyncData(
-  'settings-models',
-  () => api.models.list(modelQuery.value),
+  'settings-model-catalog',
+  () => collectApiPages(offset => api.models.list({ ...modelQuery.value, offset })),
   { watch: [modelQuery] },
 )
+const { data: user, refresh: refreshUser } = await useAsyncData('settings-model-policy', () => api.users.getCurrent())
 
-const models = computed(() => data.value?.items ?? [])
-const modelTotal = computed(() => data.value?.total ?? 0)
-const modelSearchItems = computed(() => models.value.map(model => ({
+const allModels = computed(() => data.value ?? [])
+const sortedModels = computed(() => [...allModels.value].sort((left, right) => (
+  Number(right.available) - Number(left.available)
+)))
+const models = computed(() => sortedModels.value.slice(modelOffset.value, modelOffset.value + modelPageSize))
+const modelTotal = computed(() => allModels.value.length)
+const modelSearchItems = computed(() => allModels.value.map(model => ({
   id: model.id,
   label: model.name,
   description: `${model.vendor} · ${model.family}`,
@@ -69,7 +78,6 @@ const modelSearchItems = computed(() => models.value.map(model => ({
   imageSrc: providerLogo(model.vendor, model.family) || undefined,
   imageAlt: '',
 })))
-
 watch([modelStatus, modelLabs, modelSort, modelSearchTerm], () => {
   modelOffset.value = 0
 }, { deep: true })
@@ -113,6 +121,31 @@ function officialModelPage(model: ModelSummary) {
   return officialModelPages[vendorKey] ?? officialModelPages[familyKey] ?? 'https://build.nvidia.com/models'
 }
 
+function modelVisualState(model: ModelSummary): ModelVisualState {
+  return model.available ? 'available' : 'unavailable'
+}
+
+async function updateModelPolicy(modelId: string, enabled: boolean) {
+  if (!user.value || policyMutatingId.value) return
+  policyMutatingId.value = modelId
+  policyError.value = ''
+  const status = enabled ? 'enabled' : 'disabled'
+  const defaultStatus = user.value.settings.default_model_availability
+  const configured = user.value.settings.configured_models.filter(model => model.id !== modelId)
+  if (status !== defaultStatus) configured.push({ id: modelId, status })
+  try {
+    user.value = await api.users.replaceSettings({
+      ...user.value.settings,
+      configured_models: configured,
+    })
+    if (data.value) data.value = data.value.map(model => model.id === modelId ? { ...model, enabled } : model)
+  } catch (cause) {
+    policyError.value = apiErrorMessage(cause, `The policy for ${modelId} could not be updated.`)
+  } finally {
+    policyMutatingId.value = null
+  }
+}
+
 function focusedModelId() {
   const value = Array.isArray(route.query.model) ? route.query.model[0] : route.query.model
   return typeof value === 'string' ? value : ''
@@ -126,6 +159,7 @@ async function revealFocusedModel() {
 }
 
 watch([models, () => route.query.model], () => void revealFocusedModel(), { immediate: true })
+onActivated(() => void refreshUser())
 
 async function selectModelSearchResult(item: { id: string }) {
   await router.replace({
@@ -148,10 +182,7 @@ useHead({
 <template>
   <section aria-labelledby="models-heading">
     <h2 id="models-heading" class="visually-hidden">Models</h2>
-    <p class="models-availability-note">
-      Availability is read-only and comes from enabled, configured connections in
-      <NuxtLink to="/settings/providers">Providers</NuxtLink>.
-    </p>
+    <p v-if="policyError" class="models-policy-error" role="alert">{{ policyError }}</p>
 
     <UiCatalogFilterBar
       v-model:status="modelStatus"
@@ -173,7 +204,7 @@ useHead({
 
     <UiAsyncStage
       :status="status"
-      :empty="models.length === 0"
+      :empty="modelTotal === 0"
       loading-label="Loading models…"
       error-label="Models could not be loaded."
       empty-label="No models found."
@@ -184,31 +215,31 @@ useHead({
           v-for="model in models"
           :id="`model-${model.id}`"
           :key="model.id"
+          class="model-item"
+          :class="[
+            `model-item--${modelVisualState(model)}`,
+            { 'model-item--focused': focusedModelId() === model.id },
+          ]"
           variant="catalog"
           icon-style="circle"
           :src="providerLogo(model.vendor, model.family) || undefined"
           alt=""
-          :description="model.name"
+          :description="model.vendor"
+          :toggle="model.status !== 'deprecated'"
+          :toggle-value="model.enabled"
+          :toggle-disabled="Boolean(policyMutatingId) || !user"
+          :toggle-label="`${model.enabled ? 'Disable' : 'Enable'} ${model.name}`"
           :action-icon-path="arrowSquareOutIconPath"
           :action-href="officialModelPage(model)"
           :action-label="`View official information about ${model.name}`"
           action-target="_blank"
           action-visibility="hover"
-          class="model-item"
-          :class="{ 'model-item--focused': focusedModelId() === model.id }"
+          @update:toggle-value="updateModelPolicy(model.id, $event)"
         >
           <template v-if="!providerLogo(model.vendor, model.family)" #icon>
             <span class="model-item__fallback">{{ vendorInitials(model.vendor) }}</span>
           </template>
-          <span class="model-item__label">
-            <span>{{ model.vendor }}</span>
-            <UiStatusText
-              :tone="model.available ? 'enabled' : 'disabled'"
-              class="model-item__availability"
-            >
-              {{ model.available ? 'available' : 'unavailable' }}
-            </UiStatusText>
-          </span>
+          {{ model.name }}
         </UiPill>
       </UiGrid>
     </UiAsyncStage>
@@ -228,18 +259,24 @@ useHead({
   margin-bottom: var(--ll-space-10);
 }
 
-.models-availability-note {
-  margin: 0 0 var(--ll-space-5);
-  color: var(--ll-color-text-muted);
-  font-size: var(--ll-text-sm);
-}
-
-.models-availability-note a { color: var(--ll-color-ink); }
+.models-policy-error { margin: 0 0 var(--ll-space-5); color: var(--ll-color-brand-ink); font-size: var(--ll-text-sm); }
 
 .models-grid { column-gap: var(--ll-space-20); }
 
 .model-item {
   min-width: 0;
+}
+
+.model-item--unavailable {
+  opacity: 0.42;
+  transition: opacity var(--ll-duration-normal) var(--ll-ease-out);
+.model-item--unavailable:hover,
+.model-item--unavailable:focus-within {
+  opacity: 0.78;
+}
+
+.model-item--available {
+  opacity: 1;
 }
 
 .model-item--focused {
@@ -251,24 +288,6 @@ useHead({
 .model-item__fallback {
   color: var(--ll-color-ink);
   font: 600 0.6875rem / 1 var(--ll-font-mono);
-}
-
-.model-item__label {
-  display: inline-flex;
-  max-width: 100%;
-  align-items: baseline;
-  gap: var(--ll-space-2);
-}
-
-.model-item__label > span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.model-item__availability {
-  flex: none;
-  font-size: var(--ll-text-xs);
-  font-weight: 500;
 }
 
 .visually-hidden {

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import UiPill from '~/components/ui/Pill.vue'
+import { modelIdLabel } from '~/utils/executionDefaults'
 
 interface PipelineLoopAgent {
+  model_id?: string | null
   persona_id: string
   role: string
 }
@@ -16,6 +18,7 @@ interface PipelineLoopSummary {
   id: string
   title: string
   flow: string | null
+  model_id?: string | null
   agents: PipelineLoopAgent[]
   stop_conditions: PipelineLoopStopConditions | null
 }
@@ -32,6 +35,7 @@ const props = withDefaults(defineProps<{
 })
 
 const { personaIcon } = usePersonaIcon()
+const { modelLogo } = useModelLogo()
 
 interface AgentRoleGroup {
   id: string
@@ -102,6 +106,10 @@ function flowLabel(value: string | null) {
   if (!value) return 'Draft'
   return value.charAt(0).toUpperCase() + value.slice(1)
 }
+
+function agentModelId(agent: PipelineLoopAgent) {
+  return agent.model_id ?? props.loop.model_id ?? null
+}
 </script>
 
 <template>
@@ -132,6 +140,7 @@ function flowLabel(value: string | null) {
           v-for="(agent, index) in group.agents"
           :key="`${group.id}-${agent.persona_id}-${index}`"
           class="pipeline-loop-summary__agent-pair"
+          :aria-label="`${labelFromId(agent.persona_id, 'builtin:persona:')} uses ${modelIdLabel(agentModelId(agent))}`"
         >
           <UiPill
             icon-style="circle"
@@ -144,6 +153,17 @@ function flowLabel(value: string | null) {
                 <path :d="personaIcon({ id: agent.persona_id })" />
               </svg>
             </template>
+          </UiPill>
+          <span class="pipeline-loop-summary__agent-model-arrow" aria-hidden="true">→</span>
+          <UiPill
+            v-if="agentModelId(agent)"
+            :src="modelLogo(agentModelId(agent)!)"
+            alt=""
+            :tooltip="modelIdLabel(agentModelId(agent))"
+            :focusable="false"
+          />
+          <UiPill v-else icon-style="circle" tooltip="No model configured" :focusable="false">
+            <template #icon><span class="pipeline-loop-summary__model-initials">AI</span></template>
           </UiPill>
         </span>
       </span>
@@ -227,19 +247,12 @@ function flowLabel(value: string | null) {
 }
 
 .pipeline-loop-summary__agent-pair {
+  gap: var(--ll-space-1);
   isolation: isolate;
 }
 
-.pipeline-loop-summary__agent-pair > :deep(.ui-icon-pill:first-child) {
-  position: relative;
-  z-index: 2;
-}
-
-.pipeline-loop-summary__agent-pair > :deep(.ui-icon-pill:last-child) {
-  position: relative;
-  z-index: 1;
-  margin-left: -0.5833rem;
-}
+.pipeline-loop-summary__agent-model-arrow { color: var(--ll-color-text-muted); font-family: var(--ll-font-mono); font-size: var(--ll-text-xs); }
+.pipeline-loop-summary__model-initials { font: 650 0.625rem / 1 var(--ll-font-mono); }
 
 .pipeline-loop-summary__stop > span {
   font-family: var(--ll-font-mono);

@@ -542,14 +542,14 @@ function copyButtonLabel(command: string) {
 function showSuccessNotification() {
   notifications.success(
     'Changes saved',
-    'Codex is now the default harness for this workspace.',
+    'Codex CLI is now your default harness.',
   )
 }
 
 function showErrorNotification() {
   notifications.error(
     'Changes weren’t saved',
-    'Claude is not supported by the workspace API yet. Choose Codex and try again.',
+    'Only Louie and Codex CLI harnesses are supported. Choose one and try again.',
   )
 }
 
@@ -1199,14 +1199,14 @@ onBeforeUnmount(() => {
                   <UiNotification
                     tone="success"
                     title="Changes saved"
-                    description="Codex is now the default harness for this workspace."
+                    description="Codex CLI is now your default harness."
                     :dismissible="false"
                     :announce="false"
                   />
                   <UiNotification
                     tone="error"
                     title="Changes weren’t saved"
-                    description="Claude is not supported by the workspace API yet. Choose Codex and try again."
+                    description="Only Louie and Codex CLI harnesses are supported. Choose one and try again."
                     :dismissible="false"
                     :announce="false"
                   />
@@ -1342,6 +1342,21 @@ onBeforeUnmount(() => {
                   </UiPill>
                 </div>
 
+                <div class="ds-icon-pill-example ds-icon-pill-example--catalog">
+                  <span class="ds-stage__caption">Catalog · empty action</span>
+                  <UiPill
+                    variant="catalog"
+                    empty
+                    clickable
+                    aria-haspopup="dialog"
+                    aria-label="Choose a default execution model"
+                    description="Click to choose a default execution model"
+                    @click="sampleCommandPaletteOpen = true"
+                  >
+                    No model has been selected
+                  </UiPill>
+                </div>
+
                 <div class="ds-icon-pill-example ds-icon-pill-example--selectable">
                   <span class="ds-stage__caption">Selectable · mutually exclusive choice</span>
                   <div class="ds-selectable-pills" role="radiogroup" aria-label="Default coding harness">
@@ -1433,8 +1448,8 @@ onBeforeUnmount(() => {
 
               <div class="ds-properties">
                 <div class="ds-property">
-                  <div class="ds-property__label"><span>Content</span><code>src · alt · iconStyle · tooltip · focusable · #icon</code></div>
-                  <p class="ds-property__copy">Omit media for text-only, use the icon slot for a normal icon, set <strong>iconStyle="circle"</strong> for framed artwork, or pass <strong>src</strong> for a circular image. Omit default content for icon-only or image-only, and use <strong>tooltip</strong> when that compact media needs a visible label. Set <strong>focusable=false</strong> only when another interactive parent owns keyboard focus.</p>
+                  <div class="ds-property__label"><span>Content</span><code>src · empty · alt · iconStyle · tooltip · focusable · #icon</code></div>
+                  <p class="ds-property__copy">Omit media for text-only, use the icon slot for a normal icon, set <strong>iconStyle="circle"</strong> for framed artwork, pass <strong>src</strong> for a circular image, or set <strong>empty</strong> for the dashed unconfigured marker. Omit default content for icon-only or image-only, and use <strong>tooltip</strong> when that compact media needs a visible label. Set <strong>focusable=false</strong> only when another interactive parent owns keyboard focus.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Dropdown</span><code>clickable · selectionType · options · v-model</code></div>

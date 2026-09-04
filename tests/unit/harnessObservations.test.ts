@@ -1,0 +1,91 @@
+import { describe, expect, it } from 'vitest'
+
+import {
+  harnessCommitSummary,
+  parseHarnessTurnEvent,
+} from '~/utils/harnessObservations'
+import { completedObservation, failedObservation, harnessEvent as event } from '../helpers/harnessFixtures'
+
+describe('Harness observation contracts', () => {
+  it('parses generic and compatibility completed events', () => {
+    for (const eventType of ['harness_turn_completed', 'codex_turn_completed']) {
+      const parsed = parseHarnessTurnEvent(event(eventType, completedObservation))
+
+      expect(parsed?.outcome).toBe('completed')
+      expect(parsed?.activityRunId).toBe('activity-run-1')
+      expect(parsed?.observation.duration_ms).toBe(250)
+      expect(parsed?.observation.requested_model).toBe('gpt-5-codex')
+      expect(parsed?.observation.actual_model).toBe('gpt-5.1-codex')
+    }
+  })
+
+  it('retains partial observations from generic and compatibility failures', () => {
+    for (const eventType of ['harness_turn_failed', 'codex_turn_failed']) {
+      const parsed = parseHarnessTurnEvent(event(eventType, failedObservation))
+
+      expect(parsed?.outcome).toBe('failed')
+      expect(parsed?.observation.error).toBe('boom')
+      expect(parsed?.observation.diagnostics).toEqual([
+        'Codex emitted a partial response.',
+        'boom',
+      ])
+      expect(parsed?.observation.changed_files).toEqual(['partial.py'])
+    }
+  })
+
+  it('rejects an event whose outcome contradicts its observation', () => {
+    expect(parseHarnessTurnEvent(
+      event('harness_turn_completed', failedObservation),
+    )).toBeNull()
+  })
+
+  it('retains common multi-agent turn identity and structured output', () => {
+    const parsed = parseHarnessTurnEvent(event('harness_turn_completed', {
+      ...completedObservation,
+      turn_id: '2:review:reviewer-1',
+      phase: 'review',
+      agent_id: 'reviewer-1',
+      role: 'reviewer',
+      iteration: 2,
+      output: { approved: false, feedback: 'Add a regression test.' },
+    }))
+
+    expect(parsed?.observation).toMatchObject({
+      phase: 'review',
+      agent_id: 'reviewer-1',
+      iteration: 2,
+      output: { approved: false, feedback: 'Add a regression test.' },
+    })
+  })
+
+  it('separates commit policy, authorization, and Git outcome', () => {
+    const committed = harnessCommitSummary({
+      ...completedObservation,
+      committed: true,
+      final_commit_sha: 'final-sha',
+    }, 'allow')
+    const forbidden = harnessCommitSummary(completedObservation, 'forbid')
+    const failed = harnessCommitSummary({
+      ...completedObservation,
+      committed: false,
+      commit_error: 'Git rejected the commit.',
+    }, 'allow')
+
+    expect(committed).toMatchObject({
+      authorization: 'authorized',
+      outcome: 'committed',
+      proposedMessage: 'feat: complete requested change',
+      resultingCommitSha: 'final-sha',
+    })
+    expect(forbidden).toMatchObject({
+      authorization: 'forbidden',
+      outcome: 'not_attempted',
+      resultingCommitSha: null,
+    })
+    expect(failed).toMatchObject({
+      authorization: 'authorized',
+      outcome: 'failed',
+      resultingCommitSha: null,
+    })
+  })
+})

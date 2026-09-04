@@ -91,8 +91,8 @@ function submit() {
     :open="open"
     :title="title"
     :description="editing
-      ? 'Update this workspace connection. New credentials are tested before they are saved.'
-      : 'Add an independent workspace connection. Its credentials are tested before it is saved.'"
+      ? 'Update this user connection. New credentials are tested before they are saved.'
+      : 'Add an independent user connection. Its credentials are tested before it is saved.'"
     :close-on-backdrop="!saving"
     :show-close="!saving"
     @update:open="updateOpen"

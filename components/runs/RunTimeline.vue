@@ -1,29 +1,59 @@
 <script setup lang="ts">
+import HarnessTurnResult from '~/components/runs/HarnessTurnResult.vue'
 import UiPill from '~/components/ui/Pill.vue'
-import type { PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
-import { eventLabel, eventLatency, eventTokenCount } from '~/utils/pipelineRuns'
+import type { ActivityResponse, PipelineRunEventResponse, PipelineRunResponse } from '~/types/api'
+import { isSchedulerEvent, parseHarnessTurnEvent, type ParsedHarnessTurnEvent } from '~/utils/harnessObservations'
+import { eventLabel, turnErrorMessages, turnUsage } from '~/utils/pipelineRuns'
 
-defineProps<{
+const props = defineProps<{
   run: PipelineRunResponse
   events: PipelineRunEventResponse[]
+  pipelineName?: string
+  activitiesById?: Map<string, ActivityResponse>
 }>()
 
-function eventDetail(event: PipelineRunEventResponse) {
-  if (event.event_type === 'step_failed') return String(event.payload.message || 'Activity failed')
-  if (event.event_type === 'agent_response_received') {
-    const tokens = eventTokenCount(event)
-    const latency = eventLatency(event)
-    return [tokens ? `${tokens.toLocaleString()} tokens` : '', latency ? `${(latency / 1000).toFixed(2)}s` : '']
+const { formatPreciseDateTime } = useDateTime()
+
+function activityName(activityId: string | null) {
+  if (!activityId) return ''
+  return props.activitiesById?.get(activityId)?.name ?? activityId
+}
+
+function eventDetail(event: PipelineRunEventResponse, turn: ParsedHarnessTurnEvent | null) {
+  if (turn) {
+    const tokens = turnUsage(turn).total
+    const latency = turn.observation.duration_ms ?? 0
+    return [
+      ...(turn.outcome === 'failed' ? turnErrorMessages(turn) : []),
+      tokens ? `${tokens.toLocaleString()} tokens` : '',
+      latency ? `${(latency / 1000).toFixed(2)}s` : '',
+      activityName(event.activity_id),
+      `Activity run ${turn.activityRunId}`,
+    ]
       .filter(Boolean).join(' · ')
   }
-  return event.activity_id ? `Activity ${event.activity_id}` : ''
+  if (isSchedulerEvent(event) && event.event_type !== 'pipeline_run_created') {
+    const activity = activityName(event.activity_id)
+    if (event.event_type === 'pipeline_step_failed') return [
+      activity,
+      `Activity run ${event.payload.activity_run_id} failed`,
+      event.payload.error,
+    ].filter(Boolean).join(' · ')
+    return `${activity} · Activity run ${event.payload.activity_run_id}`
+  }
+  return event.activity_id ? `Activity ${activityName(event.activity_id)}` : ''
 }
+
+const timelineEvents = computed(() => props.events.map((event) => {
+  const turn = parseHarnessTurnEvent(event)
+  return { event, turn, detail: eventDetail(event, turn) }
+}))
 </script>
 
 <template>
   <section class="run-timeline" aria-label="Run event timeline">
     <header class="run-timeline__heading">
-      <div><h2>Execution timeline</h2><p>{{ run.id }}</p></div>
+      <div><h2>Execution timeline</h2><p>{{ pipelineName ?? run.pipeline_id }} · {{ run.id }}</p></div>
       <div class="run-timeline__pills">
         <UiPill :focusable="false">{{ eventLabel(run.status) }}</UiPill>
         <UiPill :focusable="false">Commits {{ run.commit_mode === 'allow' ? 'allowed' : 'forbidden' }}</UiPill>
@@ -32,26 +62,31 @@ function eventDetail(event: PipelineRunEventResponse) {
 
     <div v-if="run.current_activity_run" class="run-timeline__current">
       <strong>Current activity</strong>
-      <span>{{ run.current_activity_run.activity_id }}</span>
+      <span>{{ activityName(run.current_activity_run.activity_id) }}</span>
       <span>{{ eventLabel(run.current_activity_run.state) }}</span>
     </div>
 
     <ol class="run-timeline__steps" aria-label="Pipeline steps">
       <li v-for="step in run.steps" :key="step.activity_id">
-        <span>{{ step.activity_id }}</span>
+        <span>{{ activityName(step.activity_id) }}</span>
         <UiPill :focusable="false">{{ eventLabel(step.status) }}</UiPill>
       </li>
     </ol>
 
     <ol v-if="events.length" class="run-timeline__events">
-      <li v-for="event in events" :key="event.id" class="run-timeline__event">
+      <li v-for="entry in timelineEvents" :key="entry.event.id" class="run-timeline__event">
         <span class="run-timeline__marker" aria-hidden="true" />
         <div class="run-timeline__content">
           <div class="run-timeline__event-heading">
-            <strong>{{ eventLabel(event.event_type) }}</strong>
-            <time :datetime="event.created_at">{{ new Date(event.created_at).toLocaleString() }}</time>
+            <strong>{{ eventLabel(entry.event.event_type) }}</strong>
+            <time :datetime="entry.event.created_at">{{ formatPreciseDateTime(entry.event.created_at) }}</time>
           </div>
-          <p v-if="eventDetail(event)">{{ eventDetail(event) }}</p>
+          <p v-if="entry.detail">{{ entry.detail }}</p>
+          <HarnessTurnResult
+            v-if="entry.turn"
+            :turn="entry.turn"
+            :commit-mode="run.commit_mode"
+          />
         </div>
       </li>
     </ol>
