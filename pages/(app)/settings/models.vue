@@ -270,6 +270,8 @@ useHead({
 .model-item--unavailable {
   opacity: 0.42;
   transition: opacity var(--ll-duration-normal) var(--ll-ease-out);
+}
+
 .model-item--unavailable:hover,
 .model-item--unavailable:focus-within {
   opacity: 0.78;
