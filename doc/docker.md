@@ -10,7 +10,7 @@ docker compose up --build
 
 The application is available at <http://localhost:3000>.
 
-The Compose service uses `host.docker.internal:8000` as the default API target.
+The Compose service uses `host.docker.internal:2000` as the default API target.
 Override it at runtime when the API runs at another address:
 
 ```bash

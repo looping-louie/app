@@ -18,7 +18,7 @@ For a containerized installation, follow the instructions in
 ## Configuration
 
 The application uses `NUXT_API_BASE_URL` to locate the Looping Louie API. It
-defaults to `http://127.0.0.1:8000` for local execution.
+defaults to `http://127.0.0.1:2000` for local execution.
 
 Create a local environment file from the template:
 
@@ -29,7 +29,7 @@ cp assets/config/.env.tpl .env
 Edit `.env` when the API runs at another address:
 
 ```env
-NUXT_API_BASE_URL=http://127.0.0.1:8000
+NUXT_API_BASE_URL=http://127.0.0.1:2000
 ```
 
 The `.env` file is ignored by Git. The tracked template is available at

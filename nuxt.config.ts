@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: [],
   runtimeConfig: {
-    apiBaseUrl: 'http://127.0.0.1:8000'
+    apiBaseUrl: 'http://127.0.0.1:2000'
   },
   vite: {
     vue: {
