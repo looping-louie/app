@@ -1,0 +1,10 @@
+.git
+.gitignore
+.nuxt
+.output
+.looping-louie
+node_modules
+.env*
+*.db
+npm-debug.log*
+.DS_Store

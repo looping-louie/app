@@ -1,0 +1,10 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://host.docker.internal:8000}
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
