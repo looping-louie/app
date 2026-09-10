@@ -5,3 +5,4 @@ node_modules
 public/images
 *.db
 .env*
+!.env.tpl

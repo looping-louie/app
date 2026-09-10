@@ -1,0 +1,18 @@
+services:
+  app:
+    image: looping-louie-app:latest
+    build:
+      context: .
+    environment:
+      NUXT_API_BASE_URL: ${API_BASE_URL:-http://host.docker.internal:2000}
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1:3000/"]
+      interval: 30s
+      start_period: 10s
+      timeout: 5s
+      retries: 3

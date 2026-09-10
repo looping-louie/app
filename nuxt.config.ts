@@ -2,6 +2,18 @@ export default defineNuxtConfig({
   ssr: true,
   devtools: { enabled: true },
   modules: [],
+  runtimeConfig: {
+    apiBaseUrl: 'http://127.0.0.1:2000'
+  },
+  vite: {
+    vue: {
+      template: {
+        transformAssetUrls: {
+          includeAbsolute: false
+        }
+      }
+    }
+  },
   css: [
     '@fontsource-variable/instrument-sans/standard.css',
     '@fontsource-variable/instrument-sans/standard-italic.css',
@@ -10,12 +22,6 @@ export default defineNuxtConfig({
     '@fontsource/commit-mono/600.css',
     '~/assets/css/tokens.css'
   ],
-
-  routeRules: {
-    '/api/**': {
-      proxy: 'http://127.0.0.1:8000/api/**'
-    }
-  },
 
   app: {
     head: {
