@@ -2,8 +2,8 @@
   <div class="app-shell">
     <aside ref="sidebarRef" class="sidebar" :class="{ open: mobileOpen }">
       <div class="sidebar-header">
-        <NuxtLink to="/app" class="sidebar-logo" aria-label="Looping Louie home" @click="closeMobile">
-          <img class="logo-icon" src="/brand/twemoji-small-airplane.svg" alt="" width="30" height="30">
+        <NuxtLink to="/runs" class="sidebar-logo" aria-label="Looping Louie home" @click="closeMobile">
+          <img class="logo-icon" src="/brand/looping-louie-biplane.png" alt="" width="30" height="30">
         </NuxtLink>
         <button class="sidebar-close" aria-label="Cerrar menú" @click="closeMobile">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
@@ -32,6 +32,7 @@
       </nav>
 
       <div class="sidebar-footer">
+        <WorkspaceSwitcher compact />
         <div class="user-avatar" title="Usuario" aria-label="Usuario">U</div>
       </div>
     </aside>
@@ -58,6 +59,7 @@
           <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor"><path d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5A.75.75 0 0 1 2.75 9h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 9.75ZM2.75 14a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75Z"/></svg>
         </button>
         <span class="topbar-title">{{ currentLabel }}</span>
+        <WorkspaceSwitcher class="topbar-workspace" />
       </header>
 
       <main class="app-content">
@@ -68,6 +70,8 @@
 </template>
 
 <script setup lang="ts">
+import WorkspaceSwitcher from '~/components/workspaces/WorkspaceSwitcher.vue'
+
 const route = useRoute()
 
 const mobileOpen = ref(false)
@@ -85,7 +89,6 @@ const navTooltipStyle = computed(() => ({
   left: `${navTooltip.left}px`,
   height: `${navTooltip.height}px`,
 }))
-
 function showNavTooltip(label: string, event: MouseEvent | FocusEvent) {
   const item = event.currentTarget
   const sidebar = sidebarRef.value
@@ -114,29 +117,29 @@ function phosphorIcon(path: string) {
 // Phosphor Icons · regular weight
 const iconRuns = phosphorIcon('M104,40H56A16,16,0,0,0,40,56v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,104,40Zm0,64H56V56h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm0,64H152V56h48v48Zm-96,32H56a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,104,136Zm0,64H56V152h48v48Zm96-64H152a16,16,0,0,0-16,16v48a16,16,0,0,0,16,16h48a16,16,0,0,0,16-16V152A16,16,0,0,0,200,136Zm0,64H152V152h48v48Z')
 const iconObservability = phosphorIcon('M240,128a8,8,0,0,1-8,8H204.94l-37.78,75.58A8,8,0,0,1,160,216h-.4a8,8,0,0,1-7.08-5.14L95.35,60.76,63.28,131.31A8,8,0,0,1,56,136H24a8,8,0,0,1,0-16H50.85L88.72,36.69a8,8,0,0,1,14.76.46l57.51,151,31.85-63.71A8,8,0,0,1,200,120h32A8,8,0,0,1,240,128Z')
-const iconHumanGates = phosphorIcon('M208,40H48A16,16,0,0,0,32,56v56c0,52.72,25.52,84.67,46.93,102.19,23.06,18.86,46,25.26,47,25.53a8,8,0,0,0,4.2,0c1-.27,23.91-6.67,47-25.53C198.48,196.67,224,164.72,224,112V56A16,16,0,0,0,208,40Zm0,72c0,37.07-13.66,67.16-40.6,89.42A129.3,129.3,0,0,1,128,223.62a128.25,128.25,0,0,1-38.92-21.81C61.82,179.51,48,149.3,48,112l0-56,160,0ZM82.34,141.66a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32l-56,56a8,8,0,0,1-11.32,0Z')
+const iconNotifications = phosphorIcon('M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z')
 const iconPipelines = phosphorIcon('M200,152a31.84,31.84,0,0,0-19.53,6.68l-23.11-18A31.65,31.65,0,0,0,160,128c0-.74,0-1.48-.08-2.21l13.23-4.41A32,32,0,1,0,168,104c0,.74,0,1.48.08,2.21l-13.23,4.41A32,32,0,0,0,128,96a32.59,32.59,0,0,0-5.27.44L115.89,81A32,32,0,1,0,96,88a32.59,32.59,0,0,0,5.27-.44l6.84,15.4a31.92,31.92,0,0,0-8.57,39.64L73.83,165.44a32.06,32.06,0,1,0,10.63,12l25.71-22.84a31.91,31.91,0,0,0,37.36-1.24l23.11,18A31.65,31.65,0,0,0,168,184a32,32,0,1,0,32-32Zm0-64a16,16,0,1,1-16,16A16,16,0,0,1,200,88ZM80,56A16,16,0,1,1,96,72,16,16,0,0,1,80,56ZM56,208a16,16,0,1,1,16-16A16,16,0,0,1,56,208Zm56-80a16,16,0,1,1,16,16A16,16,0,0,1,112,128Zm88,72a16,16,0,1,1,16-16A16,16,0,0,1,200,200Z')
-const iconLoops = phosphorIcon('M253.93,154.63c-1.32-1.46-24.09-26.22-61-40.56-1.72-18.42-8.46-35.17-19.41-47.92C158.87,49,137.58,40,112,40,60.48,40,26.89,86.18,25.49,88.15a8,8,0,0,0,13,9.31C38.8,97.05,68.81,56,112,56c20.77,0,37.86,7.11,49.41,20.57,7.42,8.64,12.44,19.69,14.67,32A140.87,140.87,0,0,0,140.6,104c-26.06,0-47.93,6.81-63.26,19.69C63.78,135.09,56,151,56,167.25A47.59,47.59,0,0,0,69.87,201.3c9.66,9.62,23.06,14.7,38.73,14.7,51.81,0,81.18-42.13,84.49-84.42a161.43,161.43,0,0,1,49,33.79,8,8,0,1,0,11.86-10.74Zm-94.46,21.64C150.64,187.09,134.66,200,108.6,200,83.32,200,72,183.55,72,167.25,72,144.49,93.47,120,140.6,120a124.34,124.34,0,0,1,36.78,5.68C176.93,144.44,170.46,162.78,159.47,176.27Z')
-const iconAgents = phosphorIcon('M100,124a12,12,0,1,1,12-12A12,12,0,0,1,100,124Zm56-24a12,12,0,1,0,12,12A12,12,0,0,0,156,100Zm-4.27,45.23a45,45,0,0,1-47.46,0,8,8,0,0,0-8.54,13.54,61,61,0,0,0,64.54,0,8,8,0,0,0-8.54-13.54ZM216,80v96a32.06,32.06,0,0,1-24,31v17a16,16,0,0,1-16,16H80a16,16,0,0,1-16-16V207a32.06,32.06,0,0,1-24-31V80A32,32,0,0,1,72,48H88V32a16,16,0,0,1,16-16h48a16,16,0,0,1,16,16V48h16A32,32,0,0,1,216,80ZM104,48h48V32H104Zm72,176V208H80v16ZM200,80a16,16,0,0,0-16-16H72A16,16,0,0,0,56,80v96a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16Z')
-const iconSkills = phosphorIcon('M243.58,72.84,197.29,49.7C191.54,39.24,177.21,32,160,32c-22.43,0-40,12.3-40,28a20.77,20.77,0,0,0,1.06,6.53l-19.52,9.76A53.69,53.69,0,0,0,80,72c-22.43,0-40,12.3-40,28a20.77,20.77,0,0,0,1.06,6.53L12.42,120.84A8,8,0,0,0,8,128v64a8,8,0,0,0,4.42,7.16l64,32a8,8,0,0,0,7.16,0l160-80A8,8,0,0,0,248,144V80A8,8,0,0,0,243.58,72.84ZM80,151.06,33.89,128,51,119.45c7.24,5.29,17.48,8.55,29,8.55,22.43,0,40-12.3,40-28a21.77,21.77,0,0,0-4.35-12.88L131,79.45c7.24,5.29,17.48,8.55,29,8.55,18.38,0,33.49-8.26,38.35-19.88L222.11,80ZM160,48c13.74,0,24,6.34,24,12s-10.26,12-24,12-24-6.34-24-12S146.26,48,160,48ZM80,88c13.74,0,24,6.34,24,12s-10.26,12-24,12c-9.67,0-17.61-3.14-21.47-7a8.29,8.29,0,0,0-.84-.93A6.62,6.62,0,0,1,56,100C56,94.34,66.26,88,80,88ZM24,140.94l48,24v46.12l-48-24Zm64,70.12V164.94l144-72v46.12Z')
+const iconRobot = phosphorIcon('M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z')
+const iconSkills = phosphorIcon('M197.58,129.06,146,110l-19-51.62a15.92,15.92,0,0,0-29.88,0L78,110l-51.62,19a15.92,15.92,0,0,0,0,29.88L78,178l19,51.62a15.92,15.92,0,0,0,29.88,0L146,178l51.62-19a15.92,15.92,0,0,0,0-29.88ZM137,164.22a8,8,0,0,0-4.74,4.74L112,223.85,91.78,169A8,8,0,0,0,87,164.22L32.15,144,87,123.78A8,8,0,0,0,91.78,119L112,64.15,132.22,119a8,8,0,0,0,4.74,4.74L191.85,144ZM144,40a8,8,0,0,1,8-8h16V16a8,8,0,0,1,16,0V32h16a8,8,0,0,1,0,16H184V64a8,8,0,0,1-16,0V48H152A8,8,0,0,1,144,40ZM248,88a8,8,0,0,1-8,8h-8v8a8,8,0,0,1-16,0V96h-8a8,8,0,0,1,0-16h8V72a8,8,0,0,1,16,0v8h8A8,8,0,0,1,248,88Z')
+const iconProjects = phosphorIcon('M216,72H130.67L102.93,51.2a16.12,16.12,0,0,0-9.6-3.2H40A16,16,0,0,0,24,64V200a16,16,0,0,0,16,16H216.89A15.13,15.13,0,0,0,232,200.89V88A16,16,0,0,0,216,72Zm0,128H40V64H93.33L123.2,86.4A8,8,0,0,0,128,88h88Z')
 const iconSettings = phosphorIcon('M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Zm109.94-52.79a8,8,0,0,0-3.89-5.4l-29.83-17-.12-33.62a8,8,0,0,0-2.83-6.08,111.91,111.91,0,0,0-36.72-20.67,8,8,0,0,0-6.46.59L128,41.85,97.88,25a8,8,0,0,0-6.47-.6A112.1,112.1,0,0,0,54.73,45.15a8,8,0,0,0-2.83,6.07l-.15,33.65-29.83,17a8,8,0,0,0-3.89,5.4,106.47,106.47,0,0,0,0,41.56,8,8,0,0,0,3.89,5.4l29.83,17,.12,33.62a8,8,0,0,0,2.83,6.08,111.91,111.91,0,0,0,36.72,20.67,8,8,0,0,0,6.46-.59L128,214.15,158.12,231a7.91,7.91,0,0,0,3.9,1,8.09,8.09,0,0,0,2.57-.42,112.1,112.1,0,0,0,36.68-20.73,8,8,0,0,0,2.83-6.07l.15-33.65,29.83-17a8,8,0,0,0,3.89-5.4A106.47,106.47,0,0,0,237.94,107.21Zm-15,34.91-28.57,16.25a8,8,0,0,0-3,3c-.58,1-1.19,2.06-1.81,3.06a7.94,7.94,0,0,0-1.22,4.21l-.15,32.25a95.89,95.89,0,0,1-25.37,14.3L134,199.13a8,8,0,0,0-3.91-1h-.19c-1.21,0-2.43,0-3.64,0a8.08,8.08,0,0,0-4.1,1l-28.84,16.1A96,96,0,0,1,67.88,201l-.11-32.2a8,8,0,0,0-1.22-4.22c-.62-1-1.23-2-1.8-3.06a8.09,8.09,0,0,0-3-3.06l-28.6-16.29a90.49,90.49,0,0,1,0-28.26L61.67,97.63a8,8,0,0,0,3-3c.58-1,1.19-2.06,1.81-3.06a7.94,7.94,0,0,0,1.22-4.21l.15-32.25a95.89,95.89,0,0,1,25.37-14.3L122,56.87a8,8,0,0,0,4.1,1c1.21,0,2.43,0,3.64,0a8.08,8.08,0,0,0,4.1-1l28.84-16.1A96,96,0,0,1,188.12,55l.11,32.2a8,8,0,0,0,1.22,4.22c.62,1,1.23,2,1.8,3.06a8.09,8.09,0,0,0,3,3.06l28.6,16.29A90.49,90.49,0,0,1,222.9,142.12Z')
 
 const navGroups = [
   [
-    { to: '/app/runs', label: 'Runs', icon: iconRuns }
+    { to: '/runs', label: 'Runs', icon: iconRuns }
   ],
   [
-    { to: '/app/observability', label: 'Observability', icon: iconObservability },
-    { to: '/app/human-intervention', label: 'Human gates', icon: iconHumanGates }
+    { to: '/observability', label: 'Observability', icon: iconObservability },
+    { to: '/notifications', label: 'Notifications', icon: iconNotifications }
   ],
   [
-    { to: '/app/pipelines', label: 'Pipelines', icon: iconPipelines },
-    { to: '/app/loops', label: 'Loops', icon: iconLoops },
-    { to: '/app/personas', label: 'Agents', icon: iconAgents },
-    { to: '/app/skills', label: 'Skills', icon: iconSkills }
+    { to: '/pipelines', label: 'Pipelines', icon: iconPipelines },
+    { to: '/personas', label: 'Personas', icon: iconRobot },
+    { to: '/skills', label: 'Skills', icon: iconSkills }
   ],
   [
-    { to: '/app/settings', label: 'Settings', icon: iconSettings }
+    { to: '/projects', label: 'Projects', icon: iconProjects },
+    { to: '/settings', label: 'Settings', icon: iconSettings }
   ]
 ]
 
@@ -148,8 +151,8 @@ const currentLabel = computed(() => {
 })
 
 function isActive(to: string) {
-  if (to === '/app') {
-    return route.path === '/app'
+  if (to === '/runs') {
+    return ['/', '/runs'].includes(route.path)
   }
   return route.path === to || route.path.startsWith(to + '/')
 }
@@ -170,6 +173,10 @@ function closeMobile() {
   min-height: 100vh;
   color: var(--ll-color-text);
   background: var(--ll-color-canvas);
+}
+
+.topbar-workspace {
+  margin-left: auto;
 }
 
 .sidebar {
@@ -204,7 +211,7 @@ function closeMobile() {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 0.75rem;
+  border-radius: var(--ll-radius-sm);
   background: transparent;
   text-decoration: none;
   font-weight: 700;
@@ -212,9 +219,10 @@ function closeMobile() {
 }
 
 .logo-icon {
-  width: 1.875rem;
-  height: 1.875rem;
+  width: 2.25rem;
+  height: 2.25rem;
   object-fit: contain;
+  transform: scale(1.16);
 }
 
 .sidebar-close {
@@ -227,7 +235,7 @@ function closeMobile() {
   color: var(--ll-color-text-muted);
   cursor: pointer;
   padding: 0.25rem;
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   align-items: center;
   justify-content: center;
 }
@@ -268,7 +276,7 @@ function closeMobile() {
   justify-content: center;
   width: 100%;
   height: 44px;
-  border-radius: 0.625rem;
+  border-radius: var(--ll-radius-sm);
   color: var(--ll-color-text-muted);
   text-decoration: none;
   transition: color 0.2s, background 0.2s;
@@ -311,7 +319,7 @@ function closeMobile() {
   padding-inline: var(--ll-space-4);
   color: var(--ll-color-ink);
   background: var(--ll-color-highlight);
-  border-radius: 0.625rem;
+  border-radius: var(--ll-radius-sm);
   font: 600 var(--ll-text-xs) / 1 var(--ll-font-control);
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -343,6 +351,9 @@ function closeMobile() {
   border-top: 1px solid var(--ll-color-divider);
   width: 100%;
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ll-space-3);
   justify-content: center;
 }
 
@@ -411,7 +422,7 @@ function closeMobile() {
   justify-content: center;
   background: transparent;
   border: 1px solid var(--ll-color-divider);
-  border-radius: 0.5rem;
+  border-radius: var(--ll-radius-sm);
   color: var(--ll-color-ink);
   cursor: pointer;
   padding: 0.4rem;

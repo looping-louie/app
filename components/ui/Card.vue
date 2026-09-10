@@ -69,7 +69,7 @@ const linkBindings = computed(() => {
   color: var(--ll-color-ink);
   background: var(--ll-color-card);
   border: 1px solid var(--ll-color-divider);
-  border-radius: var(--ll-radius-structural);
+  border-radius: var(--ui-surface-radius, var(--ll-radius-structural));
   text-decoration: none;
 }
 
@@ -160,7 +160,7 @@ const linkBindings = computed(() => {
   margin: 0 var(--ll-space-3) var(--ll-space-3);
   background: var(--ll-color-canvas);
   border: 1px solid var(--ll-color-divider);
-  border-radius: calc(var(--ll-radius-structural) - 0.375rem);
+  border-radius: calc(var(--ui-surface-radius, var(--ll-radius-structural)) - 0.375rem);
 }
 
 .ui-card__media-default,

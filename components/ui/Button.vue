@@ -75,7 +75,7 @@ const componentTag = computed(() => {
 
 const componentAttributes = computed(() => {
   if (props.dropdown) return {
-    type: 'button',
+    type: 'button' as const,
     disabled: isUnavailable.value,
   }
 
@@ -368,7 +368,7 @@ onBeforeUnmount(() => {
   gap: 0.4375rem;
   padding: 0 var(--ui-button-padding);
   border: 2px solid transparent;
-  border-radius: 57px;
+  border-radius: var(--ll-radius-pill);
   font: 470 var(--ui-button-font-size) / 1 var(--ll-font-control);
   letter-spacing: 0;
   text-decoration: none;
@@ -383,7 +383,7 @@ onBeforeUnmount(() => {
 }
 
 .ui-button-dropdown {
-  --ui-button-dropdown-trigger-radius: 1rem;
+  --ui-button-dropdown-trigger-radius: calc(var(--ui-button-height) * 0.5);
   --ui-button-dropdown-shoulder: 1rem;
   --ui-button-dropdown-menu-offset: 2px;
   --ui-button-dropdown-radius: var(--ll-radius-lg);

@@ -120,7 +120,7 @@ const resolvedAlign = computed<HeadingAlign>(() => (
 }
 
 .ui-heading-block__eyebrow-link:focus-visible {
-  border-radius: 0.125rem;
+  border-radius: var(--ll-radius-xs);
   outline: 2px solid currentColor;
   outline-offset: 0.25rem;
 }

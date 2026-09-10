@@ -1,10 +1,13 @@
 {
   "name": "looping-louie",
   "private": true,
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "nuxt dev",
     "build": "nuxt build",
+    "typecheck": "nuxt typecheck",
+    "test": "vitest run",
     "generate": "nuxt generate",
     "preview": "nuxt preview"
   },
@@ -12,5 +15,10 @@
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource/commit-mono": "^5.3.0",
     "nuxt": "^3.13.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11",
+    "vue-tsc": "^3.3.9"
   }
 }

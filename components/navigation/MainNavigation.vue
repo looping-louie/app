@@ -484,7 +484,7 @@ onBeforeUnmount(() => {
 .ui-navigation-dropdown-enter-from,
 .ui-navigation-dropdown-leave-to {
   opacity: 0;
-  border-radius: 0 0 0.75rem 0.75rem;
+  border-radius: 0 0 var(--ll-radius-sm) var(--ll-radius-sm);
   transform: translateY(-0.75rem) scaleY(0.96);
 }
 

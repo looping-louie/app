@@ -1,6 +1,6 @@
 :root {
   /* Looping Louie — light design-system foundations */
-  /* Small Airplane · Twitter / X Twemoji 2.0 */
+  /* Looping Louie brand palette */
   --ll-color-metal-025: #fdfefe;
   --ll-color-metal-050: #fafbfc;
   --ll-color-metal-100: #f5f7f8;
@@ -75,10 +75,13 @@
   --ll-space-16: 4rem;
   --ll-space-20: 5rem;
 
+  --ll-radius-xs: 0.25rem;
   --ll-radius-sm: 0.625rem;
   --ll-radius-md: 0.875rem;
   --ll-radius-lg: 1.5rem;
+  --ll-radius-stage: var(--ll-radius-lg);
   --ll-radius-structural: 1.875rem;
+  --ll-radius-modal: calc(var(--ll-radius-structural) + 0.5rem);
   --ll-radius-pill: 999px;
 
   --ll-shadow-focus: 0 0 0 3px rgba(34, 102, 153, 0.2);

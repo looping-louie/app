@@ -1,13 +1,20 @@
 <script setup lang="ts">
+import UiButton from '~/components/ui/Button.vue'
+import UiToggle from '~/components/ui/Toggle.vue'
+
 export interface PillOption {
   value: string
   label: string
   disabled?: boolean
+  group?: string
 }
 
 type DropdownAlign = 'left' | 'right'
 type SelectionType = 'radio' | 'checkbox'
 type IconStyle = 'plain' | 'circle'
+type AriaHasPopup = 'dialog' | 'grid' | 'listbox' | 'menu' | 'tree'
+type PillVariant = 'compact' | 'catalog' | 'selectable'
+type PillActionVisibility = 'always' | 'hover'
 
 const props = withDefaults(defineProps<{
   src?: string
@@ -17,11 +24,27 @@ const props = withDefaults(defineProps<{
   focusable?: boolean
   ariaLabel?: string
   tooltip?: string
+  ariaHaspopup?: AriaHasPopup
   dropdownLabel?: string
   dropdownAlign?: DropdownAlign
   selectionType?: SelectionType
   options?: PillOption[]
   modelValue?: string | string[]
+  variant?: PillVariant
+  empty?: boolean
+  selected?: boolean
+  disabled?: boolean
+  description?: string
+  toggle?: boolean
+  toggleValue?: boolean
+  toggleLabel?: string
+  toggleDisabled?: boolean
+  actionIconPath?: string
+  actionLabel?: string
+  actionHref?: string
+  actionTarget?: string
+  actionRel?: string
+  actionVisibility?: PillActionVisibility
 }>(), {
   src: undefined,
   alt: '',
@@ -30,22 +53,42 @@ const props = withDefaults(defineProps<{
   focusable: true,
   ariaLabel: undefined,
   tooltip: undefined,
+  ariaHaspopup: undefined,
   dropdownLabel: 'Options',
   dropdownAlign: 'left',
   selectionType: 'radio',
   options: () => [],
   modelValue: undefined,
+  variant: 'compact',
+  empty: false,
+  selected: false,
+  disabled: false,
+  description: undefined,
+  toggle: false,
+  toggleValue: false,
+  toggleLabel: 'Toggle item',
+  toggleDisabled: false,
+  actionIconPath: undefined,
+  actionLabel: 'Open action',
+  actionHref: undefined,
+  actionTarget: undefined,
+  actionRel: undefined,
+  actionVisibility: 'always',
 })
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | string[]]
+  'update:toggleValue': [value: boolean]
+  click: [event: MouseEvent]
+  action: [event: MouseEvent]
 }>()
 
 const slots = useSlots()
 const hasIcon = computed(() => Boolean(slots.icon))
 const hasLabel = computed(() => Boolean(slots.default))
-const hasMedia = computed(() => Boolean(props.src || hasIcon.value))
-const circularMedia = computed(() => Boolean(props.src || (hasIcon.value && props.iconStyle === 'circle')))
+const hasMedia = computed(() => Boolean(props.src || hasIcon.value || props.empty))
+const hasDropdown = computed(() => Boolean(props.options.length || slots.dropdown))
+const circularMedia = computed(() => Boolean(props.src || props.empty || (hasIcon.value && props.iconStyle === 'circle')))
 const root = ref<HTMLElement | null>(null)
 const trigger = ref<HTMLButtonElement | null>(null)
 const open = ref(false)
@@ -58,7 +101,7 @@ const tooltipId = `ui-pill-tooltip-${useId().replaceAll(':', '')}`
 const connected = computed(() => open.value || closing.value)
 
 function toggleDropdown() {
-  if (!props.clickable) return
+  if (!props.clickable || !hasDropdown.value) return
   if (open.value) {
     closeDropdown()
     return
@@ -66,6 +109,20 @@ function toggleDropdown() {
 
   closing.value = false
   open.value = true
+}
+
+function activate(event: MouseEvent) {
+  if (props.variant === 'selectable') {
+    emit('click', event)
+    return
+  }
+
+  if (hasDropdown.value) {
+    toggleDropdown()
+    return
+  }
+
+  emit('click', event)
 }
 
 function closeDropdown({ restoreFocus = false } = {}) {
@@ -144,31 +201,146 @@ onBeforeUnmount(() => {
     class="ui-icon-pill"
     :class="[
       `ui-icon-pill--align-${dropdownAlign}`,
+      `ui-icon-pill--${variant}`,
       {
         'ui-icon-pill--text-only': !hasMedia,
         'ui-icon-pill--icon-only': hasMedia && !hasLabel,
         'ui-icon-pill--circular-media': circularMedia,
         'ui-icon-pill--image': Boolean(src),
         'ui-icon-pill--has-tooltip': Boolean(tooltip),
-        'ui-icon-pill--clickable': clickable,
+        'ui-icon-pill--clickable': clickable || variant === 'selectable',
+        'ui-icon-pill--selected': selected,
+        'ui-icon-pill--disabled': disabled,
         'ui-icon-pill--open': connected,
         'ui-icon-pill--closing': closing,
       },
     ]"
   >
     <button
-      v-if="clickable"
+      v-if="variant === 'selectable'"
+      ref="trigger"
+      type="button"
+      class="ui-icon-pill__selectable-trigger"
+      :aria-label="ariaLabel"
+      role="radio"
+      :aria-checked="selected"
+      :disabled="disabled"
+      @click="activate"
+    >
+      <span class="ui-icon-pill__catalog-content">
+        <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
+          <img :src="src" :alt="alt" width="44" height="44" loading="lazy">
+        </span>
+        <span v-else-if="empty" class="ui-icon-pill__media ui-icon-pill__media--empty" aria-hidden="true">
+          <svg viewBox="0 0 44 44" fill="none">
+            <circle cx="22" cy="22" r="17" />
+            <path d="M10 10 34 34M34 10 10 34" />
+          </svg>
+        </span>
+        <span
+          v-else-if="$slots.icon"
+          :class="iconStyle === 'circle' ? 'ui-icon-pill__media ui-icon-pill__media--icon' : 'ui-icon-pill__icon'"
+          aria-hidden="true"
+        >
+          <slot name="icon" />
+        </span>
+        <span class="ui-icon-pill__catalog-copy">
+          <strong v-if="hasLabel"><slot /></strong>
+          <span v-if="description">{{ description }}</span>
+        </span>
+      </span>
+      <span class="ui-icon-pill__selection-indicator" aria-hidden="true">
+        <svg class="ui-icon-pill__selection-indicator-circle" viewBox="0 0 256 256" fill="currentColor">
+          <path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" />
+        </svg>
+        <svg class="ui-icon-pill__selection-indicator-check" viewBox="0 0 256 256" fill="currentColor">
+          <path d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
+        </svg>
+      </span>
+    </button>
+
+    <template v-else-if="variant === 'catalog'">
+      <component
+        :is="clickable ? 'button' : 'span'"
+        :type="clickable ? 'button' : undefined"
+        class="ui-icon-pill__catalog-content"
+        :class="{ 'ui-icon-pill__catalog-trigger': clickable }"
+        :aria-label="clickable ? ariaLabel : undefined"
+        :aria-haspopup="clickable ? ariaHaspopup : undefined"
+        @click="clickable && activate($event)"
+      >
+        <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
+          <img :src="src" :alt="alt" width="44" height="44" loading="lazy">
+        </span>
+        <span v-else-if="empty" class="ui-icon-pill__media ui-icon-pill__media--empty" aria-hidden="true">
+          <svg viewBox="0 0 44 44" fill="none">
+            <circle cx="22" cy="22" r="17" />
+            <path d="M10 10 34 34M34 10 10 34" />
+          </svg>
+        </span>
+        <span
+          v-else-if="$slots.icon"
+          :class="iconStyle === 'circle' ? 'ui-icon-pill__media ui-icon-pill__media--icon' : 'ui-icon-pill__icon'"
+          aria-hidden="true"
+        >
+          <slot name="icon" />
+        </span>
+        <span class="ui-icon-pill__catalog-copy">
+          <strong v-if="hasLabel"><slot /></strong>
+          <span v-if="description">{{ description }}</span>
+        </span>
+      </component>
+
+      <span v-if="actionIconPath || toggle" class="ui-icon-pill__actions">
+        <UiButton
+          v-if="actionIconPath"
+          class="ui-icon-pill__action"
+          :class="`ui-icon-pill__action--${actionVisibility}`"
+          variant="stroke"
+          size="sm"
+          icon-only
+          :href="actionHref"
+          :target="actionTarget"
+          :rel="actionRel || (actionTarget === '_blank' ? 'noopener noreferrer' : undefined)"
+          :aria-label="actionLabel"
+          @click.stop="emit('action', $event)"
+        >
+          <template #leading>
+            <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+              <path :d="actionIconPath" />
+            </svg>
+          </template>
+        </UiButton>
+        <UiToggle
+          v-if="toggle"
+          :model-value="toggleValue"
+          :disabled="toggleDisabled"
+          :aria-label="toggleLabel"
+          @update:model-value="emit('update:toggleValue', $event)"
+        />
+      </span>
+    </template>
+
+    <button
+      v-else-if="clickable"
       ref="trigger"
       type="button"
       class="ui-icon-pill__trigger"
       :aria-label="ariaLabel || (!hasLabel ? tooltip : undefined)"
       :aria-describedby="tooltip ? tooltipId : undefined"
-      :aria-expanded="open"
-      :aria-controls="dropdownId"
-      @click="toggleDropdown"
+      :aria-haspopup="ariaHaspopup || (hasDropdown ? 'menu' : undefined)"
+      :aria-expanded="hasDropdown ? open : undefined"
+      :aria-controls="hasDropdown ? dropdownId : undefined"
+      @click="activate"
     >
       <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
         <img :src="src" :alt="alt" width="28" height="28" loading="lazy">
+      </span>
+      <span v-else-if="empty" class="ui-icon-pill__media ui-icon-pill__media--empty" aria-hidden="true">
+        <svg viewBox="0 0 44 44" fill="none">
+          <circle cx="22" cy="22" r="17" />
+          <path d="M10 10 34 34M34 10 10 34" />
+        </svg>
       </span>
       <span
         v-else-if="$slots.icon"
@@ -181,7 +353,7 @@ onBeforeUnmount(() => {
     </button>
 
     <span
-      v-else
+      v-else-if="variant === 'compact'"
       class="ui-icon-pill__trigger"
       :tabindex="tooltip && focusable ? 0 : undefined"
       :aria-label="ariaLabel || (!hasLabel ? tooltip : undefined)"
@@ -189,6 +361,12 @@ onBeforeUnmount(() => {
     >
       <span v-if="src" class="ui-icon-pill__media ui-icon-pill__media--image">
         <img :src="src" :alt="alt" width="28" height="28" loading="lazy">
+      </span>
+      <span v-else-if="empty" class="ui-icon-pill__media ui-icon-pill__media--empty" aria-hidden="true">
+        <svg viewBox="0 0 44 44" fill="none">
+          <circle cx="22" cy="22" r="17" />
+          <path d="M10 10 34 34M34 10 10 34" />
+        </svg>
       </span>
       <span
         v-else-if="$slots.icon"
@@ -200,12 +378,12 @@ onBeforeUnmount(() => {
       <span v-if="hasLabel" class="ui-icon-pill__label"><slot /></span>
     </span>
 
-    <span v-if="tooltip" :id="tooltipId" class="ui-icon-pill__tooltip" role="tooltip">
+    <span v-if="variant === 'compact' && tooltip" :id="tooltipId" class="ui-icon-pill__tooltip" role="tooltip">
       {{ tooltip }}
     </span>
 
     <svg
-      v-if="connected"
+      v-if="variant === 'compact' && hasDropdown && connected"
       class="ui-icon-pill__shoulder"
       viewBox="0 0 16 16"
       preserveAspectRatio="none"
@@ -217,39 +395,46 @@ onBeforeUnmount(() => {
 
     <Transition name="ui-icon-pill-dropdown" @after-leave="onDropdownAfterLeave">
       <div
-        v-if="open"
+        v-if="variant === 'compact' && hasDropdown && open"
         :id="dropdownId"
         class="ui-icon-pill__dropdown"
         :role="options.length && selectionType === 'radio' ? 'radiogroup' : 'group'"
         :aria-label="dropdownLabel"
       >
         <div v-if="options.length" class="ui-icon-pill__options">
-          <button
-            v-for="option in options"
-            :key="option.value"
-            type="button"
-            class="ui-icon-pill__option"
-            :class="{
-              'is-selected': isSelected(option.value),
-              'is-confirming': confirmingValue === option.value,
-            }"
-            :role="selectionType === 'radio' ? 'radio' : 'checkbox'"
-            :aria-checked="isSelected(option.value)"
-            :disabled="option.disabled"
-            @click="selectOption(option)"
-          >
-            <span class="ui-icon-pill__selection-icon" aria-hidden="true">
-              <svg v-if="selectionType === 'radio'" viewBox="0 0 256 256" fill="currentColor">
-                <path v-if="isSelected(option.value)" d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
-                <path v-else d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" />
-              </svg>
-              <svg v-else viewBox="0 0 256 256" fill="currentColor">
-                <path v-if="isSelected(option.value)" d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Zm-34.34-109.66a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z" />
-                <path v-else d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Z" />
-              </svg>
+          <template v-for="(option, optionIndex) in options" :key="option.value">
+            <span
+              v-if="option.group && option.group !== options[optionIndex - 1]?.group"
+              class="ui-icon-pill__option-group"
+              role="presentation"
+            >
+              {{ option.group }}
             </span>
-            <span>{{ option.label }}</span>
-          </button>
+            <button
+              type="button"
+              class="ui-icon-pill__option"
+              :class="{
+                'is-selected': isSelected(option.value),
+                'is-confirming': confirmingValue === option.value,
+              }"
+              :role="selectionType === 'radio' ? 'radio' : 'checkbox'"
+              :aria-checked="isSelected(option.value)"
+              :disabled="option.disabled"
+              @click="selectOption(option)"
+            >
+              <span class="ui-icon-pill__selection-icon" aria-hidden="true">
+                <svg v-if="selectionType === 'radio'" viewBox="0 0 256 256" fill="currentColor">
+                  <path v-if="isSelected(option.value)" d="M173.66,98.34a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34ZM232,128A104,104,0,1,1,128,24,104.11,104.11,0,0,1,232,128Zm-16,0a88,88,0,1,0-88,88A88.1,88.1,0,0,0,216,128Z" />
+                  <path v-else d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Z" />
+                </svg>
+                <svg v-else viewBox="0 0 256 256" fill="currentColor">
+                  <path v-if="isSelected(option.value)" d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Zm-34.34-109.66a8,8,0,0,1,0,11.32l-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35A8,8,0,0,1,173.66,98.34Z" />
+                  <path v-else d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Z" />
+                </svg>
+              </span>
+              <span>{{ option.label }}</span>
+            </button>
+          </template>
         </div>
         <slot v-else name="dropdown" :close="closeDropdown" />
       </div>
@@ -277,6 +462,199 @@ onBeforeUnmount(() => {
 }
 
 .ui-icon-pill--open { z-index: 10; }
+
+.ui-icon-pill--catalog,
+.ui-icon-pill__selectable-trigger {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 4.375rem;
+  box-sizing: border-box;
+  align-items: center;
+  gap: var(--ll-space-3);
+  padding: var(--ll-space-3);
+  background: transparent;
+  border: 1px solid var(--ll-color-metal-200);
+  border-radius: var(--ll-radius-structural);
+  transition:
+    border-color var(--ll-duration-normal) var(--ll-ease-out),
+    background var(--ll-duration-normal) var(--ll-ease-out),
+    box-shadow var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-icon-pill--catalog:hover,
+.ui-icon-pill--catalog:focus-within,
+.ui-icon-pill__selectable-trigger:hover:not(:disabled) {
+  background: var(--ll-color-card);
+  border-color: var(--ll-color-divider);
+  box-shadow: var(--ll-shadow-raised);
+}
+
+.ui-icon-pill--selectable {
+  display: flex;
+  width: 100%;
+  height: auto;
+  opacity: 0.42;
+  transition: opacity var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-icon-pill__selectable-trigger {
+  width: 100%;
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-icon-pill--selectable:hover,
+.ui-icon-pill--selectable:focus-within {
+  opacity: 0.78;
+}
+
+.ui-icon-pill--selectable.ui-icon-pill--selected {
+  opacity: 1;
+}
+
+.ui-icon-pill--selected .ui-icon-pill__selectable-trigger {
+  background: transparent;
+  border-color: var(--ll-color-primary);
+  box-shadow: none;
+}
+
+.ui-icon-pill__selectable-trigger:focus-visible {
+  outline: 2px solid var(--ll-color-signal-ink);
+  outline-offset: 3px;
+}
+
+.ui-icon-pill__selectable-trigger:disabled {
+  cursor: not-allowed;
+}
+
+.ui-icon-pill--disabled {
+  opacity: 0.28;
+}
+
+.ui-icon-pill__catalog-content {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--ll-space-3);
+}
+
+.ui-icon-pill__catalog-trigger {
+  width: 100%;
+  padding: 0;
+  appearance: none;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-icon-pill__catalog-trigger:focus-visible {
+  border-radius: calc(var(--ll-radius-structural) - var(--ll-space-2));
+  outline: 2px solid var(--ll-color-primary);
+  outline-offset: 2px;
+}
+
+.ui-icon-pill__catalog-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.ui-icon-pill__catalog-copy strong,
+.ui-icon-pill__catalog-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-icon-pill__catalog-copy strong {
+  color: var(--ll-color-ink);
+  font: 600 var(--ll-text-sm) / 1.2 var(--ll-font-control);
+}
+
+.ui-icon-pill__catalog-copy > span {
+  color: var(--ll-color-text-muted);
+  font: 400 var(--ll-text-xs) / 1.35 var(--ll-font-control);
+}
+
+.ui-icon-pill__selection-indicator {
+  position: relative;
+  display: grid;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: none;
+  place-items: center;
+  color: var(--ll-color-text-muted);
+  transition: color var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-icon-pill__selection-indicator svg {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  transition:
+    opacity var(--ll-duration-normal) var(--ll-ease-out),
+    transform var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.ui-icon-pill__selection-indicator-circle {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.ui-icon-pill__selection-indicator-check {
+  opacity: 0;
+  transform: scale(0.65) rotate(-24deg);
+}
+
+.ui-icon-pill--selected .ui-icon-pill__selection-indicator {
+  color: var(--ll-color-primary);
+}
+
+.ui-icon-pill--selected .ui-icon-pill__selection-indicator-circle {
+  opacity: 0;
+  transform: scale(0.65) rotate(24deg);
+}
+
+.ui-icon-pill--selected .ui-icon-pill__selection-indicator-check {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.ui-icon-pill__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--ll-space-2);
+}
+
+.ui-icon-pill__action--hover {
+  opacity: 0;
+  transition: opacity var(--ll-duration-fast) var(--ll-ease-out);
+}
+
+.ui-icon-pill--catalog:hover .ui-icon-pill__action--hover,
+.ui-icon-pill__action--hover:focus-visible { opacity: 1; }
+
+.ui-icon-pill--catalog .ui-icon-pill__media,
+.ui-icon-pill--selectable .ui-icon-pill__media {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.ui-icon-pill--catalog .ui-icon-pill__media--icon :deep(svg),
+.ui-icon-pill--selectable .ui-icon-pill__media--icon :deep(svg) {
+  width: 1.125rem;
+  height: 1.125rem;
+}
 
 .ui-icon-pill__trigger {
   position: relative;
@@ -369,6 +747,26 @@ button.ui-icon-pill__trigger:focus-visible {
   color: var(--ll-color-ink);
   background: var(--ll-color-canvas);
   border: 1px solid var(--ui-icon-pill-border);
+}
+
+.ui-icon-pill__media--empty {
+  color: var(--ll-color-text-muted);
+  background: transparent;
+}
+
+.ui-icon-pill__media--empty svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 3 3;
+}
+
+.ui-icon-pill__media--empty svg > * {
+  vector-effect: non-scaling-stroke;
 }
 
 .ui-icon-pill__media--icon :deep(svg) {
@@ -475,6 +873,16 @@ button.ui-icon-pill__trigger:focus-visible {
 
 .ui-icon-pill__options { display: grid; gap: var(--ll-space-1); }
 
+.ui-icon-pill__option-group {
+  padding: var(--ll-space-3) var(--ll-space-3) var(--ll-space-1);
+  color: var(--ll-color-primary);
+  font: 650 var(--ll-text-xs) / 1 var(--ll-font-control);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ui-icon-pill__option-group:first-child { padding-top: var(--ll-space-1); }
+
 .ui-icon-pill__option {
   display: flex;
   width: 100%;
@@ -530,5 +938,15 @@ button.ui-icon-pill__trigger:focus-visible {
 
   .ui-icon-pill__option.is-confirming { animation: none; }
   .ui-icon-pill__tooltip { transition: none; }
+  .ui-icon-pill--catalog,
+  .ui-icon-pill--selectable,
+  .ui-icon-pill__selectable-trigger,
+  .ui-icon-pill__selection-indicator,
+  .ui-icon-pill__selection-indicator svg,
+  .ui-icon-pill__action--hover { transition: none; }
+}
+
+@media (hover: none) {
+  .ui-icon-pill__action--hover { opacity: 1; }
 }
 </style>

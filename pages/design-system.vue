@@ -2,21 +2,30 @@
 import UiMainNavigation from '~/components/navigation/MainNavigation.vue'
 import UiSiteFooter from '~/components/site/SiteFooter.vue'
 import UiAccordion from '~/components/ui/Accordion.vue'
+import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiBreadcrumb from '~/components/ui/Breadcrumb.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCard from '~/components/ui/Card.vue'
+import UiChartCard from '~/components/ui/ChartCard.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
+import UiCommandPalette from '~/components/ui/CommandPalette.vue'
 import UiContainer from '~/components/ui/Container.vue'
+import UiDrawer from '~/components/ui/Drawer.vue'
 import UiGrid from '~/components/ui/Grid.vue'
 import UiGridList from '~/components/ui/GridList.vue'
 import UiHeadingBlock from '~/components/ui/HeadingBlock.vue'
+import UiMarkdownContent from '~/components/ui/MarkdownContent.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiInterfaceShowcase from '~/components/ui/InterfaceShowcase.vue'
 import UiModal from '~/components/ui/Modal.vue'
+import UiMetricCard from '~/components/ui/MetricCard.vue'
+import UiNotification from '~/components/ui/Notification.vue'
+import UiPagination from '~/components/ui/Pagination.vue'
 import UiSection from '~/components/ui/Section.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiStatusText from '~/components/ui/StatusText.vue'
+import UiTable from '~/components/ui/Table.vue'
 import UiToggle from '~/components/ui/Toggle.vue'
 
 definePageMeta({
@@ -40,11 +49,21 @@ const catalog = ref('models')
 const settings = ref('api-keys')
 const headingDeployment = ref('platform')
 const interfaceView = ref('agents')
+const chartMetric = ref('tokens')
 const automaticRetries = ref(true)
 const humanReview = ref(false)
 const sampleModalOpen = ref(false)
+const sampleDrawerOpen = ref(false)
+const sampleCommandPaletteOpen = ref(false)
+const sampleCommandPaletteSelection = ref('No command selected')
 const pillStatus = ref('enabled')
 const pillLabs = ref<string[]>(['openai'])
+const pillAreas = ref<string[]>(['software_engineering'])
+const pillCatalogEnabled = ref(true)
+const pillSelectable = ref('codex')
+const notifications = useNotifications()
+const pillActionIconPath = 'M224,104a8,8,0,0,1-16,0V59.32l-66.33,66.34a8,8,0,0,1-11.32-11.32L196.68,48H152a8,8,0,0,1,0-16h64a8,8,0,0,1,8,8Zm-40,24a8,8,0,0,0-8,8v72H48V80h72a8,8,0,0,0,0-16H48A16,16,0,0,0,32,80V208a16,16,0,0,0,16,16H176a16,16,0,0,0,16-16V136A8,8,0,0,0,184,128Z'
+const samplePaginationOffset = ref(24)
 const buttonDropdownSelection = ref('No action selected')
 const copiedCommand = ref<string | null>(null)
 const copyError = ref<string | null>(null)
@@ -79,6 +98,26 @@ const headingDeploymentOptions = [
   { value: 'self-hosted', label: 'Self-hosted' },
 ]
 
+const chartMetricOptions = [
+  { value: 'tokens', label: 'Total tokens' },
+  { value: 'cost', label: 'Total cost' },
+]
+
+const chartMetricDemo = computed(() => ({
+  tokens: {
+    total: '534.0K',
+    label: 'Total tokens',
+    line: 'M0 146 C42 139 55 112 94 118 S151 80 191 91 S247 48 286 62 S337 29 380 38 S431 18 480 25',
+    area: 'M0 146 C42 139 55 112 94 118 S151 80 191 91 S247 48 286 62 S337 29 380 38 S431 18 480 25 V180 H0 Z',
+  },
+  cost: {
+    total: '$128.4',
+    label: 'Total cost',
+    line: 'M0 132 C36 126 62 139 96 108 S154 123 190 92 S245 104 286 72 S343 87 381 51 S436 68 480 39',
+    area: 'M0 132 C36 126 62 139 96 108 S154 123 190 92 S245 104 286 72 S343 87 381 51 S436 68 480 39 V180 H0 Z',
+  },
+})[chartMetric.value]!)
+
 const pillStatusOptions = [
   { value: 'all', label: 'All statuses' },
   { value: 'enabled', label: 'Enabled' },
@@ -91,6 +130,13 @@ const pillLabOptions = [
   { value: 'google', label: 'Google DeepMind' },
 ]
 
+const pillAreaOptions = [
+  { value: 'software_engineering', label: 'Software engineering', group: 'Engineering' },
+  { value: 'security_privacy', label: 'Security & privacy', group: 'Engineering' },
+  { value: 'growth_acquisition', label: 'Growth & acquisition', group: 'Marketing' },
+  { value: 'product_design_ux', label: 'Product design & UX', group: 'Product & Design' },
+]
+
 const buttonDropdownOptions = [
   {
     value: 'loop',
@@ -99,7 +145,7 @@ const buttonDropdownOptions = [
   },
   {
     value: 'agent',
-    label: 'Create agent',
+    label: 'Create persona',
     iconPath: 'M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z',
   },
   {
@@ -109,15 +155,65 @@ const buttonDropdownOptions = [
   },
 ]
 
+const commandPaletteItems = [
+  {
+    id: 'browse-loops',
+    label: 'Browse loops',
+    description: 'Open the catalog of iterative persona workflows.',
+    group: 'Navigate',
+    keywords: ['workflows', 'automation'],
+    iconPath: buttonDropdownOptions[0]!.iconPath,
+    shortcut: 'G L',
+  },
+  {
+    id: 'browse-agents',
+    label: 'Browse personas',
+    description: 'Review the personas available to your teams.',
+    group: 'Navigate',
+    keywords: ['personas', 'team'],
+    iconPath: buttonDropdownOptions[1]!.iconPath,
+    shortcut: 'G A',
+  },
+  {
+    id: 'browse-pipelines',
+    label: 'Browse pipelines',
+    description: 'Inspect ordered workflows and human checkpoints.',
+    group: 'Navigate',
+    keywords: ['steps', 'gates'],
+    iconPath: buttonDropdownOptions[2]!.iconPath,
+    shortcut: 'G P',
+  },
+  {
+    id: 'create-loop',
+    label: 'Create new loop',
+    description: 'Start a guided setup for a new persona workflow.',
+    group: 'Create',
+    keywords: ['new', 'wizard'],
+    iconPath: buttonDropdownOptions[0]!.iconPath,
+  },
+  {
+    id: 'create-pipeline',
+    label: 'Create new pipeline',
+    description: 'Compose loops and gates into an ordered pipeline.',
+    group: 'Create',
+    keywords: ['new', 'workflow'],
+    iconPath: buttonDropdownOptions[2]!.iconPath,
+  },
+]
+
 const designSystemNavItems = [
   { id: 'foundations', label: '01 · Foundations', level: 1 },
   { id: 'colors', label: 'Color', level: 2 },
   { id: 'typography', label: 'Typography', level: 2 },
+  { id: 'markdown-content', label: 'Markdown content', level: 2 },
   { id: 'actions', label: '02 · Actions', level: 1 },
   { id: 'buttons', label: 'Buttons', level: 2 },
   { id: 'toggle', label: 'Toggle', level: 2 },
   { id: 'form-flow', label: 'Form flow', level: 2 },
   { id: 'modal', label: 'Modal', level: 2 },
+  { id: 'drawer', label: 'Drawer', level: 2 },
+  { id: 'command-palette', label: 'Command palette', level: 2 },
+  { id: 'notification', label: 'Notification', level: 2 },
   { id: 'pill', label: 'Pill', level: 2 },
   { id: 'copy-command', label: 'Copyable command', level: 2 },
   { id: 'segmented-control', label: 'Segmented control', level: 2 },
@@ -127,12 +223,18 @@ const designSystemNavItems = [
   { id: 'layout', label: '04 · Layout', level: 1 },
   { id: 'container', label: 'Container', level: 2 },
   { id: 'section', label: 'Section', level: 2 },
-  { id: 'collections', label: '05 · Collections', level: 1 },
+  { id: 'metrics', label: '05 · Metrics', level: 1 },
+  { id: 'metric-card', label: 'Metric card', level: 2 },
+  { id: 'chart-card', label: 'Chart card', level: 2 },
+  { id: 'collections', label: '06 · Collections', level: 1 },
   { id: 'grid-card', label: 'Grid & card', level: 2 },
   { id: 'grid-list', label: 'Grid list', level: 2 },
+  { id: 'async-stage', label: 'Async stage', level: 2 },
+  { id: 'pagination', label: 'Pagination', level: 2 },
+  { id: 'table', label: 'Table', level: 2 },
   { id: 'team-grid', label: 'Team grid', level: 2 },
   { id: 'accordion', label: 'Accordion', level: 2 },
-  { id: 'site-chrome', label: '06 · Site chrome', level: 1 },
+  { id: 'site-chrome', label: '07 · Site chrome', level: 1 },
   { id: 'site-navigation', label: 'Main navigation', level: 2 },
   { id: 'interface-showcase', label: 'Interface showcase', level: 2 },
   { id: 'site-footer', label: 'Site footer', level: 2 },
@@ -161,7 +263,7 @@ function keepActiveNavItemVisible() {
 function updateActiveNavItem() {
   scrollSpyFrame = undefined
   const marker = 100
-  let nextActive = designSystemNavItems[0].id
+  let nextActive: (typeof designSystemNavItems)[number]['id'] = designSystemNavItems[0].id
 
   for (const item of designSystemNavItems) {
     const section = document.getElementById(item.id)
@@ -203,7 +305,7 @@ const mainNavigationMenus = [
       {
         label: 'Open source',
         items: [
-          { label: 'Framework', description: 'Build loops and agent teams', mark: '✣', to: '#site-navigation' },
+          { label: 'Framework', description: 'Build loops and persona teams', mark: '✣', to: '#site-navigation' },
         ],
       },
       {
@@ -245,7 +347,7 @@ const mainNavigationLinks = [
 ]
 
 const interfaceTabs = [
-  { value: 'agents', label: 'Agents', mark: '✣', description: 'Configure specialist agents, tools, models, and instructions in one clear workspace.' },
+  { value: 'agents', label: 'Personas', mark: '✣', description: 'Configure specialist personas, tools, models, and instructions in one clear workspace.' },
   { value: 'workflows', label: 'Workflows', mark: '⌘', description: 'Compose typed steps, branches, retries, and human checkpoints into inspectable flows.' },
   { value: 'harness', label: 'Harness', mark: '⌁', description: 'Coordinate multiple modes and specialists around shared state and a single objective.' },
   { value: 'memory', label: 'Memory', mark: '◌', description: 'Give every loop durable context, semantic recall, and thread-aware storage.' },
@@ -260,10 +362,10 @@ const interfaceScreens: Record<string, {
   status: string
 }> = {
   agents: {
-    file: 'agent.ts',
+    file: 'persona.ts',
     title: 'Weather specialist',
     navigation: ['Chat', 'Tools', 'Review'],
-    code: ['new Agent({', '  model: cockpitModel,', '  tools: { weather },', '})'],
+    code: ['new Persona({', '  model: cockpitModel,', '  tools: { weather },', '})'],
     status: 'Ready for takeoff',
   },
   workflows: {
@@ -306,13 +408,13 @@ const footerColumns = [
 ]
 
 const footerLegalLinks = [
-  { label: 'Privacy', to: '/legal/privacy' },
-  { label: 'Terms', to: '/legal/terms' },
-  { label: 'Imprint', to: '/legal/imprint' },
+  { label: 'Privacy', href: '#' },
+  { label: 'Terms', href: '#' },
+  { label: 'Imprint', href: '#' },
 ]
 
 const customerRows = [
-  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding agent', actionLabel: 'Read story', to: '#grid-list' },
+  { id: 'northstar', name: 'Northstar AI', categories: 'AI · Coding persona', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'airframe', name: 'Airframe', categories: 'AI · Infrastructure', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'runway', name: 'Runway Labs', categories: 'FinTech · Enterprise', actionLabel: 'Read story', to: '#grid-list' },
   { id: 'hangar', name: 'Hangar Cloud', categories: 'AI · Infrastructure', actionLabel: 'Read story', to: '#grid-list' },
@@ -330,9 +432,36 @@ const providerRows = ref([
 
 const keyValueRows = [
   { id: 'status', key: 'Status', actionLabel: 'Edit' },
-  { id: 'agents', key: 'Agents', actionLabel: 'Edit' },
+  { id: 'agents', key: 'Personas', actionLabel: 'Edit' },
   { id: 'prompt', key: 'Prompt', actionLabel: 'Edit' },
 ]
+
+const tableColumns = [
+  { key: 'name', label: 'Name', width: '34%' },
+  { key: 'flow', label: 'Flow', type: 'option' as const },
+  { key: 'team', label: 'Team', type: 'option' as const },
+  { key: 'owner', label: 'Owner' },
+]
+
+const tableRows = [
+  { id: 'release-readiness', name: 'Release readiness', flow: 'Refinement', team: ['Generator', 'Reviewer'], owner: 'Maya Rivera' },
+  { id: 'security-review', name: 'Security review', flow: 'Roundtable', team: ['Generator', 'Aggregator'], owner: 'Theo Chen' },
+  { id: 'support-triage', name: 'Support triage', flow: 'Direct', team: ['Executor'], owner: 'Inés Álvarez' },
+  { id: 'weekly-synthesis', name: 'Weekly synthesis', flow: 'Refinement', team: ['Generator', 'Reviewer', 'Aggregator'], owner: 'Omar Silva' },
+]
+
+const asyncStageMode = ref('success')
+const asyncStageOptions = [
+  { value: 'success', label: 'Success' },
+  { value: 'pending', label: 'Loading' },
+  { value: 'error', label: 'Error' },
+  { value: 'empty', label: 'Empty' },
+]
+const asyncStageStatus = computed<'pending' | 'error' | 'success'>(() => {
+  if (asyncStageMode.value === 'pending') return 'pending'
+  if (asyncStageMode.value === 'error') return 'error'
+  return 'success'
+})
 
 function updateProviderRow(item: { id: string }, checked: boolean) {
   const provider = providerRows.value.find(row => row.id === item.id)
@@ -352,6 +481,17 @@ const directorySelection = ref<string[]>(['maya'])
 const formProgressStep = ref(1)
 const formProgressSteps = ['Brief', 'Team', 'Review']
 const samplePrompt = ref('Review a launch plan and surface the risks that could prevent a successful release.')
+const markdownSample = [
+  '## Pre-flight instructions',
+  '',
+  'Use **clear acceptance criteria** before the team starts reviewing the release.',
+  '',
+  '- Check the expected outcome.',
+  '- Surface risks and unresolved dependencies.',
+  '- Record the final decision in `release-notes.md`.',
+  '',
+  '> Keep the output concise enough for an operator to scan between runs.',
+].join('\n')
 
 const faqItems = [
   {
@@ -399,6 +539,20 @@ function copyButtonLabel(command: string) {
   return `Copy command: ${command}`
 }
 
+function showSuccessNotification() {
+  notifications.success(
+    'Changes saved',
+    'Codex CLI is now your default harness.',
+  )
+}
+
+function showErrorNotification() {
+  notifications.error(
+    'Changes weren’t saved',
+    'Only Louie and Codex CLI harnesses are supported. Choose one and try again.',
+  )
+}
+
 onBeforeUnmount(() => {
   if (copyResetTimer) clearTimeout(copyResetTimer)
 })
@@ -409,14 +563,14 @@ onBeforeUnmount(() => {
     <header class="ds-header">
       <UiContainer size="default" class="ds-header__container">
         <NuxtLink to="/" class="ds-brand" aria-label="Back to Looping Louie">
-          <img class="ds-brand__mark" src="/brand/twemoji-small-airplane.svg" alt="" width="28" height="28">
+          <img class="ds-brand__mark" src="/brand/looping-louie-biplane.png" alt="" width="28" height="28">
           <span>Looping Louie</span>
         </NuxtLink>
 
         <div class="ds-header__meta">
           <span class="ds-version">Design system · 0.1</span>
-          <NuxtLink to="/" class="ds-header__link">Back to website</NuxtLink>
-          <UiButton to="/app" variant="stroke" size="sm">Open app</UiButton>
+          <NuxtLink to="/runs" class="ds-header__link">Back to runs</NuxtLink>
+          <UiButton to="/runs" variant="stroke" size="sm">Open app</UiButton>
         </div>
       </UiContainer>
     </header>
@@ -513,9 +667,9 @@ onBeforeUnmount(() => {
                 <div>
                   <div class="ds-component__title-row">
                     <h3>Color</h3>
-                    <code>Twemoji 2.0</code>
+                    <code>Louie brand</code>
                   </div>
-                  <p>Original Small Airplane colors and derived tones for the interface.</p>
+                  <p>Louie’s aviation colors and derived tones for the interface.</p>
                 </div>
                 <span class="ds-status"><i /> Defined</span>
               </header>
@@ -570,7 +724,7 @@ onBeforeUnmount(() => {
                     <span>Instrument Sans</span>
                     <code>Display · Body · UI</code>
                   </div>
-                  <p>Agents that stay on course.</p>
+                  <p>Personas that stay on course.</p>
                   <small>Precise and compact, with just enough personality to keep the interface from looking like a tax return.</small>
                 </div>
 
@@ -587,6 +741,39 @@ onBeforeUnmount(() => {
               <footer class="ds-component__footnote">
                 <span>License</span>
                 <p>Both families use the SIL Open Font License 1.1 and are served from the project itself.</p>
+              </footer>
+            </article>
+
+            <article id="markdown-content" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Markdown content</h3>
+                    <code>UiMarkdownContent</code>
+                  </div>
+                  <p>Safe, consistent long-form content for persona and skill instructions.</p>
+                </div>
+                <span class="ds-status"><i /> New</span>
+              </header>
+
+              <div class="ds-stage ds-markdown-stage">
+                <UiMarkdownContent :content="markdownSample" />
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Source</span><code>content</code></div>
+                  <p class="ds-property__copy">Receives raw Markdown and delegates its escaped HTML conversion to <strong>useMarkdown</strong>.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Trimming</span><code>stripFirstHeading · stripFirstParagraph</code></div>
+                  <p class="ds-property__copy">Removes API-provided introductory content when the surrounding page already presents it in its heading.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Rule</span>
+                <p>Pages supply the source and semantic context; this component owns Markdown rendering and typography.</p>
               </footer>
             </article>
           </section>
@@ -828,7 +1015,7 @@ onBeforeUnmount(() => {
                     title="Product Manager"
                     description="What problem does this solve?"
                     selection-type="checkbox"
-                    external-href="/app/personas/builtin%3Apersona%3Aproduct_manager"
+                    external-href="/personas/builtin%3Apersona%3Aproduct_manager"
                   >
                     <template #media>
                       <svg viewBox="0 0 256 256" fill="currentColor"><path d="M200,48H136V16a8,8,0,0,0-16,0V48H56A24,24,0,0,0,32,72V192a24,24,0,0,0,24,24H200a24,24,0,0,0,24-24V72A24,24,0,0,0,200,48Zm8,144a8,8,0,0,1-8,8H56a8,8,0,0,1-8-8V72a8,8,0,0,1,8-8H200a8,8,0,0,1,8,8ZM80,112a12,12,0,1,1,12,12A12,12,0,0,1,80,112Zm72,12a12,12,0,1,1,12,12A12,12,0,0,1,152,124Zm8.68,48a48.35,48.35,0,0,1-65.36,0,8,8,0,0,1,10.68-11.92,32.35,32.35,0,0,0,44,0A8,8,0,1,1,160.68,172Z" /></svg>
@@ -839,7 +1026,7 @@ onBeforeUnmount(() => {
                     value="deepseek-v4-pro"
                     title="DeepSeek V4 Pro"
                     description="DeepSeek"
-                    external-href="/app/settings/models?model=deepseek-v4-pro"
+                    external-href="/settings/models?model=deepseek-v4-pro"
                   >
                     <template #media><img src="/images/models/deepseek.webp" alt=""></template>
                   </UiDirectoryOption>
@@ -901,6 +1088,156 @@ onBeforeUnmount(() => {
               </footer>
             </article>
 
+            <article id="drawer" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Drawer</h3>
+                    <code>UiDrawer</code>
+                  </div>
+                  <p>A focused side panel for contextual forms and workflows that should not replace the current page.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage">
+                <div class="ds-stage__row">
+                  <UiButton variant="stroke" @click="sampleDrawerOpen = true">Open form drawer</UiButton>
+                </div>
+              </div>
+
+              <UiDrawer
+                v-model:open="sampleDrawerOpen"
+                title="Your loop"
+                description="Configure the loop to be used in your pipeline."
+                title-variant="eyebrow"
+              >
+                <div class="ds-drawer-sample">
+                  <label>
+                    <span>Name</span>
+                    <input data-autofocus type="text" placeholder="Untitled item">
+                  </label>
+                  <p>The body scrolls independently while the header and footer remain available.</p>
+                </div>
+                <template #footer>
+                  <UiButton block @click="sampleDrawerOpen = false">Create item</UiButton>
+                </template>
+              </UiDrawer>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Traps and restores focus, supports Escape and backdrop dismissal, locks page scroll, and exposes native dialog semantics.</p>
+              </footer>
+            </article>
+
+            <article id="command-palette" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Command palette</h3>
+                    <code>UiCommandPalette</code>
+                  </div>
+                  <p>Fast keyboard navigation and command discovery with rich, grouped results.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage">
+                <div class="ds-stage__row">
+                  <UiButton variant="stroke" @click="sampleCommandPaletteOpen = true">
+                    Open command palette
+                    <span class="ds-command-shortcut">Ctrl/⌘ K</span>
+                  </UiButton>
+                  <code>{{ sampleCommandPaletteSelection }}</code>
+                </div>
+              </div>
+
+              <UiCommandPalette
+                v-model:open="sampleCommandPaletteOpen"
+                :items="commandPaletteItems"
+                placeholder="Search Looping Louie…"
+                @select="sampleCommandPaletteSelection = $event.label"
+              />
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Content</span>
+                    <code>items · group · description · iconPath · imageSrc</code>
+                  </div>
+                  <p class="ds-property__copy">Results can combine Phosphor icons or circular imagery with descriptions, groups, keywords, and optional shortcuts.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label">
+                    <span>Interaction</span>
+                    <code>v-model:open · v-model:query · @select</code>
+                  </div>
+                  <p class="ds-property__copy">Supports Ctrl/⌘ K, arrow navigation, Enter selection, Escape, pointer selection, focus restoration, and an accessible empty state.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Geometry</span>
+                <p>Uses the shared modal radius token so both overlays keep the same responsive silhouette.</p>
+              </footer>
+            </article>
+
+            <article id="notification" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Notification</h3>
+                    <code>UiNotification · useNotifications</code>
+                  </div>
+                  <p>Transient, global feedback for completed actions and recoverable errors, without interrupting the current workflow.</p>
+                </div>
+                <span class="ds-status"><i /> Interactive</span>
+              </header>
+
+              <div class="ds-stage ds-stage--notifications">
+                <div class="ds-notification-samples">
+                  <UiNotification
+                    tone="success"
+                    title="Changes saved"
+                    description="Codex CLI is now your default harness."
+                    :dismissible="false"
+                    :announce="false"
+                  />
+                  <UiNotification
+                    tone="error"
+                    title="Changes weren’t saved"
+                    description="Only Louie and Codex CLI harnesses are supported. Choose one and try again."
+                    :dismissible="false"
+                    :announce="false"
+                  />
+                </div>
+                <div class="ds-notification-actions">
+                  <UiButton variant="stroke" @click="showSuccessNotification">Show success</UiButton>
+                  <UiButton variant="stroke" @click="showErrorNotification">Show error</UiButton>
+                </div>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Feedback</span><code>success · error</code></div>
+                  <p class="ds-property__copy">Use success only after an action is confirmed. Error messages state what failed, include the useful reason, and explain the next available step.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Placement</span><code>UiNotificationViewport</code></div>
+                  <p class="ds-property__copy">The newest message docks flush to the top-right edge; older messages stack below it with breathing room between them. On mobile, the stack remains anchored to the top. Notifications dismiss automatically or through their close control.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Motion</span><code>opacity · scaleY · translateY</code></div>
+                  <p class="ds-property__copy">Entry and exit mirror the compact movement and transform origin of right-aligned Pill dropdowns, with a reduced-motion fallback.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Accessibility</span>
+                <p>Success uses a polite status announcement; errors use an assertive alert. Every live notification remains manually dismissible.</p>
+              </footer>
+            </article>
+
             <article id="pill" class="ds-component">
               <header class="ds-component__header">
                 <div>
@@ -928,6 +1265,23 @@ onBeforeUnmount(() => {
                       </svg>
                     </template>
                     Last 24 hours
+                  </UiPill>
+                </div>
+
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Action · opens command palette</span>
+                  <UiPill
+                    clickable
+                    aria-label="Search catalog"
+                    aria-haspopup="dialog"
+                    @click="sampleCommandPaletteOpen = true"
+                  >
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M229.66,218.34l-50.07-50.06a88.1,88.1,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z" />
+                      </svg>
+                    </template>
+                    Search
                   </UiPill>
                 </div>
 
@@ -966,6 +1320,69 @@ onBeforeUnmount(() => {
                     alt=""
                     tooltip="deepseek-v4-pro"
                   />
+                </div>
+
+                <div class="ds-icon-pill-example ds-icon-pill-example--catalog">
+                  <span class="ds-stage__caption">Catalog · hover action + persistent toggle</span>
+                  <UiPill
+                    v-model:toggle-value="pillCatalogEnabled"
+                    variant="catalog"
+                    src="/images/models/deepseek.webp"
+                    alt=""
+                    description="deepseek-v4-pro"
+                    toggle
+                    :toggle-label="`${pillCatalogEnabled ? 'Disable' : 'Enable'} deepseek-v4-pro`"
+                    :action-icon-path="pillActionIconPath"
+                    action-label="View official information about deepseek-v4-pro"
+                    action-href="https://api-docs.deepseek.com/quick_start/pricing"
+                    action-target="_blank"
+                    action-visibility="hover"
+                  >
+                    DeepSeek
+                  </UiPill>
+                </div>
+
+                <div class="ds-icon-pill-example ds-icon-pill-example--catalog">
+                  <span class="ds-stage__caption">Catalog · empty action</span>
+                  <UiPill
+                    variant="catalog"
+                    empty
+                    clickable
+                    aria-haspopup="dialog"
+                    aria-label="Choose a default execution model"
+                    description="Click to choose a default execution model"
+                    @click="sampleCommandPaletteOpen = true"
+                  >
+                    No model has been selected
+                  </UiPill>
+                </div>
+
+                <div class="ds-icon-pill-example ds-icon-pill-example--selectable">
+                  <span class="ds-stage__caption">Selectable · mutually exclusive choice</span>
+                  <div class="ds-selectable-pills" role="radiogroup" aria-label="Default coding harness">
+                    <UiPill
+                      variant="selectable"
+                      src="/images/models/openai.webp"
+                      alt=""
+                      description="OpenAI"
+                      :selected="pillSelectable === 'codex'"
+                      aria-label="Select Codex"
+                      @click="pillSelectable = 'codex'"
+                    >
+                      Codex
+                    </UiPill>
+                    <UiPill
+                      variant="selectable"
+                      src="/images/models/anthropic.webp"
+                      alt=""
+                      description="Anthropic"
+                      :selected="pillSelectable === 'claude'"
+                      aria-label="Select Claude"
+                      @click="pillSelectable = 'claude'"
+                    >
+                      Claude
+                    </UiPill>
+                  </div>
                 </div>
               </div>
 
@@ -1008,20 +1425,51 @@ onBeforeUnmount(() => {
                     Labs
                   </UiPill>
                 </div>
+
+                <div class="ds-icon-pill-example">
+                  <span class="ds-stage__caption">Checkbox · grouped options</span>
+                  <UiPill
+                    v-model="pillAreas"
+                    clickable
+                    selection-type="checkbox"
+                    :options="pillAreaOptions"
+                    aria-label="Filter by business area"
+                    dropdown-label="Area"
+                  >
+                    <template #icon>
+                      <svg viewBox="0 0 256 256" fill="currentColor">
+                        <path d="M240,208H224V96a16,16,0,0,0-16-16H144V32a16,16,0,0,0-24.88-13.32L39.12,72A16,16,0,0,0,32,85.34V208H16a8,8,0,0,0,0,16H240a8,8,0,0,0,0-16ZM208,96V208H144V96ZM48,85.34,128,32V208H48Z" />
+                      </svg>
+                    </template>
+                    Area
+                  </UiPill>
+                </div>
               </div>
 
               <div class="ds-properties">
                 <div class="ds-property">
-                  <div class="ds-property__label"><span>Content</span><code>src · alt · iconStyle · tooltip · focusable · #icon</code></div>
-                  <p class="ds-property__copy">Omit media for text-only, use the icon slot for a normal icon, set <strong>iconStyle="circle"</strong> for framed artwork, or pass <strong>src</strong> for a circular image. Omit default content for icon-only or image-only, and use <strong>tooltip</strong> when that compact media needs a visible label. Set <strong>focusable=false</strong> only when another interactive parent owns keyboard focus.</p>
+                  <div class="ds-property__label"><span>Content</span><code>src · empty · alt · iconStyle · tooltip · focusable · #icon</code></div>
+                  <p class="ds-property__copy">Omit media for text-only, use the icon slot for a normal icon, set <strong>iconStyle="circle"</strong> for framed artwork, pass <strong>src</strong> for a circular image, or set <strong>empty</strong> for the dashed unconfigured marker. Omit default content for icon-only or image-only, and use <strong>tooltip</strong> when that compact media needs a visible label. Set <strong>focusable=false</strong> only when another interactive parent owns keyboard focus.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Dropdown</span><code>clickable · selectionType · options · v-model</code></div>
-                  <p class="ds-property__copy">Every content variant can become a dropdown. Built-in options support <strong>radio</strong> and <strong>checkbox</strong> selection, while the dropdown slot accepts custom content.</p>
+                  <p class="ds-property__copy">Every content variant can become a dropdown. Built-in options support <strong>radio</strong> and <strong>checkbox</strong> selection, an optional <strong>group</strong> label, while the dropdown slot accepts custom content.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Action</span><code>clickable · @click · ariaHaspopup</code></div>
+                  <p class="ds-property__copy">A clickable Pill without options or dropdown content emits a native-style click action, allowing it to trigger overlays such as UiCommandPalette without rendering connected dropdown geometry.</p>
                 </div>
                 <div class="ds-property">
                   <div class="ds-property__label"><span>Alignment</span><code>dropdownAlign</code></div>
                   <p class="ds-property__copy"><strong>left</strong> is the default connected geometry. <strong>right</strong> mirrors the shoulder and anchors the wider dropdown to the pill’s right edge.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Catalog actions</span><code>variant="catalog" · toggle · actionIconPath · actionVisibility</code></div>
+                  <p class="ds-property__copy">Catalog pills can append an optional icon-only Stroke action and an optional UiToggle. The toggle remains visible; the action can remain visible or appear on hover while staying keyboard accessible.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Selection</span><code>variant="selectable" · selected · @click</code></div>
+                  <p class="ds-property__copy">Selectable pills retain the catalog hierarchy while exposing a radio state. The selected choice keeps a transparent surface and uses Primary for its border and animated CircleCheck icon; unselected siblings recede until hover or keyboard focus.</p>
                 </div>
               </div>
 
@@ -1218,9 +1666,9 @@ onBeforeUnmount(() => {
               <div class="ds-stage">
                 <UiBreadcrumb
                   :items="[
-                    { label: 'Agents', to: '/app/personas' },
-                    { label: 'Engineering', to: '/app/skills' },
-                    { label: 'Code review', to: '/app/skills?category=code-review' },
+                    { label: 'Personas', to: '/personas' },
+                    { label: 'Engineering', to: '/skills' },
+                    { label: 'Code review', to: '/skills?category=code-review' },
                   ]"
                 />
               </div>
@@ -1267,8 +1715,8 @@ onBeforeUnmount(() => {
                     <UiHeadingBlock
                       layout="centered"
                       size="hero"
-                      eyebrow="Agent observability / Code"
-                      eyebrow-to="/app/personas"
+                      eyebrow="Persona observability / Code"
+                      eyebrow-to="/personas"
                     >
                       <template #title>
                         <h2>Every loop, fully visible in production</h2>
@@ -1681,11 +2129,11 @@ onBeforeUnmount(() => {
                     <code>--ui-section-stage-shell-padding</code>
                   </div>
                   <p class="ds-property__copy">
-                    The shell owns the thin padding band and the corner geometry. Its structural
-                    radius is shared with cards and the main navigation dropdown: 30px on small
-                    screens and 40px from 640px upwards, following Mastra’s antigrid radius. The
-                    stage adds its shell inset to the outer SVG curve so its inner visual radius
-                    remains identical.
+                    The shell owns the thin padding band and the corner geometry. Its 24px
+                    <code>--ll-radius-stage</code> radius is also inherited by cards and data
+                    surfaces inside the stage, while surfaces elsewhere keep the larger structural
+                    radius. The stage adds its shell inset to the outer SVG curve so its inner
+                    visual radius remains identical.
                   </p>
                 </div>
               </div>
@@ -1700,9 +2148,164 @@ onBeforeUnmount(() => {
             </article>
           </section>
 
-          <section id="collections" class="ds-section">
+          <section id="metrics" class="ds-section">
             <div class="ds-section__heading">
               <p class="ds-index">05</p>
+              <div>
+                <h2>Metrics</h2>
+                <p>
+                  From one decisive number to a complete trend line. Metric components establish
+                  hierarchy and framing while pages continue to own data and chart rendering.
+                </p>
+              </div>
+            </div>
+
+            <article id="metric-card" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Metric card</h3>
+                    <code>UiMetricCard</code>
+                  </div>
+                  <p>Compact statistics with a prominent value and semantic change context.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Metric overview</span>
+                    <code>SectionStage · columns="3" · parallel radii</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiGrid :columns="3" gap="md">
+                      <UiMetricCard
+                        label="Completed loops"
+                        value="12.8"
+                        suffix="K"
+                        trend="up"
+                        change="18.6"
+                        previous-value="10.8K"
+                      />
+                      <UiMetricCard
+                        label="Cost per run"
+                        value="0.42"
+                        prefix="$"
+                        trend="down"
+                        change="7.3"
+                        previous-value="$0.45"
+                      />
+                      <UiMetricCard
+                        label="Approval rate"
+                        value="94.2"
+                        suffix="%"
+                        trend="neutral"
+                        change="0.2"
+                        previous-value="94%"
+                      />
+                    </UiGrid>
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Value</span><code>value · prefix · suffix</code></div>
+                  <p class="ds-property__copy">The value owns the visual hierarchy. Optional prefix and suffix props cover currencies, percentages, and compact units without baking formatting rules into the component.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Trend</span><code>up · down · neutral</code></div>
+                  <p class="ds-property__copy"><strong>up</strong> uses Cockpit Blue, <strong>down</strong> uses Louie Red, and <strong>neutral</strong> uses Border Strong. Change accepts a number with or without the percent symbol.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Comparison</span><code>change · previousValue</code></div>
+                  <p class="ds-property__copy">The comparison sentence keeps “vs previous” muted while the previous value returns to Ink, preserving the same hierarchy as the main metric.</p>
+                </div>
+              </div>
+            </article>
+
+            <article id="chart-card" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Chart card</h3>
+                    <code>UiChartCard</code>
+                  </div>
+                  <p>A structured frame for totals, optional perspectives, charts, and legends.</p>
+                </div>
+                <span class="ds-status"><i /> Stable</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Usage over time</span>
+                    <code>header · controls · chart · legend</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiChartCard
+                      title="Model usage"
+                      description="Tokens and cost across completed production runs."
+                      :total="chartMetricDemo.total"
+                      :total-label="chartMetricDemo.label"
+                    >
+                      <template #controls>
+                        <UiSegmentedControl
+                          v-model="chartMetric"
+                          :options="chartMetricOptions"
+                          variant="inline"
+                          accent="metal"
+                          aria-label="Chart metric"
+                        />
+                      </template>
+
+                      <template #chart>
+                        <div class="ds-chart-demo">
+                          <svg viewBox="0 0 480 180" preserveAspectRatio="none" role="img" :aria-label="`${chartMetricDemo.label} trend over time`">
+                            <defs>
+                              <linearGradient id="ds-chart-area" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0" stop-color="var(--ll-color-primary-highlight)" stop-opacity="0.52" />
+                                <stop offset="1" stop-color="var(--ll-color-primary-highlight)" stop-opacity="0.04" />
+                              </linearGradient>
+                            </defs>
+                            <g class="ds-chart-demo__grid" aria-hidden="true">
+                              <path d="M0 20H480 M0 60H480 M0 100H480 M0 140H480 M0 180H480" />
+                            </g>
+                            <path :d="chartMetricDemo.area" class="ds-chart-demo__area" />
+                            <path :d="chartMetricDemo.line" class="ds-chart-demo__line" />
+                          </svg>
+                          <div class="ds-chart-demo__axis" aria-hidden="true">
+                            <span>Aug 1</span><span>Aug 8</span><span>Aug 15</span><span>Aug 22</span><span>Aug 29</span>
+                          </div>
+                        </div>
+                      </template>
+
+                      <template #legend>
+                        <span class="ds-chart-legend"><i />{{ chartMetricDemo.label }}</span>
+                        <span>Production runs · daily</span>
+                      </template>
+                    </UiChartCard>
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Header</span><code>title · description · total · totalLabel</code></div>
+                  <p class="ds-property__copy">The card aligns context on the left and the aggregate on the right, then stacks both safely on small screens.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Composition</span><code>#controls · #chart · #legend</code></div>
+                  <p class="ds-property__copy">Controls are optional and accept the inline SegmentedControl. Chart and legend remain slots so SVG, canvas, or a charting library can be selected by the consuming feature.</p>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section id="collections" class="ds-section">
+            <div class="ds-section__heading">
+              <p class="ds-index">06</p>
               <div>
                 <h2>Collections</h2>
                 <p>
@@ -1734,21 +2337,21 @@ onBeforeUnmount(() => {
                     <UiGrid :columns="3" gap="md">
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Internal agents</h4></template>
+                        <template #title><h4>Internal personas</h4></template>
                         <template #description><p>Automate the work that keeps your team circling the same runway.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--messages" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--messages is-animated" /></template>
                       </UiCard>
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Customer-facing agents</h4></template>
+                        <template #title><h4>Customer-facing personas</h4></template>
                         <template #description><p>Answer, complete tasks, and hand off without losing context.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--signal" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--signal is-animated" /></template>
                       </UiCard>
                       <UiCard to="#grid-card" variant="media">
                         <template #eyebrow>Use case</template>
-                        <template #title><h4>Developer platform agents</h4></template>
+                        <template #title><h4>Developer platform personas</h4></template>
                         <template #description><p>Build reliable AI operations on shared primitives.</p></template>
                         <template #media><div class="ds-media-visual ds-media-visual--console" /></template>
                         <template #media-hover><div class="ds-media-visual ds-media-visual--console is-animated" /></template>
@@ -1761,12 +2364,12 @@ onBeforeUnmount(() => {
               <div class="ds-collection-example">
                 <UiSection as="div" class="ds-collection-section">
                   <div class="ds-collection-example__heading ds-collection-example__heading--outside">
-                    <span>Agent books and latest releases</span>
+                    <span>Persona books and latest releases</span>
                     <code>group titles outside Stage · content inside</code>
                   </div>
                   <div class="ds-grouped-collection">
                     <UiGrid :columns="2" gap="md" collapse="never" class="ds-grouped-collection__titles">
-                      <UiCollectionGroupTitle title="Agent books" />
+                      <UiCollectionGroupTitle title="Persona books" />
                       <UiCollectionGroupTitle title="Latest releases" to="#grid-card" />
                     </UiGrid>
                     <UiSectionStage inverse="bottom" class="ds-collection-stage ds-collection-stage--grouped">
@@ -1775,7 +2378,7 @@ onBeforeUnmount(() => {
                           <UiCard to="#grid-card" variant="editorial">
                             <template #eyebrow>Field manual · Volume 01</template>
                             <template #title><h4>Principles of Building Reliable Loops</h4></template>
-                            <template #description><p>A practical guide to agents that know when to take another lap.</p></template>
+                            <template #description><p>A practical guide to personas that know when to take another lap.</p></template>
                             <template #meta>240K+ copies distributed</template>
                           </UiCard>
                         </div>
@@ -1787,7 +2390,7 @@ onBeforeUnmount(() => {
                           </UiCard>
                           <UiCard to="#grid-card" variant="row">
                             <template #title><h4>Persistent loop memory</h4></template>
-                            <template #description><p>Carry decisions and state across long-running agent workflows.</p></template>
+                            <template #description><p>Carry decisions and state across long-running persona workflows.</p></template>
                             <template #trailing><time datetime="2026-08-03">Aug 3</time></template>
                           </UiCard>
                         </div>
@@ -1807,7 +2410,7 @@ onBeforeUnmount(() => {
                     <UiGrid :columns="2" gap="md">
                       <UiCard to="#grid-card" variant="editorial">
                         <template #eyebrow>Engineering</template>
-                        <template #title><h4>How to review long-running agents without slowing them down</h4></template>
+                        <template #title><h4>How to review long-running personas without slowing them down</h4></template>
                         <template #description><p>Patterns for parallel review, confidence thresholds, and useful retries.</p></template>
                         <template #meta>Aug 1, 2026</template>
                         <template #trailing><span># foundations</span></template>
@@ -1975,6 +2578,161 @@ onBeforeUnmount(() => {
               </footer>
             </article>
 
+            <article id="async-stage" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Async stage</h3>
+                    <code>UiAsyncStage</code>
+                  </div>
+                  <p>One stable surface for loading, error, empty, and successful asynchronous content.</p>
+                </div>
+                <span class="ds-status"><i /> New</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Directory state</span>
+                    <UiSegmentedControl
+                      v-model="asyncStageMode"
+                      :options="asyncStageOptions"
+                      variant="contained"
+                      aria-label="Async stage state"
+                    />
+                  </div>
+                  <UiAsyncStage
+                    :status="asyncStageStatus"
+                    :empty="asyncStageMode === 'empty'"
+                    loading-label="Loading the directory…"
+                    error-label="The directory could not be loaded."
+                    empty-label="No entries match these filters."
+                    class="ds-collection-stage"
+                    @retry="asyncStageMode = 'success'"
+                  >
+                    <UiGrid :columns="3" gap="lg" class="ds-team-grid">
+                      <div v-for="member in teamMembers.slice(0, 3)" :key="member.id" class="ds-team-member">
+                        <span class="ds-team-member__avatar">{{ member.initials }}</span>
+                        <div><strong>{{ member.name }}</strong><span>{{ member.role }}</span></div>
+                      </div>
+                    </UiGrid>
+                  </UiAsyncStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>State</span><code>idle · pending · error · success</code></div>
+                  <p class="ds-property__copy">Loading and error states use the same dimensions as catalog feedback. Successful and empty states retain the selected SectionStage inverse edge.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Slots</span><code>#loading · #error · #empty · default</code></div>
+                  <p class="ds-property__copy">Default copy covers routine cases while slots allow richer feedback without duplicating the surrounding state structure.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Composition</span>
+                <p>Use it around one asynchronous collection or content block. Page headings and filters belong to the surrounding shell, not to this component.</p>
+              </footer>
+            </article>
+
+            <article id="pagination" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Pagination</h3>
+                    <code>UiPagination</code>
+                  </div>
+                  <p>Offset-based navigation for catalogs with a fixed API page size.</p>
+                </div>
+                <span class="ds-status"><i /> New</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Model catalog</span>
+                    <code>offset · total · page-size</code>
+                  </div>
+                  <UiSectionStage inverse="bottom" class="ds-collection-stage">
+                    <UiGrid :columns="3" gap="lg" class="ds-team-grid">
+                      <div v-for="member in teamMembers.slice(0, 3)" :key="member.id" class="ds-team-member">
+                        <span class="ds-team-member__avatar">{{ member.initials }}</span>
+                        <div><strong>{{ member.name }}</strong><span>{{ member.role }}</span></div>
+                      </div>
+                    </UiGrid>
+                  </UiSectionStage>
+                  <UiPagination
+                    v-model:offset="samplePaginationOffset"
+                    :total="73"
+                    :page-size="24"
+                    aria-label="Model catalog pagination example"
+                  />
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Contract</span><code>v-model:offset · total · page-size</code></div>
+                  <p class="ds-property__copy">The component derives its range and disabled states, clamps stale offsets when totals shrink, and hides itself when one page is enough.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Composition</span><code>CatalogShell · below SectionStage</code></div>
+                  <p class="ds-property__copy">Keep pagination outside the Metal 025 surface so the collection and its navigation remain visually distinct.</p>
+                </div>
+              </div>
+            </article>
+
+            <article id="table" class="ds-component">
+              <header class="ds-component__header">
+                <div>
+                  <div class="ds-component__title-row">
+                    <h3>Table</h3>
+                    <code>UiTable</code>
+                  </div>
+                  <p>Structured datasets with quiet row surfaces and pills for finite options.</p>
+                </div>
+                <span class="ds-status"><i /> New</span>
+              </header>
+
+              <div class="ds-collection-example">
+                <UiSection as="div" class="ds-collection-section">
+                  <div class="ds-collection-example__heading ds-collection-example__heading--outside">
+                    <span>Pipeline directory</span>
+                    <code>text cells · option cells · horizontal dividers</code>
+                  </div>
+                  <UiSectionStage class="ds-collection-stage">
+                    <UiTable
+                      :columns="tableColumns"
+                      :rows="tableRows"
+                      caption="Pipeline directory"
+                    />
+                  </UiSectionStage>
+                </UiSection>
+              </div>
+
+              <div class="ds-properties">
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Columns</span><code>key · label · type · align · width</code></div>
+                  <p class="ds-property__copy"><strong>text</strong> values sit directly on the row surface. <strong>option</strong> values become non-interactive UiPills automatically and accept either one value or an array.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Cells</span><code>#cell · #cell-{key} · #heading-{key}</code></div>
+                  <p class="ds-property__copy">Generic and column-specific slots allow richer pills, links, or controls without changing the table structure.</p>
+                </div>
+                <div class="ds-property">
+                  <div class="ds-property__label"><span>Responsive</span><code>horizontal overflow</code></div>
+                  <p class="ds-property__copy">The semantic table keeps its column relationships on narrow screens and scrolls inside its own rounded frame.</p>
+                </div>
+              </div>
+
+              <footer class="ds-component__footnote">
+                <span>Surface</span>
+                <p>Rows use Card over the Section surface, the header uses Highlight, and hover deepens the current row. Divider is shared by the outer border and every horizontal separator; vertical rules are intentionally absent.</p>
+              </footer>
+            </article>
+
             <article id="team-grid" class="ds-component">
               <header class="ds-component__header">
                 <div>
@@ -2047,7 +2805,7 @@ onBeforeUnmount(() => {
 
           <section id="site-chrome" class="ds-section">
             <div class="ds-section__heading">
-              <p class="ds-index">06</p>
+              <p class="ds-index">07</p>
               <div>
                 <h2>Site chrome</h2>
                 <p>
@@ -2073,7 +2831,7 @@ onBeforeUnmount(() => {
                 <UiMainNavigation :menus="mainNavigationMenus" :links="mainNavigationLinks">
                   <template #brand>
                     <a href="#site-navigation" class="ds-site-brand">
-                      <img src="/brand/twemoji-small-airplane.svg" alt="" width="26" height="26">
+                      <img src="/brand/looping-louie-biplane.png" alt="" width="26" height="26">
                       <strong>Looping Louie</strong>
                     </a>
                   </template>
@@ -2169,7 +2927,7 @@ onBeforeUnmount(() => {
                 <UiSiteFooter :columns="footerColumns" :legal-links="footerLegalLinks" status="All loops operational">
                   <template #brand>
                     <a href="#site-footer" class="ds-footer-brand">
-                      <img src="/brand/twemoji-small-airplane.svg" alt="" width="34" height="34">
+                      <img src="/brand/looping-louie-biplane.png" alt="" width="34" height="34">
                       <strong>Looping Louie</strong>
                     </a>
                   </template>
@@ -2702,7 +3460,7 @@ onBeforeUnmount(() => {
   padding: 0.3rem 0.45rem;
   color: var(--ll-color-text-muted);
   background: var(--ll-color-highlight);
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   font: 500 0.6875rem / 1 var(--ll-font-mono);
 }
 
@@ -2749,6 +3507,27 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-3);
 }
 
+.ds-stage--notifications {
+  display: grid;
+  justify-items: center;
+  gap: var(--ll-space-6);
+}
+
+.ds-notification-samples {
+  display: grid;
+  width: min(100%, 40rem);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--ll-space-4);
+}
+
+.ds-notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--ll-space-3);
+}
+
 .ds-stage--icon-pills {
   display: flex;
   flex-wrap: wrap;
@@ -2757,10 +3536,30 @@ onBeforeUnmount(() => {
   gap: var(--ll-space-8);
 }
 
+.ds-markdown-stage {
+  display: grid;
+  justify-items: start;
+}
+
+.ds-markdown-stage :deep(.ui-markdown-content) {
+  width: min(100%, 48rem);
+}
+
 .ds-icon-pill-example {
   display: grid;
   justify-items: start;
   gap: var(--ll-space-3);
+}
+
+.ds-icon-pill-example--catalog { width: min(100%, 28rem); }
+
+.ds-icon-pill-example--selectable { width: min(100%, 40rem); }
+
+.ds-selectable-pills {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ll-space-5);
 }
 
 .ds-pill-dropdown {
@@ -3018,7 +3817,7 @@ onBeforeUnmount(() => {
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
   background: var(--ll-color-highlight);
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   font: 500 0.625rem / 1 var(--ll-font-mono);
   white-space: nowrap;
 }
@@ -3182,7 +3981,7 @@ onBeforeUnmount(() => {
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
   background: var(--ll-color-highlight);
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   font: 500 0.625rem / 1 var(--ll-font-mono);
   white-space: nowrap;
 }
@@ -3300,7 +4099,7 @@ onBeforeUnmount(() => {
   padding: 0.35rem 0.5rem;
   color: var(--ll-color-text-muted);
   background: var(--ll-color-highlight);
-  border-radius: 0.375rem;
+  border-radius: var(--ll-radius-xs);
   font-size: 0.625rem;
 }
 
@@ -3313,6 +4112,64 @@ onBeforeUnmount(() => {
 
 .ds-resource-group--releases {
   grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+.ds-chart-demo {
+  display: grid;
+  min-width: 0;
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--ll-space-2);
+  padding-top: var(--ll-space-2);
+}
+
+.ds-chart-demo svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  overflow: visible;
+}
+
+.ds-chart-demo__grid {
+  fill: none;
+  stroke: var(--ll-color-divider);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.ds-chart-demo__area {
+  fill: url(#ds-chart-area);
+}
+
+.ds-chart-demo__line {
+  fill: none;
+  stroke: var(--ll-color-primary);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.ds-chart-demo__axis {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ll-space-3);
+  color: var(--ll-color-text-faint);
+  font: 500 var(--ll-text-xs) / 1 var(--ll-font-mono);
+}
+
+.ds-chart-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ll-space-2);
+}
+
+.ds-chart-legend i {
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--ll-color-primary);
+  border-radius: 50%;
 }
 
 .ds-resource-group :deep(.ui-card--row) {
@@ -3400,7 +4257,7 @@ onBeforeUnmount(() => {
   height: 2.75rem;
   inset: 0;
   margin: auto;
-  background: url('/brand/twemoji-small-airplane.svg') center / contain no-repeat;
+  background: url('/brand/looping-louie-biplane.png') center / contain no-repeat;
   filter: drop-shadow(0 0.5rem 0.8rem rgba(41, 47, 51, 0.2));
 }
 
@@ -3933,6 +4790,12 @@ onBeforeUnmount(() => {
   font-weight: 650;
 }
 
+.ds-command-shortcut {
+  margin-left: var(--ll-space-2);
+  font: 600 0.6875rem / 1 var(--ll-font-mono);
+  opacity: 0.62;
+}
+
 @media (min-width: 40rem) {
   .ds-collection-section :deep(.ui-section__inner) {
     --ds-stage-shell-padding: 1.6875rem;
@@ -4053,6 +4916,10 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .ds-notification-samples {
+    grid-template-columns: 1fr;
+  }
+
   .ds-stage--icon-pills {
     justify-content: flex-start;
   }
@@ -4073,6 +4940,12 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 }
+
+.ds-drawer-sample { display: grid; gap: var(--ll-space-5); }
+.ds-drawer-sample label { display: grid; gap: var(--ll-space-2); color: var(--ll-color-ink); font: 600 var(--ll-text-sm) / 1.2 var(--ll-font-control); }
+.ds-drawer-sample input { width: 100%; height: 3rem; box-sizing: border-box; padding: 0 var(--ll-space-5); color: var(--ll-color-ink); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ll-radius-structural); font: 450 1rem / 1.5 var(--ll-font-control); }
+.ds-drawer-sample input:focus { border-color: var(--ll-color-primary); box-shadow: 0 0 0 3px var(--ll-color-primary-highlight); outline: none; }
+.ds-drawer-sample p { margin: 0; color: var(--ll-color-text-muted); font: 400 var(--ll-text-sm) / 1.55 var(--ll-font-control); }
 
 @media (prefers-reduced-motion: reduce) {
   :global(html) {
