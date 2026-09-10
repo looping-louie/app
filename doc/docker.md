@@ -14,11 +14,11 @@ The Compose service uses `host.docker.internal:8000` as the default API target.
 Override it at runtime when the API runs at another address:
 
 ```bash
-API_PROXY_TARGET=http://host.docker.internal:9000 docker compose up --build
+API_BASE_URL=http://host.docker.internal:9000 docker compose up --build
 ```
 
-`API_PROXY_TARGET` is passed to the running container as Nuxt's
-`NUXT_API_PROXY_TARGET` runtime configuration. The image does not need to be
+`API_BASE_URL` is passed to the running container as Nuxt's
+`NUXT_API_BASE_URL` runtime configuration. The image does not need to be
 rebuilt when the API target changes.
 
 ## Check the service
