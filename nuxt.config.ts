@@ -2,6 +2,15 @@ export default defineNuxtConfig({
   ssr: true,
   devtools: { enabled: true },
   modules: [],
+  vite: {
+    vue: {
+      template: {
+        transformAssetUrls: {
+          includeAbsolute: false
+        }
+      }
+    }
+  },
   css: [
     '@fontsource-variable/instrument-sans/standard.css',
     '@fontsource-variable/instrument-sans/standard-italic.css',
