@@ -3,8 +3,8 @@ services:
     image: looping-louie-app:latest
     build:
       context: .
-      args:
-        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://host.docker.internal:8000}
+    environment:
+      NUXT_API_PROXY_TARGET: ${API_PROXY_TARGET:-http://host.docker.internal:8000}
     ports:
       - "3000:3000"
     restart: unless-stopped

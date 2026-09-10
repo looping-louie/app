@@ -2,6 +2,9 @@ export default defineNuxtConfig({
   ssr: true,
   devtools: { enabled: true },
   modules: [],
+  runtimeConfig: {
+    apiProxyTarget: 'http://127.0.0.1:8000'
+  },
   vite: {
     vue: {
       template: {
@@ -19,12 +22,6 @@ export default defineNuxtConfig({
     '@fontsource/commit-mono/600.css',
     '~/assets/css/tokens.css'
   ],
-
-  routeRules: {
-    '/api/**': {
-      proxy: `${process.env.API_PROXY_TARGET || 'http://127.0.0.1:8000'}/api/**`
-    }
-  },
 
   app: {
     head: {

@@ -7,8 +7,6 @@ RUN npm ci
 
 COPY . .
 
-ARG API_PROXY_TARGET=http://host.docker.internal:8000
-ENV API_PROXY_TARGET=${API_PROXY_TARGET}
 RUN npm run build
 
 FROM node:22-alpine AS runtime
