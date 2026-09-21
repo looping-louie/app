@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import UiButton from '~/components/ui/Button.vue'
 import UiModal from '~/components/ui/Modal.vue'
+import UiPill from '~/components/ui/Pill.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import type { PipelineRunCommitMode } from '~/types/api'
@@ -18,7 +19,9 @@ const emit = defineEmits<{
 
 const router = useRouter()
 const api = useApiClient()
+const { projects } = useProjectContext()
 const prompt = ref('')
+const projectId = ref('')
 const commitMode = ref<PipelineRunCommitMode>('allow')
 const preparedRunId = ref('')
 const submitting = ref(false)
@@ -28,10 +31,16 @@ const commitModeOptions = [
   { value: 'allow', label: 'Allow runtime commit' },
   { value: 'forbid', label: 'Leave uncommitted' },
 ]
+const projectOptions = computed(() => projects.value.map(project => ({
+  value: project.id,
+  label: project.name,
+})))
+const selectedProject = computed(() => projects.value.find(project => project.id === projectId.value) ?? null)
 
 watch(() => props.open, (open) => {
   if (!open) return
   prompt.value = ''
+  projectId.value = ''
   commitMode.value = 'allow'
   preparedRunId.value = ''
   error.value = ''
@@ -42,23 +51,28 @@ function close() {
   if (!submitting.value) emit('update:open', false)
 }
 
+function selectProject(value: string | string[]) {
+  if (preparedRunId.value || submitting.value || typeof value !== 'string') return
+  projectId.value = value
+}
+
 async function submit() {
   const initialPrompt = prompt.value.trim()
-  if (!initialPrompt || submitting.value) return
+  if (!initialPrompt || !projectId.value || submitting.value) return
   submitting.value = true
   error.value = ''
   unavailableModelId.value = ''
   try {
     if (!preparedRunId.value) {
-      const preparedRun = await api.pipelines.createRun(props.pipelineId, {
+      const preparedRun = await api.pipelines.createRun(props.pipelineId, projectId.value, {
         input: initialPrompt,
         commit_mode: commitMode.value,
       })
       preparedRunId.value = preparedRun.id
     }
-    const run = await api.pipelines.startRun(props.pipelineId, preparedRunId.value)
+    const run = await api.pipelines.startRun(props.pipelineId, preparedRunId.value, projectId.value)
     emit('update:open', false)
-    await router.push({ path: '/runs', query: { pipeline: props.pipelineId, run: run.id } })
+    await router.push({ path: '/runs', query: { project: projectId.value, pipeline: props.pipelineId, run: run.id } })
   } catch (cause) {
     const details = apiErrorDetails(cause)
     unavailableModelId.value = details?.reason === 'model_disabled' && typeof details.model_id === 'string'
@@ -83,6 +97,26 @@ async function submit() {
     @update:open="emit('update:open', $event)"
   >
     <form class="pipeline-run-form" @submit.prevent="submit">
+      <div class="pipeline-run-form__project">
+        <span>Project <span aria-hidden="true">*</span></span>
+        <UiPill
+          v-if="projects.length"
+          :model-value="projectId"
+          :options="projectOptions"
+          :disabled="Boolean(preparedRunId)"
+          clickable
+          aria-haspopup="listbox"
+          dropdown-label="Projects"
+          aria-label="Choose the project for this run"
+          @update:model-value="selectProject"
+        >
+          {{ selectedProject?.name ?? 'Select project' }}
+        </UiPill>
+        <div v-else class="pipeline-run-form__no-projects">
+          <p>Create a project before running this pipeline.</p>
+          <UiButton to="/projects/new" size="sm" variant="stroke">New project</UiButton>
+        </div>
+      </div>
       <UiTextField
         v-model="prompt"
         label="Initial prompt"
@@ -117,7 +151,7 @@ async function submit() {
 
     <template #actions>
       <UiButton type="button" variant="secondary" :disabled="submitting" @click="close">Cancel</UiButton>
-      <UiButton type="button" :disabled="!prompt.trim()" :loading="submitting" @click="submit">
+      <UiButton type="button" :disabled="!prompt.trim() || !projectId" :loading="submitting" @click="submit">
         {{ preparedRunId ? 'Retry start' : 'Run pipeline' }}
       </UiButton>
     </template>
@@ -126,6 +160,11 @@ async function submit() {
 
 <style scoped>
 .pipeline-run-form { display: grid; min-width: 0; gap: var(--ll-space-5); }
+.pipeline-run-form__project { display: grid; gap: var(--ll-space-2); }
+.pipeline-run-form__project > span { color: var(--ll-color-ink); font: 600 var(--ll-text-sm) / 1.2 var(--ll-font-control); }
+.pipeline-run-form__project :deep(.ui-icon-pill) { width: fit-content; max-width: 100%; }
+.pipeline-run-form__no-projects { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-3); padding: var(--ll-space-3) var(--ll-space-4); background: var(--ll-color-metal-025); border-radius: var(--ll-radius-structural); }
+.pipeline-run-form__no-projects p { margin: 0; color: var(--ll-color-text-muted); font-size: var(--ll-text-sm); }
 .pipeline-run-form__commit-mode { display: grid; gap: var(--ll-space-2); padding: 0; margin: 0; border: 0; }
 .pipeline-run-form__commit-mode legend { margin-bottom: var(--ll-space-2); font-size: var(--ll-text-sm); font-weight: 650; }
 .pipeline-run-form__commit-mode p { margin: 0; color: var(--ll-color-text-muted); font-size: var(--ll-text-xs); }

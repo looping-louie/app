@@ -4,6 +4,7 @@ import { isSchedulerEvent, parseHarnessTurnEvent, type ParsedHarnessTurnEvent } 
 export interface PipelineRunSnapshot {
   run: PipelineRunResponse
   events: PipelineRunEventResponse[]
+  projectId: string
 }
 
 export interface HarnessTurnRecord extends ParsedHarnessTurnEvent {
@@ -17,8 +18,25 @@ export interface HarnessTurnUsageSummary {
   total: number
 }
 
+export type PipelineRunOutcome = 'prepared' | 'running' | 'action-required' | 'failed' | 'succeeded'
+
+export interface PipelineRunDisplayStatus {
+  label: 'Prepared' | 'Running' | 'Action required' | 'Failed' | 'Succeeded'
+  outcome: PipelineRunOutcome
+}
+
 export function runPrompt(run: PipelineRunResponse) {
   return run.input.trim() || run.id
+}
+
+export function pipelineRunDisplayStatus(run: PipelineRunResponse): PipelineRunDisplayStatus {
+  if (run.status === 'waiting') return { label: 'Action required', outcome: 'action-required' }
+  if (run.status === 'prepared') return { label: 'Prepared', outcome: 'prepared' }
+  if (!['completed', 'failed'].includes(run.status)) return { label: 'Running', outcome: 'running' }
+  if (run.status === 'failed' || run.steps.some(step => step.status === 'failed')) {
+    return { label: 'Failed', outcome: 'failed' }
+  }
+  return { label: 'Succeeded', outcome: 'succeeded' }
 }
 
 export function runTokenCount(events: PipelineRunEventResponse[]) {

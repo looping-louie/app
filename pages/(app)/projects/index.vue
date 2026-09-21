@@ -2,36 +2,38 @@
 import PageShell from '~/components/layout/PageShell.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
-import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
+import UiCard from '~/components/ui/Card.vue'
 
-definePageMeta({
-  layout: 'app',
-})
+const { error, initialize, projects, status } = useProjectContext()
 
-useHead({
-  title: 'Projects · Looping Louie',
-})
+definePageMeta({ layout: 'app' })
+useHead({ title: 'Projects · Looping Louie' })
 </script>
 
 <template>
-  <PageShell
-    title="Projects"
-    description="Organize shared work, teammates, and progress in one place."
-  >
+  <PageShell title="Projects" description="Choose where Looping Louie applies each pipeline run.">
     <template #actions>
       <UiButton to="/projects/new" variant="primary">New project</UiButton>
     </template>
 
-    <template #toolbar>
-      <UiCatalogFilterBar
-        third-label="Teammate"
-        third-icon="user-circle"
-      />
-    </template>
-
     <UiAsyncStage
-      empty
-      empty-label="No projects yet."
-    />
+      :status="status"
+      :empty="status === 'success' && !projects.length"
+      :error-label="error"
+      empty-label="No projects yet. Add the first execution target."
+      @retry="initialize(true)"
+    >
+      <div class="project-list">
+        <UiCard v-for="project in projects" :key="project.id" variant="row">
+          <template #title><h2>{{ project.name }}</h2></template>
+          <template #meta><code>{{ project.id }}</code></template>
+        </UiCard>
+      </div>
+    </UiAsyncStage>
   </PageShell>
 </template>
+
+<style scoped>
+.project-list { display: grid; gap: var(--ll-space-3); padding: var(--ll-space-4); }
+.project-list code { color: var(--ll-color-text-faint); font: 400 var(--ll-text-xs) / 1.4 var(--ll-font-mono); }
+</style>

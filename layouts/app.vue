@@ -19,7 +19,7 @@
             :to="item.to"
             class="nav-item"
             :class="{ active: isActive(item.to) }"
-            :aria-label="item.label"
+            :aria-label="navigationLabel(item)"
             @mouseenter="showNavTooltip(item.label, $event)"
             @mouseleave="hideNavTooltip"
             @focus="showNavTooltip(item.label, $event)"
@@ -27,12 +27,16 @@
             @click="closeMobile"
           >
             <span class="nav-icon" v-html="item.icon" />
+            <span
+              v-if="item.to === '/notifications' && humanGateNotifications.length"
+              class="nav-badge"
+              aria-hidden="true"
+            >{{ humanGateNotifications.length > 9 ? '9+' : humanGateNotifications.length }}</span>
           </NuxtLink>
         </template>
       </nav>
 
       <div class="sidebar-footer">
-        <WorkspaceSwitcher compact />
         <div class="user-avatar" title="Usuario" aria-label="Usuario">U</div>
       </div>
     </aside>
@@ -59,7 +63,17 @@
           <svg width="22" height="22" viewBox="0 0 20 20" fill="currentColor"><path d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5A.75.75 0 0 1 2.75 9h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 9.75ZM2.75 14a.75.75 0 0 0 0 1.5h14.5a.75.75 0 0 0 0-1.5H2.75Z"/></svg>
         </button>
         <span class="topbar-title">{{ currentLabel }}</span>
-        <WorkspaceSwitcher class="topbar-workspace" />
+        <NuxtLink
+          v-if="humanGateNotifications.length"
+          to="/notifications"
+          class="topbar-notifications"
+          :aria-label="navigationLabel({ to: '/notifications', label: 'Notifications' })"
+        >
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z" />
+          </svg>
+          <span>{{ humanGateNotifications.length > 9 ? '9+' : humanGateNotifications.length }}</span>
+        </NuxtLink>
       </header>
 
       <main class="app-content">
@@ -70,9 +84,12 @@
 </template>
 
 <script setup lang="ts">
-import WorkspaceSwitcher from '~/components/workspaces/WorkspaceSwitcher.vue'
-
 const route = useRoute()
+const {
+  notifications: humanGateNotifications,
+  startPolling: startHumanGatePolling,
+  stopPolling: stopHumanGatePolling,
+} = useHumanGateNotifications()
 
 const mobileOpen = ref(false)
 const sidebarRef = ref<HTMLElement | null>(null)
@@ -157,6 +174,12 @@ function isActive(to: string) {
   return route.path === to || route.path.startsWith(to + '/')
 }
 
+function navigationLabel(item: { to: string, label: string }) {
+  if (item.to !== '/notifications' || !humanGateNotifications.value.length) return item.label
+  const count = humanGateNotifications.value.length
+  return `${item.label}, ${count} ${count === 1 ? 'item' : 'items'} requiring action`
+}
+
 function openMobile() {
   mobileOpen.value = true
 }
@@ -165,6 +188,9 @@ function closeMobile() {
   hideNavTooltip()
   mobileOpen.value = false
 }
+
+onMounted(startHumanGatePolling)
+onBeforeUnmount(stopHumanGatePolling)
 </script>
 
 <style scoped>
@@ -175,9 +201,6 @@ function closeMobile() {
   background: var(--ll-color-canvas);
 }
 
-.topbar-workspace {
-  margin-left: auto;
-}
 
 .sidebar {
   width: 64px;
@@ -310,6 +333,24 @@ function closeMobile() {
   height: 22px;
 }
 
+.nav-badge {
+  position: absolute;
+  top: 0.28rem;
+  right: 0.28rem;
+  display: grid;
+  min-width: 1rem;
+  height: 1rem;
+  box-sizing: border-box;
+  padding-inline: 0.2rem;
+  place-items: center;
+  color: var(--ll-color-surface-raised);
+  background: var(--ll-color-brand);
+  border: 2px solid var(--ll-color-surface-raised);
+  border-radius: var(--ll-radius-pill);
+  font: 700 0.58rem / 1 var(--ll-font-control);
+  font-variant-numeric: tabular-nums;
+}
+
 .nav-tooltip {
   position: fixed;
   z-index: 310;
@@ -438,6 +479,31 @@ function closeMobile() {
   font-weight: 600;
   font-size: 1rem;
   color: var(--ll-color-ink);
+}
+
+.topbar-notifications {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ll-space-2);
+  min-height: 2rem;
+  margin-left: auto;
+  padding-inline: var(--ll-space-3);
+  color: var(--ll-color-brand-ink);
+  background: var(--ll-color-red-100);
+  border-radius: var(--ll-radius-pill);
+  font-size: var(--ll-text-xs);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.topbar-notifications svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.topbar-notifications:focus-visible {
+  outline: 2px solid var(--ll-color-brand);
+  outline-offset: 2px;
 }
 
 .app-content {

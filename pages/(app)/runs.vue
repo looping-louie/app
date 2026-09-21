@@ -7,19 +7,36 @@ import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
+import UiPill from '~/components/ui/Pill.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse } from '~/types/api'
+import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
-import { runPrompt, runTokenCount, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
+import {
+  collectProjectPipelineRuns,
+  DEFAULT_PIPELINE_RUN_DATE_RANGE,
+  filterPipelineRunSnapshots,
+  pipelineRunCreatedFrom,
+  pipelineRunProjectName,
+  runCatalogProjectIds,
+} from '~/utils/pipelineRunCatalog'
+import {
+  pipelineRunDisplayStatus,
+  runPrompt,
+  runTokenCount,
+  type PipelineRunOutcome,
+  type PipelineRunSnapshot,
+} from '~/utils/pipelineRuns'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
+  projectId: string
   pipelineId: string
   name: string
+  project: string
   pipeline: string
   status: string
-  statusValue: PipelineRunResponse['status']
+  outcome: PipelineRunOutcome
   created: string
   createdValue: string
   tokens: string
@@ -27,8 +44,9 @@ interface RunTableRow extends Record<string, unknown> {
 }
 
 const tableColumns = [
-  { key: 'name', label: 'Initial prompt', width: '30%' },
-  { key: 'pipeline', label: 'Pipeline', width: '18%' },
+  { key: 'name', label: 'Initial prompt', width: '26%' },
+  { key: 'project', label: 'Project', width: '14%' },
+  { key: 'pipeline', label: 'Pipeline', width: '16%' },
   { key: 'status', label: 'Status', type: 'option' as const },
   { key: 'created', label: 'Created' },
   { key: 'tokens', label: 'Tokens', align: 'end' as const },
@@ -47,6 +65,7 @@ const runStatusOptions = [
 ]
 
 const dateRangeOptions = [
+  { value: 'all-time', label: 'All time' },
   { value: 'last-24-hours', label: 'Last 24 hours' },
   { value: 'last-week', label: 'Last week' },
   { value: 'last-month', label: 'Last month' },
@@ -58,9 +77,23 @@ const router = useRouter()
 const api = useApiClient()
 const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
 const { formatDateTime } = useDateTime()
-const { activeWorkspace } = useWorkspaceContext()
-const runStatus = ref('all')
-const dateRange = ref('last-24-hours')
+const { projects } = useProjectContext()
+const { refresh: refreshHumanGateNotifications } = useHumanGateNotifications()
+const allProjectsValue = '__all_projects__'
+const requestedProjectId = computed(() => {
+  const requested = typeof route.query.project === 'string' ? route.query.project : ''
+  return projects.value.some(project => project.id === requested) ? requested : ''
+})
+const projectOptions = computed(() => [
+  { value: allProjectsValue, label: 'All projects' },
+  ...projects.value.map(project => ({ value: project.id, label: project.name })),
+])
+const selectedProjectValue = computed(() => requestedProjectId.value || allProjectsValue)
+const selectedProjectName = computed(() => (
+  projects.value.find(project => project.id === requestedProjectId.value)?.name ?? 'All projects'
+))
+const runStatus = ref<PipelineRunStatus | 'all'>('all')
+const dateRange = ref(DEFAULT_PIPELINE_RUN_DATE_RANGE)
 const runSort = ref('newest')
 const startingRun = ref(false)
 const continuingRun = ref(false)
@@ -80,11 +113,11 @@ interface HumanDecisionAttempt {
 const humanDecisionAttempt = ref<HumanDecisionAttempt | null>(null)
 
 const selectedDateRangeLabel = computed(() => (
-  dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'Last 24 hours'
+  dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'All time'
 ))
 
 const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
-watch([runStatus, dateRange], () => void refresh())
+watch([dateRange, requestedProjectId], () => void refresh())
 const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
 const {
   applyRunUpdates,
@@ -95,20 +128,20 @@ const {
 } = usePipelineRunPolling(
   () => data.value?.snapshots ?? [],
   updateRunDetails,
+  { refreshCatalog: refreshRunCatalog },
 )
-const readinessWorkspaceName = computed(() => {
-  const workspace = activeWorkspace.value
-  if (workspace && workspace.id === runReadiness.value?.project_id) return workspace.name
-  return 'Current workspace'
+const readinessProjectName = computed(() => {
+  const project = projects.value.find(candidate => candidate.id === runReadiness.value?.project_id)
+  return project?.name ?? 'Current project'
 })
 const selectedActivity = computed<ActivityResponse | null>(() => {
   const activityId = selectedSnapshot.value?.run.current_activity_run?.activity_id
   return activityId ? data.value?.activitiesById.get(activityId) ?? null : null
 })
 const displayedRuns = computed(() => {
-  const cutoff = Date.now() - rangeDuration(dateRange.value)
-  const rows = (data.value?.snapshots ?? [])
-    .filter(({ run }) => (runStatus.value === 'all' || run.status === runStatus.value) && Date.parse(run.created_at) >= cutoff)
+  const createdFrom = pipelineRunCreatedFrom(dateRange.value)
+  const cutoff = createdFrom ? Date.parse(createdFrom) : undefined
+  const rows = filterPipelineRunSnapshots(data.value?.snapshots ?? [], runStatus.value, cutoff)
     .map(snapshot => toTableRow(snapshot, data.value?.pipelineNames.get(snapshot.run.pipeline_id) ?? snapshot.run.pipeline_id))
   return rows.sort((first, second) => {
     if (runSort.value === 'alphabetical-desc') return second.name.localeCompare(first.name)
@@ -119,38 +152,55 @@ const displayedRuns = computed(() => {
 })
 
 async function loadRuns() {
-  const cutoff = new Date(Date.now() - rangeDuration(dateRange.value)).toISOString()
+  const scopedProjectId = requestedProjectId.value
+  const projectIds = runCatalogProjectIds(projects.value, scopedProjectId)
+  if (!projectIds.length) return { snapshots: [], pipelineNames: new Map(), activitiesById: new Map() }
+  const createdFrom = pipelineRunCreatedFrom(dateRange.value)
   const [pipelines, discoveredRuns] = await Promise.all([
     collectApiPages(offset => api.pipelines.list({ offset })),
-    collectApiPages(offset => api.pipelineRuns.list({
+    collectProjectPipelineRuns(projectIds, (projectId, offset) => api.pipelineRuns.list(projectId, {
       offset,
-      created_from: cutoff,
+      ...(createdFrom ? { created_from: createdFrom } : {}),
     })),
   ])
   const selectedPipeline = typeof route.query.pipeline === 'string' ? route.query.pipeline : ''
   const selectedId = typeof route.query.run === 'string' ? route.query.run : ''
-  if (selectedPipeline && selectedId && !discoveredRuns.some(run => run.id === selectedId)) {
-    discoveredRuns.push(await api.pipelines.getRun(selectedPipeline, selectedId))
+  if (scopedProjectId && selectedPipeline && selectedId) {
+    const selectedRun = await api.pipelines.getRun(selectedPipeline, selectedId, scopedProjectId)
+    const selectedIndex = discoveredRuns.findIndex(({ run }) => run.id === selectedId)
+    const selectedProjectRun = { projectId: scopedProjectId, run: selectedRun }
+    if (selectedIndex === -1) discoveredRuns.push(selectedProjectRun)
+    else discoveredRuns.splice(selectedIndex, 1, selectedProjectRun)
   }
   return {
-    snapshots: await Promise.all(discoveredRuns.map(loadSnapshot)),
+    snapshots: await Promise.all(discoveredRuns.map(({ projectId, run }) => loadSnapshot(run, projectId))),
     pipelineNames: new Map(pipelines.map(pipeline => [pipeline.id, pipeline.name])),
     activitiesById: new Map(pipelines.flatMap(pipeline => pipeline.steps.map(step => [step.id, step] as const))),
   }
 }
 
+async function refreshRunCatalog() {
+  await refresh()
+}
+
 function selectRun(row: RunTableRow) {
   runActionError.value = ''
-  void router.replace({ query: { ...route.query, pipeline: row.pipelineId, run: row.id } })
+  void router.replace({ query: { project: row.projectId, pipeline: row.pipelineId, run: row.id } })
+}
+
+function selectProject(value: string | string[]) {
+  if (typeof value !== 'string' || value === selectedProjectValue.value) return
+  void router.replace({ query: value === allProjectsValue ? {} : { project: value } })
 }
 
 async function startPreparedRun() {
-  const run = selectedSnapshot.value?.run
-  if (!run || run.status !== 'prepared' || startingRun.value) return
+  const snapshot = selectedSnapshot.value
+  const run = snapshot?.run
+  if (!snapshot || !run || run.status !== 'prepared' || startingRun.value) return
   startingRun.value = true
   runActionError.value = ''
   try {
-    const started = await api.pipelines.startRun(run.pipeline_id, run.id)
+    const started = await api.pipelines.startRun(run.pipeline_id, run.id, snapshot.projectId)
     await applyRunUpdates([started])
   } catch (cause) {
     runActionError.value = apiErrorMessage(cause, 'This prepared run could not be started. Please try again.')
@@ -165,9 +215,10 @@ function newIdempotencyKey() {
 }
 
 async function submitHumanDecision(decision: ActivityRunHumanDecision, comment: string | null) {
-  const run = selectedSnapshot.value?.run
+  const snapshot = selectedSnapshot.value
+  const run = snapshot?.run
   const activityRun = run?.current_activity_run
-  if (!run || !activityRun || continuingRun.value) return
+  if (!snapshot || !run || !activityRun || continuingRun.value) return
 
   const previousAttempt = humanDecisionAttempt.value
   const attempt = previousAttempt?.activityRunId === activityRun.id
@@ -188,7 +239,7 @@ async function submitHumanDecision(decision: ActivityRunHumanDecision, comment: 
   try {
     if (!decisionRecorded) {
       if (!activityRun.continuation_token) throw new Error('The activity continuation token is missing.')
-      const continuedActivity = await api.activities.continueRun(activityRun.activity_id, activityRun.id, {
+      const continuedActivity = await api.activities.continueRun(activityRun.activity_id, activityRun.id, snapshot.projectId, {
         pipeline_run_id: run.id,
         lease_token: null,
         continuation_token: activityRun.continuation_token,
@@ -229,10 +280,12 @@ async function retryPipelineContinuation() {
 }
 
 async function continueSelectedPipeline() {
-  const run = selectedSnapshot.value?.run
-  if (!run) return
-  const continued = await api.pipelines.continueRun(run.pipeline_id, run.id, { lease_token: null })
+  const snapshot = selectedSnapshot.value
+  const run = snapshot?.run
+  if (!snapshot || !run) return
+  const continued = await api.pipelines.continueRun(run.pipeline_id, run.id, snapshot.projectId, { lease_token: null })
   await applyRunUpdates([continued])
+  await refreshHumanGateNotifications()
 }
 
 function replaceCurrentActivity(runId: string, activityRun: NonNullable<PipelineRunResponse['current_activity_run']>) {
@@ -256,16 +309,17 @@ async function updateRunDetails(updates: PipelineRunResponse[]) {
 }
 
 async function refreshRunReadiness() {
-  const run = selectedSnapshot.value?.run
+  const snapshot = selectedSnapshot.value
+  const run = snapshot?.run
   const request = ++readinessRequest
-  if (!run || run.status !== 'queued') {
+  if (!snapshot || !run || run.status !== 'queued') {
     clearRunReadiness()
     return
   }
   runReadinessLoading.value = true
   runReadinessError.value = ''
   try {
-    const readiness = await api.pipelines.getRunReadiness(run.pipeline_id, run.id)
+    const readiness = await api.pipelines.getRunReadiness(run.pipeline_id, run.id, snapshot.projectId)
     if (request !== readinessRequest) return
     runReadiness.value = readiness
   } catch (cause) {
@@ -286,13 +340,16 @@ function clearRunReadiness() {
 
 function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRow {
   const { run, events } = snapshot
+  const displayStatus = pipelineRunDisplayStatus(run)
   return {
     id: run.id,
+    projectId: snapshot.projectId,
     pipelineId: run.pipeline_id,
     name: runPrompt(run).split('\n')[0]!.slice(0, 90),
+    project: pipelineRunProjectName(projects.value, snapshot.projectId),
     pipeline,
-    status: run.status.replaceAll('_', ' ').replace(/^./, first => first.toUpperCase()),
-    statusValue: run.status,
+    status: displayStatus.label,
+    outcome: displayStatus.outcome,
     created: formatDateTime(run.created_at),
     createdValue: run.created_at,
     tokens: runTokenCount(events).toLocaleString(),
@@ -300,19 +357,20 @@ function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRo
   }
 }
 
-function rangeDuration(value: string) {
-  const day = 24 * 60 * 60 * 1000
-  if (value === 'last-week') return 7 * day
-  if (value === 'last-month') return 30 * day
-  if (value === 'last-quarter') return 90 * day
-  return day
-}
-
 watch(
   () => [selectedSnapshot.value?.run.id, selectedSnapshot.value?.run.status],
   () => void refreshRunReadiness(),
 )
 onMounted(() => void refreshRunReadiness())
+watch(
+  () => [route.hash, selectedSnapshot.value?.run.id, selectedSnapshot.value?.run.status],
+  async () => {
+    if (!import.meta.client || route.hash !== '#human-gate' || selectedSnapshot.value?.run.status !== 'waiting') return
+    await nextTick()
+    document.getElementById('human-gate')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  },
+  { immediate: true },
+)
 
 definePageMeta({ layout: 'app', alias: ['/'] })
 useHead({ title: 'Runs · Looping Louie' })
@@ -320,7 +378,21 @@ useHead({ title: 'Runs · Looping Louie' })
 
 <template>
   <PageShell title="Runs" description="Monitor pipeline executions, their event timeline, and human decisions.">
-    <template #actions><UiButton to="/pipelines">New run</UiButton></template>
+    <template #actions>
+      <UiPill
+        v-if="projects.length"
+        :model-value="selectedProjectValue"
+        :options="projectOptions"
+        clickable
+        aria-haspopup="listbox"
+        dropdown-label="Projects"
+        aria-label="Filter runs by project"
+        @update:model-value="selectProject"
+      >
+        {{ selectedProjectName }}
+      </UiPill>
+      <UiButton to="/pipelines">New run</UiButton>
+    </template>
     <template #toolbar>
       <UiCatalogFilterBar
         v-model:status="runStatus"
@@ -341,7 +413,23 @@ useHead({ title: 'Runs · Looping Louie' })
         <UiDataFreshnessNotice v-if="isStale" :description="staleMessage" :loading="isPollingRefreshing" @retry="retryPolling" />
         <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
           <template #cell-name="{ row }">
-            <button type="button" class="runs-link" @click="selectRun(row as RunTableRow)">{{ row.name }}</button>
+            <button
+              type="button"
+              class="runs-link"
+              :class="{ 'runs-link--action': (row as RunTableRow).outcome === 'action-required' }"
+              @click="selectRun(row as RunTableRow)"
+            >{{ row.name }}</button>
+          </template>
+          <template #cell-status="{ row }">
+            <span
+              class="runs-status"
+              :class="`runs-status--${(row as RunTableRow).outcome}`"
+            >
+              <svg v-if="(row as RunTableRow).outcome === 'action-required'" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                <path d="M128,24a104,104,0,1,0,104,104A104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm8-120v40a8,8,0,0,1-16,0V96a8,8,0,0,1,16,0Zm4,72a12,12,0,1,1-12-12A12,12,0,0,1,140,168Z" />
+              </svg>
+              {{ (row as RunTableRow).status }}
+            </span>
           </template>
           <template #empty>No runs match these filters.</template>
         </UiTable>
@@ -354,7 +442,7 @@ useHead({ title: 'Runs · Looping Louie' })
           :readiness="runReadiness"
           :loading="runReadinessLoading"
           :error="runReadinessError"
-          :workspace-name="readinessWorkspaceName"
+          :project-name="readinessProjectName"
           @retry="refreshRunReadiness"
         />
         <div v-else-if="selectedSnapshot?.run.status === 'claimed'" class="runs-action runs-action--informative" role="status">
@@ -388,6 +476,12 @@ useHead({ title: 'Runs · Looping Louie' })
 .runs-content { display: grid; gap: var(--ll-space-6); }
 .runs-link { padding: 0; color: var(--ll-color-ink); background: transparent; border: 0; font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
 .runs-link:hover, .runs-link:focus-visible { color: var(--ll-color-primary); text-decoration: underline; }
+.runs-link--action { color: var(--ll-color-brand-ink); }
+.runs-status { display: inline-flex; align-items: center; gap: var(--ll-space-2); padding: 0.25rem 0.625rem; border-radius: var(--ll-radius-pill); font-size: var(--ll-text-xs); font-weight: 650; line-height: 1.35; white-space: nowrap; }
+.runs-status svg { width: 0.9rem; height: 0.9rem; }
+.runs-status--running { color: var(--ll-color-primary-depth); background: var(--ll-color-blue-100); }
+.runs-status--action-required, .runs-status--failed { color: var(--ll-color-brand-ink); background: var(--ll-color-red-100); }
+.runs-status--prepared, .runs-status--succeeded { color: var(--ll-color-ink); background: var(--ll-color-highlight); }
 .runs-action { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-4); padding: var(--ll-space-4); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ui-surface-radius, var(--ll-radius-structural)); }
 .runs-action--informative { justify-content: flex-start; }
 .runs-action--informative > div { display: grid; gap: var(--ll-space-2); }

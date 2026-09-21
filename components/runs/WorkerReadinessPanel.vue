@@ -11,7 +11,7 @@ const props = defineProps<{
   readiness: PipelineRunReadinessResponse | null
   loading: boolean
   error: string
-  workspaceName: string
+  projectName: string
 }>()
 
 defineEmits<{ retry: [] }>()
@@ -35,9 +35,9 @@ const statusTitle = computed(() => {
 })
 const statusDescription = computed(() => {
   if (props.error) return props.error
-  if (!props.readiness) return 'Reading worker heartbeats for this execution workspace.'
+  if (!props.readiness) return 'Reading worker heartbeats for this project.'
   if (props.readiness.status === 'ready') return 'A matching worker is online. It will claim this run automatically; no retry is needed.'
-  if (props.readiness.status === 'no_registered_workers') return 'This execution workspace has no provisioned worker yet.'
+  if (props.readiness.status === 'no_registered_workers') return 'This project has no provisioned worker yet.'
   if (props.readiness.status === 'no_active_workers') return 'Workers are registered, but none has sent a heartbeat in the last two minutes.'
   if (props.readiness.status === 'no_compatible_workers') return 'Workers are online, but none currently advertises the required Harness.'
   return 'Queued diagnostics are no longer applicable.'
@@ -68,8 +68,8 @@ const isReady = computed(() => props.readiness?.status === 'ready')
           </div>
           <dl class="worker-readiness__facts">
             <div>
-              <dt>Execution workspace</dt>
-              <dd>{{ workspaceName }} <code>{{ readiness.project_id }}</code></dd>
+              <dt>Project</dt>
+              <dd>{{ projectName }} <code>{{ readiness.project_id }}</code></dd>
             </div>
             <div>
               <dt>Workers</dt>
