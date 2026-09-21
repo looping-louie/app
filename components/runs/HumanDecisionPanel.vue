@@ -37,7 +37,7 @@ function submit(decision: ActivityRunHumanDecision) {
 </script>
 
 <template>
-  <section class="human-decision-panel" aria-labelledby="human-decision-title">
+  <section id="human-gate" class="human-decision-panel" aria-labelledby="human-decision-title">
     <header class="human-decision-panel__header">
       <div>
         <span class="human-decision-panel__eyebrow">Human gate</span>
