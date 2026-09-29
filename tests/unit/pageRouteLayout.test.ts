@@ -1,0 +1,26 @@
+import { readdirSync } from 'node:fs'
+import { join, parse } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { describe, expect, it } from 'vitest'
+
+const projectRoot = fileURLToPath(new URL('../..', import.meta.url))
+const pagesDirectory = join(projectRoot, 'pages')
+
+describe('Nuxt page route layout', () => {
+  it('uses an index page when a route segment has descendants', () => {
+    expect(routeFileDirectoryCollisions(pagesDirectory)).toEqual([])
+  })
+})
+
+function routeFileDirectoryCollisions(directory: string): string[] {
+  const entries = readdirSync(directory, { withFileTypes: true })
+  const directories = new Set(entries.filter(entry => entry.isDirectory()).map(entry => entry.name))
+  const collisions = entries
+    .filter(entry => entry.isFile() && entry.name.endsWith('.vue'))
+    .map(entry => parse(entry.name).name)
+    .filter(name => directories.has(name))
+    .map(name => join(directory, name))
+  return [...collisions, ...entries
+    .filter(entry => entry.isDirectory())
+    .flatMap(entry => routeFileDirectoryCollisions(join(directory, entry.name)))]
+}

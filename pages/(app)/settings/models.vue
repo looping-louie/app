@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SettingsPageShell from '~/components/settings/SettingsPageShell.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
@@ -180,7 +181,8 @@ useHead({
 </script>
 
 <template>
-  <section aria-labelledby="models-heading">
+  <SettingsPageShell>
+    <section aria-labelledby="models-heading">
     <h2 id="models-heading" class="visually-hidden">Models</h2>
     <p v-if="policyError" class="models-policy-error" role="alert">{{ policyError }}</p>
 
@@ -251,7 +253,8 @@ useHead({
       :page-size="modelPageSize"
       aria-label="Models pagination"
     />
-  </section>
+    </section>
+  </SettingsPageShell>
 </template>
 
 <style scoped>

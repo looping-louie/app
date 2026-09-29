@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SettingsPageShell from '~/components/settings/SettingsPageShell.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiGrid from '~/components/ui/Grid.vue'
@@ -119,7 +120,8 @@ useHead({
 </script>
 
 <template>
-  <section aria-labelledby="mcps-heading">
+  <SettingsPageShell>
+    <section aria-labelledby="mcps-heading">
     <h2 id="mcps-heading" class="visually-hidden">MCPs</h2>
 
     <UiCatalogFilterBar
@@ -176,7 +178,8 @@ useHead({
       :page-size="mcpPageSize"
       aria-label="MCPs pagination"
     />
-  </section>
+    </section>
+  </SettingsPageShell>
 </template>
 
 <style scoped>
