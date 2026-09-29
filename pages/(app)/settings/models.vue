@@ -172,6 +172,7 @@ async function selectModelSearchResult(item: { id: string }) {
 }
 
 definePageMeta({
+  layout: 'app',
   pageTransition: false,
 })
 

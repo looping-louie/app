@@ -173,6 +173,7 @@ async function confirmDelete() {
 }
 
 definePageMeta({
+  layout: 'app',
   pageTransition: false,
 })
 

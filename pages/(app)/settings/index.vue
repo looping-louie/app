@@ -173,7 +173,7 @@ async function saveDefaults() {
   }
 }
 
-definePageMeta({ pageTransition: false })
+definePageMeta({ layout: 'app', pageTransition: false })
 useHead({ title: 'Settings · Looping Louie' })
 </script>
 

@@ -111,6 +111,7 @@ async function selectMcpSearchResult(item: { id: string }) {
 }
 
 definePageMeta({
+  layout: 'app',
   pageTransition: false,
 })
 

@@ -26,6 +26,9 @@ pattern across the application.
 Shared UI that must appear on independent child routes belongs in a reusable
 component or Nuxt layout, not a colliding parent route file. For example,
 `SettingsPageShell` supplies Settings navigation to each `/settings` page.
+Every page under `pages/(app)` must declare `layout: 'app'` so it retains the
+global sidebar and application shell after route restructuring. The
+`pageRouteLayout` unit test enforces both requirements.
 
 ## Run Navigation
 
