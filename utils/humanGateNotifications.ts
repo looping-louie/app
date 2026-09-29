@@ -1,5 +1,6 @@
 import type { PipelineRunResponse, ProjectResponse } from '~/types/api'
 import type { ProjectPipelineRun } from '~/utils/pipelineRunCatalog'
+import { pipelineRunDetailRoute } from '~/utils/pipelineRunRoutes'
 
 export interface HumanGateNotification {
   id: string
@@ -34,12 +35,11 @@ export function humanGateNotifications(
 }
 
 export function humanGateRoute(projectId: string, run: PipelineRunResponse) {
-  const query = new URLSearchParams({
-    project: projectId,
-    pipeline: run.pipeline_id,
-    run: run.id,
-  })
-  return `/runs?${query.toString()}#human-gate`
+  return pipelineRunDetailRoute({
+    projectId,
+    pipelineId: run.pipeline_id,
+    runId: run.id,
+  }, 'human-gate')
 }
 
 function humanGateRunLabel(run: PipelineRunResponse) {

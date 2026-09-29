@@ -6,6 +6,7 @@ import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTextField from '~/components/ui/TextField.vue'
 import type { PipelineRunCommitMode } from '~/types/api'
 import { apiErrorDetails, apiErrorMessage } from '~/utils/api/errors'
+import { pipelineRunDetailRoute } from '~/utils/pipelineRunRoutes'
 
 const props = defineProps<{
   open: boolean
@@ -72,7 +73,11 @@ async function submit() {
     }
     const run = await api.pipelines.startRun(props.pipelineId, preparedRunId.value, projectId.value)
     emit('update:open', false)
-    await router.push({ path: '/runs', query: { project: projectId.value, pipeline: props.pipelineId, run: run.id } })
+    await router.push(pipelineRunDetailRoute({
+      projectId: projectId.value,
+      pipelineId: props.pipelineId,
+      runId: run.id,
+    }))
   } catch (cause) {
     const details = apiErrorDetails(cause)
     unavailableModelId.value = details?.reason === 'model_disabled' && typeof details.model_id === 'string'

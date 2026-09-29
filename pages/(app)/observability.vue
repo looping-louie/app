@@ -8,6 +8,7 @@ import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTable from '~/components/ui/Table.vue'
 import { collectApiPages } from '~/utils/apiPagination'
 import { observabilityDistributions, observabilityLogs, observabilityMetrics, type ObservabilityDistributionItem } from '~/utils/observability'
+import { pipelineRunDetailRoute } from '~/utils/pipelineRunRoutes'
 
 const activeView = ref('metrics')
 const dateRange = ref('7d')
@@ -90,10 +91,11 @@ function distributionMaximum(items: ObservabilityDistributionItem[]) {
 }
 
 function runLink(row: Record<string, unknown>) {
-  return {
-    path: '/runs',
-    query: { project: String(row.projectId), pipeline: String(row.pipelineId), run: String(row.runId) },
-  }
+  return pipelineRunDetailRoute({
+    projectId: String(row.projectId),
+    pipelineId: String(row.pipelineId),
+    runId: String(row.runId),
+  })
 }
 
 definePageMeta({ layout: 'app' })

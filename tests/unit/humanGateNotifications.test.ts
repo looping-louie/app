@@ -14,7 +14,7 @@ describe('human-gate notifications', () => {
       projectName: 'Grader',
       runId: 'run-1',
       runLabel: 'Review the Grader implementation',
-      to: '/runs?project=project-1&pipeline=pipeline-1&run=run-1#human-gate',
+      to: '/runs/run-1?project=project-1&pipeline=pipeline-1#human-gate',
     })])
   })
 
