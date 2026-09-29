@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import PageShell from '~/components/layout/PageShell.vue'
-import HumanDecisionPanel from '~/components/runs/HumanDecisionPanel.vue'
-import RunTimeline from '~/components/runs/RunTimeline.vue'
-import WorkerReadinessPanel from '~/components/runs/WorkerReadinessPanel.vue'
+import RunPreviewDrawer from '~/components/runs/RunPreviewDrawer.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCatalogFilterBar from '~/components/ui/CatalogFilterBar.vue'
 import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse, PipelineRunStatus } from '~/types/api'
-import { apiErrorMessage } from '~/utils/api/errors'
+import type { PipelineRunResponse, PipelineRunStatus } from '~/types/api'
 import { collectApiPages } from '~/utils/apiPagination'
 import {
   collectProjectPipelineRuns,
@@ -27,6 +24,7 @@ import {
   type PipelineRunOutcome,
   type PipelineRunSnapshot,
 } from '~/utils/pipelineRuns'
+import { pipelineRunDetailRoute } from '~/utils/pipelineRunRoutes'
 
 interface RunTableRow extends Record<string, unknown> {
   id: string
@@ -51,6 +49,7 @@ const tableColumns = [
   { key: 'created', label: 'Created' },
   { key: 'tokens', label: 'Tokens', align: 'end' as const },
   { key: 'runBy', label: 'Run by' },
+  { key: 'details', label: 'Details', align: 'end' as const },
 ]
 
 const runStatusOptions = [
@@ -78,7 +77,6 @@ const api = useApiClient()
 const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
 const { formatDateTime } = useDateTime()
 const { projects } = useProjectContext()
-const { refresh: refreshHumanGateNotifications } = useHumanGateNotifications()
 const allProjectsValue = '__all_projects__'
 const requestedProjectId = computed(() => {
   const requested = typeof route.query.project === 'string' ? route.query.project : ''
@@ -95,30 +93,20 @@ const selectedProjectName = computed(() => (
 const runStatus = ref<PipelineRunStatus | 'all'>('all')
 const dateRange = ref(DEFAULT_PIPELINE_RUN_DATE_RANGE)
 const runSort = ref('newest')
-const startingRun = ref(false)
-const continuingRun = ref(false)
-const runActionError = ref('')
-const runReadiness = ref<PipelineRunReadinessResponse | null>(null)
-const runReadinessLoading = ref(false)
-const runReadinessError = ref('')
-let readinessRequest = 0
-
-interface HumanDecisionAttempt {
-  activityRunId: string
-  idempotencyKey: string
-  decision: ActivityRunHumanDecision
-  comment: string | null
-}
-
-const humanDecisionAttempt = ref<HumanDecisionAttempt | null>(null)
-
 const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'All time'
 ))
 
 const { data, status, refresh } = await useAsyncData('pipeline-runs-catalog', loadRuns)
 watch([dateRange, requestedProjectId], () => void refresh())
-const selectedSnapshot = computed(() => data.value?.snapshots.find(snapshot => snapshot.run.id === route.query.run) ?? null)
+const previewRunId = computed(() => typeof route.query.preview === 'string' ? route.query.preview : '')
+const previewProjectId = computed(() => typeof route.query.previewProject === 'string' ? route.query.previewProject : '')
+const previewPipelineId = computed(() => typeof route.query.previewPipeline === 'string' ? route.query.previewPipeline : '')
+const previewSnapshot = computed(() => data.value?.snapshots.find(snapshot => (
+  snapshot.run.id === previewRunId.value
+  && snapshot.projectId === previewProjectId.value
+  && snapshot.run.pipeline_id === previewPipelineId.value
+)) ?? null)
 const {
   applyRunUpdates,
   isRefreshing: isPollingRefreshing,
@@ -130,14 +118,6 @@ const {
   updateRunDetails,
   { refreshCatalog: refreshRunCatalog },
 )
-const readinessProjectName = computed(() => {
-  const project = projects.value.find(candidate => candidate.id === runReadiness.value?.project_id)
-  return project?.name ?? 'Current project'
-})
-const selectedActivity = computed<ActivityResponse | null>(() => {
-  const activityId = selectedSnapshot.value?.run.current_activity_run?.activity_id
-  return activityId ? data.value?.activitiesById.get(activityId) ?? null : null
-})
 const displayedRuns = computed(() => {
   const createdFrom = pipelineRunCreatedFrom(dateRange.value)
   const cutoff = createdFrom ? Date.parse(createdFrom) : undefined
@@ -163,15 +143,6 @@ async function loadRuns() {
       ...(createdFrom ? { created_from: createdFrom } : {}),
     })),
   ])
-  const selectedPipeline = typeof route.query.pipeline === 'string' ? route.query.pipeline : ''
-  const selectedId = typeof route.query.run === 'string' ? route.query.run : ''
-  if (scopedProjectId && selectedPipeline && selectedId) {
-    const selectedRun = await api.pipelines.getRun(selectedPipeline, selectedId, scopedProjectId)
-    const selectedIndex = discoveredRuns.findIndex(({ run }) => run.id === selectedId)
-    const selectedProjectRun = { projectId: scopedProjectId, run: selectedRun }
-    if (selectedIndex === -1) discoveredRuns.push(selectedProjectRun)
-    else discoveredRuns.splice(selectedIndex, 1, selectedProjectRun)
-  }
   return {
     snapshots: await Promise.all(discoveredRuns.map(({ projectId, run }) => loadSnapshot(run, projectId))),
     pipelineNames: new Map(pipelines.map(pipeline => [pipeline.id, pipeline.name])),
@@ -184,118 +155,19 @@ async function refreshRunCatalog() {
 }
 
 function selectRun(row: RunTableRow) {
-  runActionError.value = ''
-  void router.replace({ query: { project: row.projectId, pipeline: row.pipelineId, run: row.id } })
+  void router.push({
+    query: {
+      ...route.query,
+      preview: row.id,
+      previewProject: row.projectId,
+      previewPipeline: row.pipelineId,
+    },
+  })
 }
 
 function selectProject(value: string | string[]) {
   if (typeof value !== 'string' || value === selectedProjectValue.value) return
   void router.replace({ query: value === allProjectsValue ? {} : { project: value } })
-}
-
-async function startPreparedRun() {
-  const snapshot = selectedSnapshot.value
-  const run = snapshot?.run
-  if (!snapshot || !run || run.status !== 'prepared' || startingRun.value) return
-  startingRun.value = true
-  runActionError.value = ''
-  try {
-    const started = await api.pipelines.startRun(run.pipeline_id, run.id, snapshot.projectId)
-    await applyRunUpdates([started])
-  } catch (cause) {
-    runActionError.value = apiErrorMessage(cause, 'This prepared run could not be started. Please try again.')
-  } finally {
-    startingRun.value = false
-  }
-}
-
-function newIdempotencyKey() {
-  if (import.meta.client && typeof crypto.randomUUID === 'function') return `human-decision-${crypto.randomUUID()}`
-  return `human-decision-${Date.now()}-${Math.random().toString(36).slice(2)}`
-}
-
-async function submitHumanDecision(decision: ActivityRunHumanDecision, comment: string | null) {
-  const snapshot = selectedSnapshot.value
-  const run = snapshot?.run
-  const activityRun = run?.current_activity_run
-  if (!snapshot || !run || !activityRun || continuingRun.value) return
-
-  const previousAttempt = humanDecisionAttempt.value
-  const attempt = previousAttempt?.activityRunId === activityRun.id
-    && previousAttempt.decision === decision
-    && previousAttempt.comment === comment
-    ? previousAttempt
-    : {
-        activityRunId: activityRun.id,
-        idempotencyKey: newIdempotencyKey(),
-        decision,
-        comment,
-      }
-  humanDecisionAttempt.value = attempt
-  continuingRun.value = true
-  runActionError.value = ''
-
-  let decisionRecorded = activityRun.next_action !== 'submit_human_decision'
-  try {
-    if (!decisionRecorded) {
-      if (!activityRun.continuation_token) throw new Error('The activity continuation token is missing.')
-      const continuedActivity = await api.activities.continueRun(activityRun.activity_id, activityRun.id, snapshot.projectId, {
-        pipeline_run_id: run.id,
-        lease_token: null,
-        continuation_token: activityRun.continuation_token,
-        idempotency_key: attempt.idempotencyKey,
-        result: {
-          action: 'submit_human_decision',
-          decision,
-          comment,
-        },
-      })
-      decisionRecorded = true
-      replaceCurrentActivity(run.id, continuedActivity)
-    }
-
-    await continueSelectedPipeline()
-    humanDecisionAttempt.value = null
-  } catch (cause) {
-    runActionError.value = decisionRecorded
-      ? 'The decision was recorded, but the pipeline could not be resumed. Use “Continue pipeline” to retry.'
-      : apiErrorMessage(cause, 'The human decision could not be recorded. Please try again.')
-  } finally {
-    continuingRun.value = false
-  }
-}
-
-async function retryPipelineContinuation() {
-  if (continuingRun.value) return
-  continuingRun.value = true
-  runActionError.value = ''
-  try {
-    await continueSelectedPipeline()
-    humanDecisionAttempt.value = null
-  } catch (cause) {
-    runActionError.value = apiErrorMessage(cause, 'The decision is recorded, but the pipeline still could not be resumed.')
-  } finally {
-    continuingRun.value = false
-  }
-}
-
-async function continueSelectedPipeline() {
-  const snapshot = selectedSnapshot.value
-  const run = snapshot?.run
-  if (!snapshot || !run) return
-  const continued = await api.pipelines.continueRun(run.pipeline_id, run.id, snapshot.projectId, { lease_token: null })
-  await applyRunUpdates([continued])
-  await refreshHumanGateNotifications()
-}
-
-function replaceCurrentActivity(runId: string, activityRun: NonNullable<PipelineRunResponse['current_activity_run']>) {
-  if (!data.value) return
-  data.value = {
-    ...data.value,
-    snapshots: data.value.snapshots.map(snapshot => snapshot.run.id === runId
-      ? { ...snapshot, run: { ...snapshot.run, current_activity_run: activityRun } }
-      : snapshot),
-  }
 }
 
 async function updateRunDetails(updates: PipelineRunResponse[]) {
@@ -304,38 +176,30 @@ async function updateRunDetails(updates: PipelineRunResponse[]) {
     ...data.value,
     snapshots: await mergeSnapshots(data.value.snapshots, updates),
   }
-  if (selectedSnapshot.value?.run.status === 'queued') await refreshRunReadiness()
-  else clearRunReadiness()
 }
 
-async function refreshRunReadiness() {
-  const snapshot = selectedSnapshot.value
-  const run = snapshot?.run
-  const request = ++readinessRequest
-  if (!snapshot || !run || run.status !== 'queued') {
-    clearRunReadiness()
-    return
-  }
-  runReadinessLoading.value = true
-  runReadinessError.value = ''
-  try {
-    const readiness = await api.pipelines.getRunReadiness(run.pipeline_id, run.id, snapshot.projectId)
-    if (request !== readinessRequest) return
-    runReadiness.value = readiness
-  } catch (cause) {
-    if (request !== readinessRequest) return
-    runReadiness.value = null
-    runReadinessError.value = apiErrorMessage(cause, 'Worker readiness could not be loaded. The run will remain queued and retry automatically.')
-  } finally {
-    if (request === readinessRequest) runReadinessLoading.value = false
-  }
+function closePreview(open: boolean) {
+  if (open) return
+  const { preview, previewProject, previewPipeline, ...query } = route.query
+  void router.replace({ query })
 }
 
-function clearRunReadiness() {
-  readinessRequest += 1
-  runReadiness.value = null
-  runReadinessLoading.value = false
-  runReadinessError.value = ''
+function openPreviewDetails() {
+  const snapshot = previewSnapshot.value
+  if (!snapshot) return
+  void router.push(pipelineRunDetailRoute({
+    projectId: snapshot.projectId,
+    pipelineId: snapshot.run.pipeline_id,
+    runId: snapshot.run.id,
+  }))
+}
+
+function openRunDetails(row: RunTableRow) {
+  void router.push(pipelineRunDetailRoute({
+    projectId: row.projectId,
+    pipelineId: row.pipelineId,
+    runId: row.id,
+  }))
 }
 
 function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRow {
@@ -356,21 +220,6 @@ function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRo
     runBy: run.created_by,
   }
 }
-
-watch(
-  () => [selectedSnapshot.value?.run.id, selectedSnapshot.value?.run.status],
-  () => void refreshRunReadiness(),
-)
-onMounted(() => void refreshRunReadiness())
-watch(
-  () => [route.hash, selectedSnapshot.value?.run.id, selectedSnapshot.value?.run.status],
-  async () => {
-    if (!import.meta.client || route.hash !== '#human-gate' || selectedSnapshot.value?.run.status !== 'waiting') return
-    await nextTick()
-    document.getElementById('human-gate')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  },
-  { immediate: true },
-)
 
 definePageMeta({ layout: 'app', alias: ['/'] })
 useHead({ title: 'Runs · Looping Louie' })
@@ -431,44 +280,21 @@ useHead({ title: 'Runs · Looping Louie' })
               {{ (row as RunTableRow).status }}
             </span>
           </template>
+          <template #cell-details="{ row }">
+            <UiButton size="sm" variant="secondary" @click="openRunDetails(row as RunTableRow)">Open details</UiButton>
+          </template>
           <template #empty>No runs match these filters.</template>
         </UiTable>
-        <div v-if="selectedSnapshot?.run.status === 'prepared'" class="runs-action">
-          <p>This run is prepared and will not execute until it is started.</p>
-          <UiButton :loading="startingRun" @click="startPreparedRun">Start run</UiButton>
-        </div>
-        <WorkerReadinessPanel
-          v-else-if="selectedSnapshot?.run.status === 'queued'"
-          :readiness="runReadiness"
-          :loading="runReadinessLoading"
-          :error="runReadinessError"
-          :project-name="readinessProjectName"
-          @retry="refreshRunReadiness"
-        />
-        <div v-else-if="selectedSnapshot?.run.status === 'claimed'" class="runs-action runs-action--informative" role="status">
-          <div>
-            <strong>Claimed by the runtime</strong>
-            <p>The runtime has claimed this run and may still be preparing it before execution begins.</p>
-          </div>
-        </div>
-        <HumanDecisionPanel
-          v-if="selectedSnapshot?.run.status === 'waiting'"
-          :activity="selectedActivity"
-          :activity-run="selectedSnapshot.run.current_activity_run"
-          :loading="continuingRun"
-          @decide="submitHumanDecision"
-          @continue="retryPipelineContinuation"
-        />
-        <p v-if="runActionError" class="runs-error" role="alert">{{ runActionError }}</p>
-        <RunTimeline
-          v-if="selectedSnapshot"
-          :run="selectedSnapshot.run"
-          :events="selectedSnapshot.events"
-          :pipeline-name="data?.pipelineNames.get(selectedSnapshot.run.pipeline_id)"
-          :activities-by-id="data?.activitiesById"
-        />
       </div>
     </UiAsyncStage>
+    <RunPreviewDrawer
+      :open="Boolean(previewSnapshot)"
+      :snapshot="previewSnapshot"
+      :project-name="previewSnapshot ? pipelineRunProjectName(projects, previewSnapshot.projectId) : ''"
+      :pipeline-name="previewSnapshot ? data?.pipelineNames.get(previewSnapshot.run.pipeline_id) ?? previewSnapshot.run.pipeline_id : ''"
+      @update:open="closePreview"
+      @open-details="openPreviewDetails"
+    />
   </PageShell>
 </template>
 
@@ -482,9 +308,4 @@ useHead({ title: 'Runs · Looping Louie' })
 .runs-status--running { color: var(--ll-color-primary-depth); background: var(--ll-color-blue-100); }
 .runs-status--action-required, .runs-status--failed { color: var(--ll-color-brand-ink); background: var(--ll-color-red-100); }
 .runs-status--prepared, .runs-status--succeeded { color: var(--ll-color-ink); background: var(--ll-color-highlight); }
-.runs-action { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-4); padding: var(--ll-space-4); background: var(--ll-color-metal-025); border: 1px solid var(--ll-color-divider); border-radius: var(--ui-surface-radius, var(--ll-radius-structural)); }
-.runs-action--informative { justify-content: flex-start; }
-.runs-action--informative > div { display: grid; gap: var(--ll-space-2); }
-.runs-action p { margin: 0; color: var(--ll-color-text-muted); }
-.runs-error { margin: 0; color: var(--ll-color-brand-ink); }
 </style>
