@@ -22,8 +22,8 @@ The `(app)` directory is a Nuxt route group. Route groups organize related
 pages without adding their name to the URL, so
 `pages/(app)/runs/index.vue` maps to `/runs`, not `/app/runs`. This project
 uses the group for operational application pages that share the `app` layout;
-routes such as `design-system` and `legacy` remain outside it. Nuxt also exposes
-the group as `route.meta.groups` when route-specific behavior needs it.
+the `design-system` route remains outside it. Nuxt also exposes the group as
+`route.meta.groups` when route-specific behavior needs it.
 
 Do not define both `pages/(app)/runs.vue` and `pages/(app)/runs/`. Nuxt treats
 that file-directory pairing as a route collision and can omit descendant routes
