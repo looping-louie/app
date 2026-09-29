@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Ref, ShallowRef } from 'vue'
+import SettingsPageShell from '~/components/settings/SettingsPageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiCollectionGroupTitle from '~/components/ui/CollectionGroupTitle.vue'
 import UiCommandPalette from '~/components/ui/CommandPalette.vue'
@@ -11,12 +11,6 @@ import type { ExecutionHarness, ExecutionHarnessKind, ModelAvailabilityStatus, M
 import { apiErrorMessage } from '~/utils/api/errors'
 import { collectApiPages } from '~/utils/apiPagination'
 import { executionHarnesses, executionHarnessValue } from '~/utils/executionHarnesses'
-
-interface SettingsNavigationState {
-  dirty: Ref<boolean>
-  saving: Ref<boolean>
-  save: ShallowRef<(() => Promise<void> | void) | null>
-}
 
 interface HarnessOption {
   id: string
@@ -53,7 +47,6 @@ const noDefaultModelId = '__no-default-model__'
 const api = useApiClient()
 const notifications = useNotifications()
 const { modelLogo, providerLogo } = useModelLogo()
-const settingsNavigation = inject<SettingsNavigationState>('settings-navigation')
 const defaultModelId = ref<string | null>(null)
 const defaultModelAvailability = ref<ModelAvailabilityStatus>('enabled')
 const defaultHarness = ref<ExecutionHarness | null>(null)
@@ -62,6 +55,7 @@ const modelPaletteOpen = ref(false)
 const modelPaletteQuery = ref('')
 const savedRemoteSettings = ref('')
 const initialized = ref(false)
+const savingDefaults = ref(false)
 
 const {
   data: executionSettings,
@@ -146,7 +140,7 @@ function selectHarness(harness: HarnessOption) {
 }
 
 async function saveDefaults() {
-  if (!settingsNavigation || settingsNavigation.saving.value) return
+  if (savingDefaults.value) return
   const selectedHarness = harnessOptions.find(harness => harness.id === selectedHarnessId.value)
   if (!selectedHarness?.kind) {
     notifications.error(
@@ -156,7 +150,7 @@ async function saveDefaults() {
     return
   }
 
-  settingsNavigation.saving.value = true
+  savingDefaults.value = true
   try {
     const currentUser = executionSettings.value?.user ?? await api.users.getCurrent()
     const updated = await api.users.replaceSettings({
@@ -175,37 +169,24 @@ async function saveDefaults() {
       apiErrorMessage(cause, 'Your user settings could not be updated. Please try again.'),
     )
   } finally {
-    settingsNavigation.saving.value = false
+    savingDefaults.value = false
   }
 }
 
-if (settingsNavigation) {
-  settingsNavigation.save.value = saveDefaults
-  watch(isDirty, dirty => {
-    settingsNavigation.dirty.value = dirty
-  }, { immediate: true })
-
-  onUnmounted(() => {
-    if (settingsNavigation.save.value === saveDefaults) {
-      settingsNavigation.dirty.value = false
-      settingsNavigation.save.value = null
-    }
-  })
-}
-
-definePageMeta({ pageTransition: false })
+definePageMeta({ layout: 'app', pageTransition: false })
 useHead({ title: 'Settings · Looping Louie' })
 </script>
 
 <template>
-  <div v-if="status === 'pending' || status === 'idle'" class="configuration-state" role="status">
-    Loading execution settings…
-  </div>
-  <div v-else-if="status === 'error'" class="configuration-state configuration-state--error" role="alert">
-    <span>{{ errorLabel }}</span>
-    <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
-  </div>
-  <div v-else class="global-configuration">
+  <SettingsPageShell :show-save="isDirty" :saving="savingDefaults" @save="saveDefaults">
+    <div v-if="status === 'pending' || status === 'idle'" class="configuration-state" role="status">
+      Loading execution settings…
+    </div>
+    <div v-else-if="status === 'error'" class="configuration-state configuration-state--error" role="alert">
+      <span>{{ errorLabel }}</span>
+      <UiButton variant="stroke" size="sm" @click="() => refresh()">Retry</UiButton>
+    </div>
+    <div v-else class="global-configuration">
     <section class="configuration-section" aria-labelledby="default-harness-title">
       <UiCollectionGroupTitle id="default-harness-title" title="Default harness" heading-as="h2" />
       <UiSectionStage inverse="bottom">
@@ -255,7 +236,7 @@ useHead({ title: 'Settings · Looping Louie' })
             <UiToggle
               class="execution-defaults__model-policy-toggle"
               :model-value="defaultModelAvailability === 'enabled'"
-              :disabled="settingsNavigation?.saving.value"
+              :disabled="savingDefaults"
               aria-label="Enable new models by default"
               @update:model-value="updateDefaultModelAvailability($event)"
             />
@@ -263,21 +244,22 @@ useHead({ title: 'Settings · Looping Louie' })
         </div>
       </UiSectionStage>
     </section>
-  </div>
+    </div>
 
-  <UiCommandPalette
-    v-model:open="modelPaletteOpen"
-    v-model:query="modelPaletteQuery"
-    :items="modelPaletteItems"
-    placeholder="Search models…"
-    aria-label="Choose default model"
-    empty-title="No models found"
-    empty-description="Try another model, vendor, or family."
-    option-style="card"
-    size="wide"
-    :keyboard-shortcut="false"
-    @select="selectModel($event)"
-  />
+    <UiCommandPalette
+      v-model:open="modelPaletteOpen"
+      v-model:query="modelPaletteQuery"
+      :items="modelPaletteItems"
+      placeholder="Search models…"
+      aria-label="Choose default model"
+      empty-title="No models found"
+      empty-description="Try another model, vendor, or family."
+      option-style="card"
+      size="wide"
+      :keyboard-shortcut="false"
+      @select="selectModel($event)"
+    />
+  </SettingsPageShell>
 </template>
 
 <style scoped>

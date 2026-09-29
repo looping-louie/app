@@ -17,40 +17,45 @@ For a containerized installation, follow the instructions in
 
 ## Configuration
 
-The application uses `NUXT_API_BASE_URL` to locate the Looping Louie API. It
-defaults to `http://127.0.0.1:2000` for local execution.
-
-Create a local environment file from the template:
+Create a local environment file `.env` in the root of your project (this
+`.env` file will be ignored by Git) You can find the template for this `.env`
+file at [`assets/config/.env.tpl`](assets/config/.env.tpl).
 
 ```bash
 cp assets/config/.env.tpl .env
 ```
 
-Edit `.env` when the API runs at another address:
+Edit `.env` with your desired configuration:
 
 ```env
-NUXT_API_BASE_URL=http://127.0.0.1:2000
+NUXT_API_BASE_URL=http://127.0.0.1:8000
 ```
-
-The `.env` file is ignored by Git. The tracked template is available at
-[`assets/config/.env.tpl`](assets/config/.env.tpl).
 
 ## Execution
 
-Start the Nuxt development server:
-
-```bash
-npm run dev
-```
-
-The application is available at <http://localhost:3000>.
-
-To build and run the production server locally:
+To build and run the production server locally, run:
 
 ```bash
 npm run build
 node .output/server/index.mjs
 ```
+
+## Development
+
+Start the Nuxt development server like this:
+
+```bash
+npm run dev
+```
+
+The application will be available at <http://localhost:3000> (by default).
+
+The development-only design system preview is available at
+<http://localhost:3000/dev/design-system>. Use it as the visual and interaction
+reference when designing or changing any UI component, page, or workflow. This
+route is not included in production builds.
+
+## Docker
 
 The production server also reads `NUXT_API_BASE_URL` from its environment. See
 [`doc/docker.md`](doc/docker.md) for the Docker execution workflow.

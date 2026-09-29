@@ -65,8 +65,8 @@ export function usePipelineRunPolling(
     timer = setTimeout(poll, delay)
   }
 
-  async function fetchRun(run: PipelineRunResponse) {
-    return api.pipelines.getRun(run.pipeline_id, run.id)
+  async function fetchRun(snapshot: PipelineRunSnapshot) {
+    return api.pipelines.getRun(snapshot.run.pipeline_id, snapshot.run.id, snapshot.projectId)
   }
 
   function setScopeFailure(scope: string, message: string | null) {
@@ -101,7 +101,7 @@ export function usePipelineRunPolling(
     polling = true
     isRefreshing.value = true
     try {
-      const results = await Promise.allSettled(candidates.map(snapshot => fetchRun(snapshot.run)))
+      const results = await Promise.allSettled(candidates.map(fetchRun))
       const updates = results.flatMap(result => result.status === 'fulfilled' ? [result.value] : [])
       await applyRunUpdates(updates)
       const failedRun = results.find(result => result.status === 'rejected')
@@ -130,7 +130,9 @@ export function usePipelineRunPolling(
   async function refreshRun(run: PipelineRunResponse) {
     isRefreshing.value = true
     try {
-      const refreshed = await fetchRun(run)
+      const snapshot = getSnapshots().find(candidate => candidate.run.id === run.id)
+      if (!snapshot) throw new Error('The run project context is unavailable.')
+      const refreshed = await fetchRun(snapshot)
       setScopeFailure('runs', null)
       await applyRunUpdates([refreshed])
       schedule()

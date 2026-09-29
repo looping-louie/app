@@ -40,19 +40,15 @@ import type {
   SkillResponse,
   UserResponse,
   UserSettingsRequest,
-  WorkspaceCreateRequest,
-  WorkspacePatchRequest,
-  WorkspaceResponse,
+  ProjectCreateRequest,
+  ProjectPatchRequest,
+  ProjectResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
+const projectOptions = (projectId: string) => ({ headers: { 'X-Project-ID': projectId } })
 
 export function useApiClient() {
-  const activeWorkspaceId = useCookie<string | null>('looping-louie-workspace-id')
-  const workspaceOptions = () => activeWorkspaceId.value
-    ? { headers: { 'X-Project-ID': activeWorkspaceId.value } }
-    : {}
-
   return {
     activities: {
       list: (query: ApiListQuery = {}) => $fetch<ActivityListResponse>('/api/v1/activities', { query }),
@@ -60,8 +56,8 @@ export function useApiClient() {
       create: (body: ActivityCreateRequest) => $fetch<ActivityResponse>('/api/v1/activities', { method: 'POST', body }),
       patch: (id: string, body: ActivityPatchRequest) => $fetch<ActivityResponse>(resourcePath('activities', id), { method: 'PATCH', body }),
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('activities', id), { method: 'DELETE' }),
-      listRuns: (id: string, query: ApiListQuery = {}) => $fetch<ActivityRunListResponse>(`${resourcePath('activities', id)}/runs`, { ...workspaceOptions(), query }),
-      continueRun: (activityId: string, runId: string, body: ActivityRunContinueRequest) => $fetch<ActivityRunResponse>(`${resourcePath('activities', activityId)}/runs/${encodeURIComponent(runId)}/continue`, { ...workspaceOptions(), method: 'POST', body }),
+      listRuns: (id: string, projectId: string, query: ApiListQuery = {}) => $fetch<ActivityRunListResponse>(`${resourcePath('activities', id)}/runs`, { ...projectOptions(projectId), query }),
+      continueRun: (activityId: string, runId: string, projectId: string, body: ActivityRunContinueRequest) => $fetch<ActivityRunResponse>(`${resourcePath('activities', activityId)}/runs/${encodeURIComponent(runId)}/continue`, { ...projectOptions(projectId), method: 'POST', body }),
     },
     pipelines: {
       list: (query: PipelineListQuery = {}) => $fetch<PipelineListResponse>('/api/v1/pipelines', { query }),
@@ -69,15 +65,15 @@ export function useApiClient() {
       create: (body: PipelineCreateRequest) => $fetch<PipelineResponse>('/api/v1/pipelines', { method: 'POST', body }),
       patch: (id: string, body: PipelinePatchRequest) => $fetch<PipelineResponse>(resourcePath('pipelines', id), { method: 'PATCH', body }),
       remove: (id: string) => $fetch<ApiDeleteResponse>(resourcePath('pipelines', id), { method: 'DELETE' }),
-      createRun: (id: string, body: PipelineRunCreateRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', id)}/runs`, { ...workspaceOptions(), method: 'POST', body }),
-      startRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { ...workspaceOptions(), method: 'POST' }),
-      continueRun: (pipelineId: string, runId: string, body: PipelineRunContinueRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/continue`, { ...workspaceOptions(), method: 'POST', body }),
-      getRun: (pipelineId: string, runId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`, workspaceOptions()),
-      getRunReadiness: (pipelineId: string, runId: string) => $fetch<PipelineRunReadinessResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/readiness`, workspaceOptions()),
-      listRunEvents: (pipelineId: string, runId: string, query: ApiListQuery = {}) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`, { ...workspaceOptions(), query }),
+      createRun: (id: string, projectId: string, body: PipelineRunCreateRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', id)}/runs`, { ...projectOptions(projectId), method: 'POST', body }),
+      startRun: (pipelineId: string, runId: string, projectId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/start`, { ...projectOptions(projectId), method: 'POST' }),
+      continueRun: (pipelineId: string, runId: string, projectId: string, body: PipelineRunContinueRequest) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/continue`, { ...projectOptions(projectId), method: 'POST', body }),
+      getRun: (pipelineId: string, runId: string, projectId: string) => $fetch<PipelineRunResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}`, projectOptions(projectId)),
+      getRunReadiness: (pipelineId: string, runId: string, projectId: string) => $fetch<PipelineRunReadinessResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/readiness`, projectOptions(projectId)),
+      listRunEvents: (pipelineId: string, runId: string, projectId: string, query: ApiListQuery = {}) => $fetch<PipelineRunEventListResponse>(`${resourcePath('pipelines', pipelineId)}/runs/${encodeURIComponent(runId)}/events`, { ...projectOptions(projectId), query }),
     },
     pipelineRuns: {
-      list: (query: PipelineRunListQuery = {}) => $fetch<PipelineRunListResponse>('/api/v1/pipeline-runs', { ...workspaceOptions(), query }),
+      list: (projectId: string, query: PipelineRunListQuery = {}) => $fetch<PipelineRunListResponse>('/api/v1/pipeline-runs', { ...projectOptions(projectId), query }),
     },
     personas: {
       list: (query: PersonaListQuery = {}) => $fetch<PersonaListResponse>('/api/v1/personas', { query }),
@@ -106,11 +102,11 @@ export function useApiClient() {
       listPersonas: (signal?: AbortSignal) => $fetch<CatalogPersonaResponse[]>('/api/v1/catalog/personas', { signal }),
       listSkills: (signal?: AbortSignal) => $fetch<CatalogSkillResponse[]>('/api/v1/catalog/skills', { signal }),
     },
-    workspaces: {
-      list: () => $fetch<WorkspaceResponse[]>('/api/v1/projects'),
-      get: (id: string) => $fetch<WorkspaceResponse>(resourcePath('projects', id)),
-      create: (body: WorkspaceCreateRequest) => $fetch<WorkspaceResponse>('/api/v1/projects', { method: 'POST', body }),
-      patch: (id: string, body: WorkspacePatchRequest) => $fetch<WorkspaceResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
+    projects: {
+      list: () => $fetch<ProjectResponse[]>('/api/v1/projects'),
+      get: (id: string) => $fetch<ProjectResponse>(resourcePath('projects', id)),
+      create: (body: ProjectCreateRequest) => $fetch<ProjectResponse>('/api/v1/projects', { method: 'POST', body }),
+      patch: (id: string, body: ProjectPatchRequest) => $fetch<ProjectResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),

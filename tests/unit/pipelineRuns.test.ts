@@ -9,6 +9,7 @@ import {
   eventLabel,
   harnessTurns,
   needsTerminalEventRefresh,
+  pipelineRunDisplayStatus,
   turnErrorMessages,
   turnUsage,
 } from '~/utils/pipelineRuns'
@@ -63,7 +64,7 @@ describe('Pipeline run transformations', () => {
       },
       created_at: '2026-08-31T10:00:01+00:00',
     }
-    const snapshot = { run: pipelineRun(), events: [completedEvent, failedEvent, schedulerEvent] }
+    const snapshot = { run: pipelineRun(), events: [completedEvent, failedEvent, schedulerEvent], projectId: 'project-1' }
     const metrics = observabilityMetrics([snapshot])
     const logs = observabilityLogs([snapshot])
 
@@ -88,7 +89,7 @@ describe('Pipeline run transformations', () => {
 
   it('recognizes the terminal scheduler event used by the timeline', () => {
     const run = pipelineRun()
-    const snapshot = { run, events: [failedEvent] }
+    const snapshot = { run, events: [failedEvent], projectId: 'project-1' }
 
     expect(needsTerminalEventRefresh(snapshot)).toBe(true)
     snapshot.events.push({
@@ -105,6 +106,42 @@ describe('Pipeline run transformations', () => {
       created_at: '2026-08-31T10:00:01+00:00',
     })
     expect(needsTerminalEventRefresh(snapshot)).toBe(false)
+  })
+
+  it('shows a failed outcome when a terminal run contains a failed step', () => {
+    const run = pipelineRun()
+    run.status = 'completed'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Failed', outcome: 'failed' })
+  })
+
+  it('shows a successful outcome when a terminal run has no failed steps', () => {
+    const run = pipelineRun()
+    run.status = 'completed'
+    run.steps[0]!.status = 'completed'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Succeeded', outcome: 'succeeded' })
+  })
+
+  it('shows waiting human gates as requiring action', () => {
+    const run = pipelineRun()
+    run.status = 'waiting'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Action required', outcome: 'action-required' })
+  })
+
+  it('shows active executions as running', () => {
+    const run = pipelineRun()
+    run.status = 'in_progress'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Running', outcome: 'running' })
+  })
+
+  it('does not describe a prepared run as already running', () => {
+    const run = pipelineRun()
+    run.status = 'prepared'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Prepared', outcome: 'prepared' })
   })
 })
 

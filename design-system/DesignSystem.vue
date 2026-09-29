@@ -347,7 +347,7 @@ const mainNavigationLinks = [
 ]
 
 const interfaceTabs = [
-  { value: 'agents', label: 'Personas', mark: '✣', description: 'Configure specialist personas, tools, models, and instructions in one clear workspace.' },
+  { value: 'agents', label: 'Personas', mark: '✣', description: 'Configure specialist personas, tools, models, and instructions in one clear place.' },
   { value: 'workflows', label: 'Workflows', mark: '⌘', description: 'Compose typed steps, branches, retries, and human checkpoints into inspectable flows.' },
   { value: 'harness', label: 'Harness', mark: '⌁', description: 'Coordinate multiple modes and specialists around shared state and a single objective.' },
   { value: 'memory', label: 'Memory', mark: '◌', description: 'Give every loop durable context, semantic recall, and thread-aware storage.' },
