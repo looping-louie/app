@@ -108,7 +108,6 @@ const previewSnapshot = computed(() => data.value?.snapshots.find(snapshot => (
   && snapshot.run.pipeline_id === previewPipelineId.value
 )) ?? null)
 const {
-  applyRunUpdates,
   isRefreshing: isPollingRefreshing,
   isStale,
   staleMessage,
