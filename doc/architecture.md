@@ -21,9 +21,15 @@ pages/(app)/runs/
 The `(app)` directory is a Nuxt route group. Route groups organize related
 pages without adding their name to the URL, so
 `pages/(app)/runs/index.vue` maps to `/runs`, not `/app/runs`. This project
-uses the group for operational application pages that share the `app` layout;
-the `design-system` route remains outside it. Nuxt also exposes the group as
-`route.meta.groups` when route-specific behavior needs it.
+uses the group for operational application pages that share the `app` layout.
+Nuxt also exposes the group as `route.meta.groups` when route-specific behavior
+needs it.
+
+The standalone visual showcase lives in `design-system/`, alongside application
+directories such as `layouts/` and `pages/`. It is development-only source, not
+a production Nuxt page. During `npm run dev`, `nuxt.config.ts` registers it at
+`/dev/design-system`; production builds exclude that route. It must not be moved
+under `pages/` unless a public product route is explicitly required.
 
 Do not define both `pages/(app)/runs.vue` and `pages/(app)/runs/`. Nuxt treats
 that file-directory pairing as a route collision and can omit descendant routes

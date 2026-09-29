@@ -50,6 +50,11 @@ npm run dev
 
 The application will be available at <http://localhost:3000> (by default).
 
+The development-only design system preview is available at
+<http://localhost:3000/dev/design-system>. Use it as the visual and interaction
+reference when designing or changing any UI component, page, or workflow. This
+route is not included in production builds.
+
 ## Docker
 
 The production server also reads `NUXT_API_BASE_URL` from its environment. See
