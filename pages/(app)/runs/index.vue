@@ -24,6 +24,7 @@ import {
   pipelineRunDisplayStatus,
   runPrompt,
   type PipelineRunOutcome,
+  type PipelineRunStatusTone,
   type PipelineRunSummary,
 } from '~/utils/pipelineRuns'
 import { pipelineRunDetailRoute } from '~/utils/pipelineRunRoutes'
@@ -37,19 +38,21 @@ interface RunTableRow extends Record<string, unknown> {
   pipeline: string
   status: string
   outcome: PipelineRunOutcome
+  statusTone: PipelineRunStatusTone
   created: string
+  createdFull: string
   createdValue: string
   runBy: string
 }
 
 const tableColumns = [
   { key: 'name', label: 'Initial prompt', width: '26%' },
-  { key: 'project', label: 'Project', width: '14%' },
-  { key: 'pipeline', label: 'Pipeline', width: '16%' },
-  { key: 'status', label: 'Status', type: 'option' as const },
-  { key: 'created', label: 'Created' },
-  { key: 'runBy', label: 'Run by' },
-  { key: 'details', label: 'Details', align: 'end' as const },
+  { key: 'project', label: 'Project', width: '14%', align: 'center' as const },
+  { key: 'pipeline', label: 'Pipeline', width: '16%', align: 'center' as const },
+  { key: 'status', label: 'Status', type: 'option' as const, align: 'center' as const },
+  { key: 'created', label: 'Created', align: 'center' as const },
+  { key: 'runBy', label: 'By', align: 'center' as const },
+  { key: 'details', label: 'Details', align: 'center' as const },
 ]
 
 const runStatusOptions = [
@@ -74,7 +77,8 @@ const dateRangeOptions = [
 const route = useRoute()
 const router = useRouter()
 const api = useApiClient()
-const { formatDateTime } = useDateTime()
+const { formatCompactRelativeTime, formatDateTime } = useDateTime()
+const relativeTimeNow = useMinuteClock()
 const projectContext = useProjectContext()
 const { error: projectError, projects, status: projectStatus } = projectContext
 const allProjectsValue = '__all_projects__'
@@ -213,14 +217,6 @@ function openPreviewDetails() {
   }))
 }
 
-function openRunDetails(row: RunTableRow) {
-  void router.push(pipelineRunDetailRoute({
-    projectId: row.projectId,
-    pipelineId: row.pipelineId,
-    runId: row.id,
-  }))
-}
-
 function toTableRow(snapshot: PipelineRunSummary, pipeline: string): RunTableRow {
   const { run } = snapshot
   const displayStatus = pipelineRunDisplayStatus(run)
@@ -233,7 +229,9 @@ function toTableRow(snapshot: PipelineRunSummary, pipeline: string): RunTableRow
     pipeline,
     status: displayStatus.label,
     outcome: displayStatus.outcome,
-    created: formatDateTime(run.created_at),
+    statusTone: displayStatus.tone,
+    created: formatCompactRelativeTime(run.created_at, relativeTimeNow.value),
+    createdFull: formatDateTime(run.created_at),
     createdValue: run.created_at,
     runBy: run.created_by,
   }
@@ -300,18 +298,36 @@ useHead({ title: 'Runs · Looping Louie' })
             >{{ (row as RunTableRow).pipeline }}</UiPill>
           </template>
           <template #cell-status="{ row }">
-            <span
-              class="runs-status"
-              :class="`runs-status--${(row as RunTableRow).outcome}`"
-            >
-              <svg v-if="(row as RunTableRow).outcome === 'action-required'" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                <path d="M128,24a104,104,0,1,0,104,104A104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm8-120v40a8,8,0,0,1-16,0V96a8,8,0,0,1,16,0Zm4,72a12,12,0,1,1-12-12A12,12,0,0,1,140,168Z" />
-              </svg>
+            <UiPill :focusable="false" :tone="(row as RunTableRow).statusTone">
+              <template v-if="(row as RunTableRow).outcome === 'action-required'" #icon>
+                <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                  <path d="M128,24a104,104,0,1,0,104,104A104.11,104.11,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216Zm8-120v40a8,8,0,0,1-16,0V96a8,8,0,0,1,16,0Zm4,72a12,12,0,1,1-12-12A12,12,0,0,1,140,168Z" />
+                </svg>
+              </template>
               {{ (row as RunTableRow).status }}
-            </span>
+            </UiPill>
+          </template>
+          <template #cell-created="{ row }">
+            <UiPill
+              :tooltip="(row as RunTableRow).createdFull"
+              :aria-label="`${(row as RunTableRow).created}, created ${(row as RunTableRow).createdFull}`"
+            >{{ (row as RunTableRow).created }}</UiPill>
           </template>
           <template #cell-details="{ row }">
-            <UiButton size="sm" variant="secondary" @click="openRunDetails(row as RunTableRow)">Open details</UiButton>
+            <UiButton
+              size="sm"
+              variant="secondary"
+              icon-only
+              aria-label="Open details"
+              title="Open details"
+              @click="selectRun(row as RunTableRow)"
+            >
+              <template #leading>
+                <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                  <path d="M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z" />
+                </svg>
+              </template>
+            </UiButton>
           </template>
           <template #empty>{{ emptyMessage }}</template>
         </UiTable>
@@ -339,9 +355,4 @@ useHead({ title: 'Runs · Looping Louie' })
 .runs-link { padding: 0; color: var(--ll-color-ink); background: transparent; border: 0; font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
 .runs-link:hover, .runs-link:focus-visible { color: var(--ll-color-primary); text-decoration: underline; }
 .runs-link--action { color: var(--ll-color-brand-ink); }
-.runs-status { display: inline-flex; align-items: center; gap: var(--ll-space-2); padding: 0.25rem 0.625rem; border-radius: var(--ll-radius-pill); font-size: var(--ll-text-xs); font-weight: 650; line-height: 1.35; white-space: nowrap; }
-.runs-status svg { width: 0.9rem; height: 0.9rem; }
-.runs-status--running { color: var(--ll-color-primary-depth); background: var(--ll-color-blue-100); }
-.runs-status--action-required, .runs-status--failed { color: var(--ll-color-brand-ink); background: var(--ll-color-red-100); }
-.runs-status--prepared, .runs-status--succeeded { color: var(--ll-color-ink); background: var(--ll-color-highlight); }
 </style>
