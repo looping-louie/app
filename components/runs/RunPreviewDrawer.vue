@@ -2,12 +2,12 @@
 import UiButton from '~/components/ui/Button.vue'
 import UiDrawer from '~/components/ui/Drawer.vue'
 import UiPill from '~/components/ui/Pill.vue'
-import type { PipelineRunSnapshot } from '~/utils/pipelineRuns'
-import { pipelineRunDisplayStatus, runPrompt, runTokenCount } from '~/utils/pipelineRuns'
+import type { PipelineRunSummary } from '~/utils/pipelineRuns'
+import { pipelineRunDisplayStatus, runPrompt } from '~/utils/pipelineRuns'
 
 const props = defineProps<{
   open: boolean
-  snapshot: PipelineRunSnapshot | null
+  snapshot: PipelineRunSummary | null
   projectName: string
   pipelineName: string
 }>()
@@ -52,10 +52,6 @@ const currentActivity = computed(() => props.snapshot?.run.current_activity_run)
         <div>
           <dt>Updated</dt>
           <dd>{{ formatDateTime(snapshot.run.updated_at) }}</dd>
-        </div>
-        <div>
-          <dt>Tokens</dt>
-          <dd>{{ runTokenCount(snapshot.events).toLocaleString() }}</dd>
         </div>
         <div>
           <dt>Run by</dt>

@@ -7,6 +7,11 @@ export interface PipelineRunSnapshot {
   projectId: string
 }
 
+export interface PipelineRunSummary {
+  run: PipelineRunResponse
+  projectId: string
+}
+
 export interface HarnessTurnRecord extends ParsedHarnessTurnEvent {
   event: PipelineRunEventResponse
 }

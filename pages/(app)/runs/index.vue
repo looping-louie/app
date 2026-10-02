@@ -8,21 +8,22 @@ import UiDataFreshnessNotice from '~/components/ui/DataFreshnessNotice.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiTable from '~/components/ui/Table.vue'
 import type { PipelineRunResponse, PipelineRunStatus } from '~/types/api'
-import { collectApiPages } from '~/utils/apiPagination'
 import {
-  collectProjectPipelineRuns,
   DEFAULT_PIPELINE_RUN_DATE_RANGE,
   filterPipelineRunSnapshots,
+  findPipelineRunSummary,
+  loadPipelineRunCatalog,
+  mergePipelineRunSummaries,
   pipelineRunCreatedFrom,
   pipelineRunProjectName,
   runCatalogProjectIds,
+  sortPipelineRunCatalogRows,
 } from '~/utils/pipelineRunCatalog'
 import {
   pipelineRunDisplayStatus,
   runPrompt,
-  runTokenCount,
   type PipelineRunOutcome,
-  type PipelineRunSnapshot,
+  type PipelineRunSummary,
 } from '~/utils/pipelineRuns'
 import { pipelineRunDetailRoute } from '~/utils/pipelineRunRoutes'
 
@@ -37,7 +38,6 @@ interface RunTableRow extends Record<string, unknown> {
   outcome: PipelineRunOutcome
   created: string
   createdValue: string
-  tokens: string
   runBy: string
 }
 
@@ -47,7 +47,6 @@ const tableColumns = [
   { key: 'pipeline', label: 'Pipeline', width: '16%' },
   { key: 'status', label: 'Status', type: 'option' as const },
   { key: 'created', label: 'Created' },
-  { key: 'tokens', label: 'Tokens', align: 'end' as const },
   { key: 'runBy', label: 'Run by' },
   { key: 'details', label: 'Details', align: 'end' as const },
 ]
@@ -74,9 +73,9 @@ const dateRangeOptions = [
 const route = useRoute()
 const router = useRouter()
 const api = useApiClient()
-const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
 const { formatDateTime } = useDateTime()
-const { projects } = useProjectContext()
+const projectContext = useProjectContext()
+const { error: projectError, projects, status: projectStatus } = projectContext
 const allProjectsValue = '__all_projects__'
 const requestedProjectId = computed(() => {
   const requested = typeof route.query.project === 'string' ? route.query.project : ''
@@ -102,52 +101,63 @@ watch([dateRange, requestedProjectId], () => void refresh())
 const previewRunId = computed(() => typeof route.query.preview === 'string' ? route.query.preview : '')
 const previewProjectId = computed(() => typeof route.query.previewProject === 'string' ? route.query.previewProject : '')
 const previewPipelineId = computed(() => typeof route.query.previewPipeline === 'string' ? route.query.previewPipeline : '')
-const previewSnapshot = computed(() => data.value?.snapshots.find(snapshot => (
-  snapshot.run.id === previewRunId.value
-  && snapshot.projectId === previewProjectId.value
-  && snapshot.run.pipeline_id === previewPipelineId.value
-)) ?? null)
+const previewSnapshot = computed(() => findPipelineRunSummary(
+  data.value?.summaries ?? [],
+  previewRunId.value,
+  previewProjectId.value,
+  previewPipelineId.value,
+))
 const {
   isRefreshing: isPollingRefreshing,
   isStale,
   staleMessage,
   refresh: retryPolling,
 } = usePipelineRunPolling(
-  () => data.value?.snapshots ?? [],
+  () => data.value?.summaries ?? [],
   updateRunDetails,
   { refreshCatalog: refreshRunCatalog },
 )
 const displayedRuns = computed(() => {
   const createdFrom = pipelineRunCreatedFrom(dateRange.value)
   const cutoff = createdFrom ? Date.parse(createdFrom) : undefined
-  const rows = filterPipelineRunSnapshots(data.value?.snapshots ?? [], runStatus.value, cutoff)
+  const rows = filterPipelineRunSnapshots(data.value?.summaries ?? [], runStatus.value, cutoff)
     .map(snapshot => toTableRow(snapshot, data.value?.pipelineNames.get(snapshot.run.pipeline_id) ?? snapshot.run.pipeline_id))
-  return rows.sort((first, second) => {
-    if (runSort.value === 'alphabetical-desc') return second.name.localeCompare(first.name)
-    if (runSort.value === 'oldest') return Date.parse(first.createdValue) - Date.parse(second.createdValue)
-    if (runSort.value === 'newest') return Date.parse(second.createdValue) - Date.parse(first.createdValue)
-    return first.name.localeCompare(second.name)
-  })
+  return sortPipelineRunCatalogRows(rows, runSort.value)
 })
 
 async function loadRuns() {
+  if (projectStatus.value === 'error') throw new Error(projectError.value || 'Projects could not be loaded.')
   const scopedProjectId = requestedProjectId.value
   const projectIds = runCatalogProjectIds(projects.value, scopedProjectId)
-  if (!projectIds.length) return { snapshots: [], pipelineNames: new Map(), activitiesById: new Map() }
+  if (!projectIds.length) return { summaries: [], pipelineNames: new Map<string, string>(), failedProjectIds: [] }
   const createdFrom = pipelineRunCreatedFrom(dateRange.value)
-  const [pipelines, discoveredRuns] = await Promise.all([
-    collectApiPages(offset => api.pipelines.list({ offset })),
-    collectProjectPipelineRuns(projectIds, (projectId, offset) => api.pipelineRuns.list(projectId, {
+  return loadPipelineRunCatalog(
+    projectIds,
+    offset => api.pipelines.list({ offset }),
+    (projectId, offset) => api.pipelineRuns.list(projectId, {
       offset,
       ...(createdFrom ? { created_from: createdFrom } : {}),
-    })),
-  ])
-  return {
-    snapshots: await Promise.all(discoveredRuns.map(({ projectId, run }) => loadSnapshot(run, projectId))),
-    pipelineNames: new Map(pipelines.map(pipeline => [pipeline.id, pipeline.name])),
-    activitiesById: new Map(pipelines.flatMap(pipeline => pipeline.steps.map(step => [step.id, step] as const))),
-  }
+    }),
+  )
 }
+
+async function retryCatalog() {
+  if (projectStatus.value === 'error') await projectContext.initialize(true)
+  await refresh()
+}
+
+const partialCoverageMessage = computed(() => {
+  const failedIds = data.value?.failedProjectIds ?? []
+  if (!failedIds.length) return ''
+  const names = failedIds.map(id => pipelineRunProjectName(projects.value, id))
+  return `Runs could not be loaded for ${names.join(', ')}. The catalog is incomplete.`
+})
+
+const emptyMessage = computed(() => {
+  if (!projects.value.length) return 'No projects are available yet.'
+  if (!(data.value?.summaries.length)) return 'No runs have been created yet.'
+  return 'No runs match these filters.'
+})
 
 async function refreshRunCatalog() {
   await refresh()
@@ -169,11 +179,11 @@ function selectProject(value: string | string[]) {
   void router.replace({ query: value === allProjectsValue ? {} : { project: value } })
 }
 
-async function updateRunDetails(updates: PipelineRunResponse[]) {
+function updateRunDetails(updates: PipelineRunResponse[]) {
   if (!data.value) return
   data.value = {
     ...data.value,
-    snapshots: await mergeSnapshots(data.value.snapshots, updates),
+    summaries: mergePipelineRunSummaries(data.value.summaries, updates),
   }
 }
 
@@ -201,8 +211,8 @@ function openRunDetails(row: RunTableRow) {
   }))
 }
 
-function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRow {
-  const { run, events } = snapshot
+function toTableRow(snapshot: PipelineRunSummary, pipeline: string): RunTableRow {
+  const { run } = snapshot
   const displayStatus = pipelineRunDisplayStatus(run)
   return {
     id: run.id,
@@ -215,7 +225,6 @@ function toTableRow(snapshot: PipelineRunSnapshot, pipeline: string): RunTableRo
     outcome: displayStatus.outcome,
     created: formatDateTime(run.created_at),
     createdValue: run.created_at,
-    tokens: runTokenCount(events).toLocaleString(),
     runBy: run.created_by,
   }
 }
@@ -256,8 +265,12 @@ useHead({ title: 'Runs · Looping Louie' })
       />
     </template>
 
-    <UiAsyncStage :status="status" loading-label="Loading runs…" error-label="Runs could not be loaded." @retry="refresh">
+    <UiAsyncStage :status="status" loading-label="Loading runs…" :error-label="projectError || 'Runs could not be loaded.'" @retry="retryCatalog">
       <div class="runs-content">
+        <div v-if="partialCoverageMessage" class="runs-coverage-warning" role="alert">
+          <span>{{ partialCoverageMessage }}</span>
+          <UiButton size="sm" variant="stroke" @click="() => refresh()">Retry</UiButton>
+        </div>
         <UiDataFreshnessNotice v-if="isStale" :description="staleMessage" :loading="isPollingRefreshing" @retry="retryPolling" />
         <UiTable :columns="tableColumns" :rows="displayedRuns" caption="Pipeline runs">
           <template #cell-name="{ row }">
@@ -282,7 +295,7 @@ useHead({ title: 'Runs · Looping Louie' })
           <template #cell-details="{ row }">
             <UiButton size="sm" variant="secondary" @click="openRunDetails(row as RunTableRow)">Open details</UiButton>
           </template>
-          <template #empty>No runs match these filters.</template>
+          <template #empty>{{ emptyMessage }}</template>
         </UiTable>
       </div>
     </UiAsyncStage>
@@ -299,6 +312,7 @@ useHead({ title: 'Runs · Looping Louie' })
 
 <style scoped>
 .runs-content { display: grid; gap: var(--ll-space-6); }
+.runs-coverage-warning { display: flex; align-items: center; justify-content: space-between; gap: var(--ll-space-4); padding: var(--ll-space-3) var(--ll-space-4); color: var(--ll-color-brand-ink); background: var(--ll-color-red-100); border-radius: var(--ll-radius-structural); }
 .runs-link { padding: 0; color: var(--ll-color-ink); background: transparent; border: 0; font: inherit; font-weight: 650; text-align: left; cursor: pointer; }
 .runs-link:hover, .runs-link:focus-visible { color: var(--ll-color-primary); text-decoration: underline; }
 .runs-link--action { color: var(--ll-color-brand-ink); }

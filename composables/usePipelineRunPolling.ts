@@ -1,6 +1,6 @@
 import type { PipelineRunResponse } from '~/types/api'
 import { apiErrorSummary } from '~/utils/api/errors'
-import { needsTerminalEventRefresh, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
+import { needsTerminalEventRefresh, type PipelineRunSnapshot, type PipelineRunSummary } from '~/utils/pipelineRuns'
 
 const LIVE_POLL_DELAY = 2500
 const MAX_PASSIVE_POLL_DELAY = 30000
@@ -11,7 +11,7 @@ interface PipelineRunPollingOptions {
 }
 
 export function usePipelineRunPolling(
-  getSnapshots: () => PipelineRunSnapshot[],
+  getSnapshots: () => Array<PipelineRunSnapshot | PipelineRunSummary>,
   updateRuns: (runs: PipelineRunResponse[]) => void | Promise<void>,
   options: PipelineRunPollingOptions = {},
 ) {
@@ -36,7 +36,7 @@ export function usePipelineRunPolling(
     let runDelay: number | null = null
     if (snapshots.some(snapshot => (
       ['queued', 'claimed', 'in_progress'].includes(snapshot.run.status)
-      || needsTerminalEventRefresh(snapshot)
+      || ('events' in snapshot && needsTerminalEventRefresh(snapshot))
     ))) {
       passivePollCount = 0
       runDelay = LIVE_POLL_DELAY
@@ -65,7 +65,7 @@ export function usePipelineRunPolling(
     timer = setTimeout(poll, delay)
   }
 
-  async function fetchRun(snapshot: PipelineRunSnapshot) {
+  async function fetchRun(snapshot: PipelineRunSummary) {
     return api.pipelines.getRun(snapshot.run.pipeline_id, snapshot.run.id, snapshot.projectId)
   }
 
@@ -96,7 +96,7 @@ export function usePipelineRunPolling(
     if (polling || (!forceCatalog && document.hidden)) return
     const candidates = getSnapshots().filter(snapshot => (
       ['prepared', 'queued', 'claimed', 'in_progress', 'waiting'].includes(snapshot.run.status)
-      || needsTerminalEventRefresh(snapshot)
+      || ('events' in snapshot && needsTerminalEventRefresh(snapshot))
     ))
     polling = true
     isRefreshing.value = true
