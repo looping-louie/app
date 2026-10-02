@@ -24,10 +24,12 @@ export interface HarnessTurnUsageSummary {
 }
 
 export type PipelineRunOutcome = 'prepared' | 'running' | 'action-required' | 'failed' | 'succeeded'
+export type PipelineRunStatusTone = 'positive' | 'negative' | 'quiet' | 'subtle' | 'neutral' | 'strong' | 'emphasis'
 
 export interface PipelineRunDisplayStatus {
-  label: 'Prepared' | 'Running' | 'Action required' | 'Failed' | 'Succeeded'
+  label: 'Prepared' | 'Queued' | 'Claimed' | 'Running' | 'Action required' | 'Failed' | 'Succeeded'
   outcome: PipelineRunOutcome
+  tone: PipelineRunStatusTone
 }
 
 export function runPrompt(run: PipelineRunResponse) {
@@ -35,13 +37,15 @@ export function runPrompt(run: PipelineRunResponse) {
 }
 
 export function pipelineRunDisplayStatus(run: PipelineRunResponse): PipelineRunDisplayStatus {
-  if (run.status === 'waiting') return { label: 'Action required', outcome: 'action-required' }
-  if (run.status === 'prepared') return { label: 'Prepared', outcome: 'prepared' }
-  if (!['completed', 'failed'].includes(run.status)) return { label: 'Running', outcome: 'running' }
+  if (run.status === 'waiting') return { label: 'Action required', outcome: 'action-required', tone: 'emphasis' }
+  if (run.status === 'prepared') return { label: 'Prepared', outcome: 'prepared', tone: 'quiet' }
+  if (run.status === 'queued') return { label: 'Queued', outcome: 'running', tone: 'subtle' }
+  if (run.status === 'claimed') return { label: 'Claimed', outcome: 'running', tone: 'neutral' }
+  if (run.status === 'in_progress') return { label: 'Running', outcome: 'running', tone: 'strong' }
   if (run.status === 'failed' || run.steps.some(step => step.status === 'failed')) {
-    return { label: 'Failed', outcome: 'failed' }
+    return { label: 'Failed', outcome: 'failed', tone: 'negative' }
   }
-  return { label: 'Succeeded', outcome: 'succeeded' }
+  return { label: 'Succeeded', outcome: 'succeeded', tone: 'positive' }
 }
 
 export function runTokenCount(events: PipelineRunEventResponse[]) {

@@ -112,7 +112,7 @@ describe('Pipeline run transformations', () => {
     const run = pipelineRun()
     run.status = 'completed'
 
-    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Failed', outcome: 'failed' })
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Failed', outcome: 'failed', tone: 'negative' })
   })
 
   it('shows a successful outcome when a terminal run has no failed steps', () => {
@@ -120,28 +120,38 @@ describe('Pipeline run transformations', () => {
     run.status = 'completed'
     run.steps[0]!.status = 'completed'
 
-    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Succeeded', outcome: 'succeeded' })
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Succeeded', outcome: 'succeeded', tone: 'positive' })
   })
 
   it('shows waiting human gates as requiring action', () => {
     const run = pipelineRun()
     run.status = 'waiting'
 
-    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Action required', outcome: 'action-required' })
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Action required', outcome: 'action-required', tone: 'emphasis' })
   })
 
   it('shows active executions as running', () => {
     const run = pipelineRun()
     run.status = 'in_progress'
 
-    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Running', outcome: 'running' })
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Running', outcome: 'running', tone: 'strong' })
+  })
+
+  it.each([
+    ['queued', 'Queued', 'subtle'],
+    ['claimed', 'Claimed', 'neutral'],
+  ] as const)('keeps the %s lifecycle state visible', (status, label, tone) => {
+    const run = pipelineRun()
+    run.status = status
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label, outcome: 'running', tone })
   })
 
   it('does not describe a prepared run as already running', () => {
     const run = pipelineRun()
     run.status = 'prepared'
 
-    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Prepared', outcome: 'prepared' })
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Prepared', outcome: 'prepared', tone: 'quiet' })
   })
 })
 

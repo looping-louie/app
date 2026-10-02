@@ -14,6 +14,7 @@ type SelectionType = 'radio' | 'checkbox'
 type IconStyle = 'plain' | 'circle'
 type AriaHasPopup = 'dialog' | 'grid' | 'listbox' | 'menu' | 'tree'
 type PillVariant = 'compact' | 'catalog' | 'selectable'
+export type PillTone = 'default' | 'positive' | 'negative' | 'quiet' | 'subtle' | 'neutral' | 'strong' | 'emphasis'
 type PillActionVisibility = 'always' | 'hover'
 
 const props = withDefaults(defineProps<{
@@ -31,6 +32,7 @@ const props = withDefaults(defineProps<{
   options?: PillOption[]
   modelValue?: string | string[]
   variant?: PillVariant
+  tone?: PillTone
   empty?: boolean
   selected?: boolean
   disabled?: boolean
@@ -60,6 +62,7 @@ const props = withDefaults(defineProps<{
   options: () => [],
   modelValue: undefined,
   variant: 'compact',
+  tone: 'default',
   empty: false,
   selected: false,
   disabled: false,
@@ -202,6 +205,7 @@ onBeforeUnmount(() => {
     :class="[
       `ui-icon-pill--align-${dropdownAlign}`,
       `ui-icon-pill--${variant}`,
+      `ui-icon-pill--tone-${tone}`,
       {
         'ui-icon-pill--text-only': !hasMedia,
         'ui-icon-pill--icon-only': hasMedia && !hasLabel,
@@ -462,6 +466,45 @@ onBeforeUnmount(() => {
 }
 
 .ui-icon-pill--open { z-index: 10; }
+
+.ui-icon-pill--tone-positive {
+  --ui-icon-pill-surface: var(--ll-color-blue-100);
+  --ui-icon-pill-border: var(--ll-color-blue-200);
+  color: var(--ll-color-primary-depth);
+}
+
+.ui-icon-pill--tone-negative {
+  --ui-icon-pill-surface: var(--ll-color-red-100);
+  --ui-icon-pill-border: var(--ll-color-red-500);
+  color: var(--ll-color-brand-ink);
+}
+
+.ui-icon-pill--tone-quiet {
+  --ui-icon-pill-surface: var(--ll-color-metal-025);
+  --ui-icon-pill-border: var(--ll-color-metal-200);
+  color: var(--ll-color-text-muted);
+}
+
+.ui-icon-pill--tone-subtle {
+  --ui-icon-pill-surface: var(--ll-color-metal-050);
+  --ui-icon-pill-border: var(--ll-color-metal-400);
+  color: var(--ll-color-text-muted);
+}
+
+.ui-icon-pill--tone-neutral {
+  --ui-icon-pill-surface: var(--ll-color-metal-100);
+  --ui-icon-pill-border: var(--ll-color-metal-400);
+}
+
+.ui-icon-pill--tone-strong {
+  --ui-icon-pill-surface: var(--ll-color-metal-200);
+  --ui-icon-pill-border: var(--ll-color-metal-500);
+}
+
+.ui-icon-pill--tone-emphasis {
+  --ui-icon-pill-surface: var(--ll-color-metal-400);
+  --ui-icon-pill-border: var(--ll-color-metal-500);
+}
 
 .ui-icon-pill--catalog,
 .ui-icon-pill__selectable-trigger {
