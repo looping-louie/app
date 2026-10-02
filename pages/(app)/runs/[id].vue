@@ -7,18 +7,13 @@ import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
-import { runPrompt, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
-
-interface RunDetailData {
-  snapshot: PipelineRunSnapshot
-  pipelineName: string
-  activitiesById: Map<string, ActivityResponse>
-}
+import { runPrompt } from '~/utils/pipelineRuns'
 
 const route = useRoute()
 const router = useRouter()
 const api = useApiClient()
-const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
+const { merge: mergeSnapshots } = usePipelineRunSnapshots()
+const { load: loadRunDetails } = usePipelineRunDetails()
 const { refresh: refreshHumanGateNotifications } = useHumanGateNotifications()
 const { projects } = useProjectContext()
 const runId = computed(() => String(route.params.id))
@@ -44,7 +39,7 @@ const humanDecisionAttempt = ref<HumanDecisionAttempt | null>(null)
 
 const { data, status, refresh } = await useAsyncData(
   () => `pipeline-run-detail-${projectId.value}-${pipelineId.value}-${runId.value}`,
-  loadRunDetails,
+  loadDetails,
 )
 const snapshot = computed(() => data.value?.snapshot ?? null)
 const currentActivity = computed<ActivityResponse | null>(() => {
@@ -64,20 +59,14 @@ const {
   { refreshCatalog: refresh },
 )
 
-async function loadRunDetails(): Promise<RunDetailData> {
+async function loadDetails() {
   if (!projectId.value || !pipelineId.value) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Run details require project and pipeline context.',
     })
   }
-  const run = await api.pipelines.getRun(pipelineId.value, runId.value, projectId.value)
-  const pipeline = await api.pipelines.get(run.pipeline_id)
-  return {
-    snapshot: await loadSnapshot(run, projectId.value),
-    pipelineName: pipeline.name,
-    activitiesById: new Map(pipeline.steps.map(step => [step.id, step] as const)),
-  }
+  return loadRunDetails(pipelineId.value, runId.value, projectId.value)
 }
 
 async function startPreparedRun() {

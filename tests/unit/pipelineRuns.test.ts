@@ -7,9 +7,11 @@ import type {
 import { observabilityLogs, observabilityMetrics } from '~/utils/observability'
 import {
   eventLabel,
+  compactRunTimeline,
   harnessTurns,
   needsTerminalEventRefresh,
   pipelineRunDisplayStatus,
+  pipelineRunPreviewMetrics,
   turnErrorMessages,
   turnUsage,
 } from '~/utils/pipelineRuns'
@@ -106,6 +108,64 @@ describe('Pipeline run transformations', () => {
       created_at: '2026-08-31T10:00:01+00:00',
     })
     expect(needsTerminalEventRefresh(snapshot)).toBe(false)
+  })
+
+  it('derives preview timing, usage, and harnesses from execution events', () => {
+    const run = pipelineRun()
+    const events: PipelineRunEventResponse[] = [
+      {
+        id: 'step-started',
+        event_type: 'pipeline_step_started',
+        activity_id: 'activity-1',
+        actor_id: 'worker-1',
+        payload: { activity_run_id: 'activity-run-1', position: 0, harness: completedObservation.harness },
+        created_at: '2026-08-31T10:00:00+00:00',
+      },
+      completedEvent,
+      {
+        id: 'step-failed',
+        event_type: 'pipeline_step_failed',
+        activity_id: 'activity-1',
+        actor_id: 'worker-1',
+        payload: {
+          activity_run_id: 'activity-run-1',
+          status: 'failed',
+          started_at: '2026-08-31T10:00:00+00:00',
+          completed_at: '2026-08-31T10:00:01+00:00',
+        },
+        created_at: '2026-08-31T10:00:01+00:00',
+      },
+    ]
+
+    expect(pipelineRunPreviewMetrics(run, events)).toEqual({
+      startedAt: '2026-08-31T10:00:00+00:00',
+      endedAt: '2026-08-31T10:00:01+00:00',
+      durationMs: 1000,
+      inputTokens: 2,
+      outputTokens: 3,
+      cacheTokens: 1,
+      harnesses: [completedObservation.harness],
+    })
+    expect(compactRunTimeline(run, events)).toEqual([{
+      activityId: 'activity-1',
+      activityRunId: 'activity-run-1',
+      timestamp: '2026-08-31T10:00:00+00:00',
+    }])
+  })
+
+  it('does not invent preview metrics when telemetry is not reported', () => {
+    const run = pipelineRun()
+    run.status = 'in_progress'
+
+    expect(pipelineRunPreviewMetrics(run, [])).toEqual({
+      startedAt: null,
+      endedAt: null,
+      durationMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      cacheTokens: null,
+      harnesses: [],
+    })
   })
 
   it('shows a failed outcome when a terminal run contains a failed step', () => {
