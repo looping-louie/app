@@ -2,7 +2,6 @@
 import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
 import PageShell from '~/components/layout/PageShell.vue'
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
-import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
 import PipelineDesignEditor from '~/components/pipelines/PipelineDesignEditor.vue'
 import PipelineRunModal from '~/components/pipelines/PipelineRunModal.vue'
 import UiButton from '~/components/ui/Button.vue'
@@ -11,7 +10,6 @@ import UiModal from '~/components/ui/Modal.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import type {
-  ActivityLoopConfig,
   ExecutionHarness,
   PipelineActivityStepRequest,
   PipelinePatchRequest,
@@ -19,6 +17,7 @@ import type {
 import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
 import { executionHarnessItem } from '~/utils/executionHarnesses'
+import { pipelineCanvasActivities } from '~/utils/pipelineCanvas'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
@@ -105,36 +104,9 @@ const canSaveEditing = computed(() => (
 ))
 
 const createdBy = computed(() => 'user')
-const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
-  const result: PipelineCanvasActivity[] = []
-  pipeline.value?.steps.forEach((activity, index) => {
-    const instanceId = `pipeline-detail-step-${index}`
-    if (activity.type.endsWith('_loop')) {
-      const config = activity.config as ActivityLoopConfig
-      result.push({
-        instanceId,
-        type: 'loop',
-        loop: {
-          id: activity.id,
-          title: activity.name,
-          flow: activity.type.replace('_loop', ''),
-          model_id: activity.model_id ?? pipeline.value?.model_id ?? executionDefaults.value?.default_model_id ?? null,
-          agents: config.agents,
-          stop_conditions: config.stop_conditions,
-        },
-      })
-      return
-    }
-
-    const isQuiz = activity.type === 'quiz'
-    result.push({
-      instanceId,
-      type: 'human-gate',
-      gate: isQuiz ? 'multiple-choice-quiz' : 'human-review',
-      title: activity.name,
-    })
-  })
-  return result
+const canvasActivities = computed(() => {
+  if (!pipeline.value) return []
+  return pipelineCanvasActivities(pipeline.value, executionDefaults.value?.default_model_id ?? null)
 })
 
 function editableText(element: HTMLElement | null) {

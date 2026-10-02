@@ -28,8 +28,10 @@ const props = withDefaults(defineProps<{
   loop: PipelineLoop
   instanceId: string
   readonly?: boolean
+  variant?: 'default' | 'compact'
 }>(), {
   readonly: false,
+  variant: 'default',
 })
 
 const emit = defineEmits<{
@@ -40,7 +42,7 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
 </script>
 
 <template>
-  <article class="pipeline-loop-card">
+  <article class="pipeline-loop-card" :class="`pipeline-loop-card--${variant}`">
     <UiButton
       v-if="!readonly"
       class="pipeline-loop-card__remove"
@@ -62,7 +64,7 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
       <template #title><h3>{{ loop.title }}</h3></template>
     </UiCard>
 
-    <UiCard variant="editorial" class="pipeline-loop-card__review">
+    <UiCard v-if="variant === 'default'" variant="editorial" class="pipeline-loop-card__review">
       <template #description>
         <PipelineLoopSummary :loop="loop" :show-title="false" :show-flow="false" layout="team-stop" />
       </template>
@@ -98,6 +100,12 @@ const eyebrow = computed(() => `LOOP · ${(props.loop.flow || 'DRAFT').toUpperCa
   justify-content: center;
   padding: var(--ll-space-5) var(--ll-space-6);
 }
+
+.pipeline-loop-card--compact,
+.pipeline-loop-card--compact .pipeline-loop-card__main { min-height: 5rem; }
+.pipeline-loop-card--compact .pipeline-loop-card__main :deep(.ui-card__content) { padding: var(--ll-space-3) var(--ll-space-4); }
+.pipeline-loop-card--compact .pipeline-loop-card__main :deep(.ui-card__eyebrow) { margin-bottom: var(--ll-space-2); font-size: 0.625rem; }
+.pipeline-loop-card--compact .pipeline-loop-card__main :deep(.ui-card__title h3) { font-size: 1rem; line-height: 1.2; }
 
 .pipeline-loop-card__review {
   position: absolute;

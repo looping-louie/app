@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PageShell from '~/components/layout/PageShell.vue'
+import PipelinePreviewDrawer from '~/components/pipelines/PipelinePreviewDrawer.vue'
 import RunPreviewDrawer from '~/components/runs/RunPreviewDrawer.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
@@ -92,6 +93,7 @@ const selectedProjectName = computed(() => (
 const runStatus = ref<PipelineRunStatus | 'all'>('all')
 const dateRange = ref(DEFAULT_PIPELINE_RUN_DATE_RANGE)
 const runSort = ref('newest')
+const drawerPipelineId = ref('')
 const selectedDateRangeLabel = computed(() => (
   dateRangeOptions.find(option => option.value === dateRange.value)?.label ?? 'All time'
 ))
@@ -172,6 +174,14 @@ function selectRun(row: RunTableRow) {
       previewPipeline: row.pipelineId,
     },
   })
+}
+
+function openPipelinePreview(row: RunTableRow) {
+  drawerPipelineId.value = row.pipelineId
+}
+
+function closePipelinePreview(open: boolean) {
+  if (!open) drawerPipelineId.value = ''
 }
 
 function selectProject(value: string | string[]) {
@@ -281,6 +291,14 @@ useHead({ title: 'Runs · Looping Louie' })
               @click="selectRun(row as RunTableRow)"
             >{{ row.name }}</button>
           </template>
+          <template #cell-pipeline="{ row }">
+            <UiPill
+              clickable
+              aria-haspopup="dialog"
+              :aria-label="`Inspect pipeline ${(row as RunTableRow).pipeline}`"
+              @click.stop="openPipelinePreview(row as RunTableRow)"
+            >{{ (row as RunTableRow).pipeline }}</UiPill>
+          </template>
           <template #cell-status="{ row }">
             <span
               class="runs-status"
@@ -306,6 +324,11 @@ useHead({ title: 'Runs · Looping Louie' })
       :pipeline-name="previewSnapshot ? data?.pipelineNames.get(previewSnapshot.run.pipeline_id) ?? previewSnapshot.run.pipeline_id : ''"
       @update:open="closePreview"
       @open-details="openPreviewDetails"
+    />
+    <PipelinePreviewDrawer
+      :open="Boolean(drawerPipelineId)"
+      :pipeline-id="drawerPipelineId"
+      @update:open="closePipelinePreview"
     />
   </PageShell>
 </template>

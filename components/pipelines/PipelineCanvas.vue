@@ -49,11 +49,13 @@ import UiPill from '~/components/ui/Pill.vue'
 const props = withDefaults(defineProps<{
   activities: PipelineCanvasActivity[]
   readonly?: boolean
+  variant?: 'default' | 'compact'
   inputLabel?: string
   ariaLabel?: string
   emptyLabel?: string
 }>(), {
   readonly: false,
+  variant: 'default',
   inputLabel: 'Input prompt',
   ariaLabel: 'Activities in this pipeline',
   emptyLabel: 'Add a loop to your new pipeline',
@@ -69,6 +71,7 @@ const emit = defineEmits<{
 }>()
 
 const canvasRoot = ref<HTMLElement | null>(null)
+const previousTargetOffsets = ref<Record<string, number>>({})
 const addMenuOpen = ref(false)
 const draggingActivityId = ref<string | null>(null)
 const dropTargetActivityId = ref<string | null>(null)
@@ -76,6 +79,25 @@ const highlightedOutcome = ref<'success' | 'failure' | null>(null)
 const actionMenuId = useId()
 let touchHoldTimer: ReturnType<typeof setTimeout> | undefined
 let touchPointerId: number | null = null
+let geometryObserver: ResizeObserver | undefined
+
+function updateRouteGeometry() {
+  const steps = [...(canvasRoot.value?.querySelectorAll<HTMLElement>('.pipeline-canvas__step') || [])]
+  const firstCard = steps[0]?.querySelector<HTMLElement>('.pipeline-loop-card__main, .pipeline-human-gate-card__main')
+  if (!firstCard) {
+    previousTargetOffsets.value = {}
+    return
+  }
+
+  const firstActivityTop = firstCard.getBoundingClientRect().top
+  previousTargetOffsets.value = Object.fromEntries(steps.flatMap((step) => {
+    const instanceId = step.dataset.activityId
+    const route = step.querySelector<HTMLElement>('.pipeline-outcome-route')
+    return instanceId && route
+      ? [[instanceId, firstActivityTop - route.getBoundingClientRect().top]]
+      : []
+  }))
+}
 
 function previousLoopDepth(index: number) {
   for (let candidate = index - 1; candidate >= 0; candidate -= 1) {
@@ -189,14 +211,25 @@ function onActivityPointerEnd(event: PointerEvent) {
   resetDragState()
 }
 
-onBeforeUnmount(resetDragState)
+onMounted(() => {
+  geometryObserver = new ResizeObserver(updateRouteGeometry)
+  if (canvasRoot.value) geometryObserver.observe(canvasRoot.value)
+  nextTick(updateRouteGeometry)
+})
+
+watch(() => props.activities, () => nextTick(updateRouteGeometry), { deep: true })
+
+onBeforeUnmount(() => {
+  geometryObserver?.disconnect()
+  resetDragState()
+})
 </script>
 
 <template>
   <div
     ref="canvasRoot"
     class="pipeline-canvas"
-    :class="{ 'pipeline-canvas--readonly': readonly }"
+    :class="[`pipeline-canvas--${variant}`, { 'pipeline-canvas--readonly': readonly }]"
   >
     <div class="pipeline-canvas__input-node">
       <UiPill class="pipeline-canvas__input-pill" :focusable="false">{{ inputLabel }}</UiPill>
@@ -243,6 +276,7 @@ onBeforeUnmount(resetDragState)
             :loop="activity.loop"
             :instance-id="activity.instanceId"
             :readonly="readonly"
+            :variant="variant"
             @remove="removeActivity"
           />
           <PipelineHumanGateCard
@@ -251,6 +285,7 @@ onBeforeUnmount(resetDragState)
             :instance-id="activity.instanceId"
             :gate="activity.gate"
             :readonly="readonly"
+            :variant="variant"
             @remove="removeActivity"
           />
 
@@ -266,11 +301,17 @@ onBeforeUnmount(resetDragState)
           <PipelineOutcomeRoute
             :failure-mode="failureModeFor(activity, index)"
             :return-depth="previousLoopDepth(index) || 1"
+            :variant="variant"
+            :previous-target-offset="previousTargetOffsets[activity.instanceId]"
             :highlighted="highlightedOutcome"
             @highlight="highlightedOutcome = $event"
           />
         </li>
       </ol>
+
+      <div v-if="readonly" class="pipeline-canvas__output-node">
+        <UiPill class="pipeline-canvas__output-pill" :focusable="false">Pipeline output</UiPill>
+      </div>
 
       <div v-if="!readonly" class="pipeline-canvas__insertion">
         <UiButton
@@ -410,6 +451,39 @@ onBeforeUnmount(resetDragState)
   border-radius: var(--ll-radius-structural);
   outline: none;
   transition: opacity var(--ll-duration-fast) var(--ll-ease-out);
+}
+
+.pipeline-canvas--compact .pipeline-canvas__step :deep(.pipeline-loop-card),
+.pipeline-canvas--compact .pipeline-canvas__step :deep(.pipeline-human-gate-card) {
+  justify-content: flex-start;
+}
+
+.pipeline-canvas--compact .pipeline-canvas__step :deep(.pipeline-loop-card__main),
+.pipeline-canvas--compact .pipeline-canvas__step :deep(.pipeline-human-gate-card__main) {
+  width: min(44%, 14rem);
+  margin-left: calc(36% - min(22%, 7rem));
+}
+
+.pipeline-canvas--compact .pipeline-canvas__input-node,
+.pipeline-canvas--compact .pipeline-canvas__output-node {
+  align-items: flex-start;
+}
+
+.pipeline-canvas--compact .pipeline-canvas__input-node > *,
+.pipeline-canvas--compact .pipeline-canvas__output-node > * {
+  margin-left: 36%;
+  transform: translateX(-50%);
+}
+
+.pipeline-canvas__output-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pipeline-canvas__output-pill :deep(.ui-icon-pill__trigger) {
+  background: transparent;
+  border-style: dashed;
 }
 
 .pipeline-canvas:not(.pipeline-canvas--readonly) .pipeline-canvas__step {
