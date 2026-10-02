@@ -210,8 +210,8 @@ function returnToRuns() {
 watch(
   () => [snapshot.value?.run.id, snapshot.value?.run.status],
   () => void refreshRunReadiness(),
+  { immediate: true },
 )
-onMounted(() => void refreshRunReadiness())
 watch(
   () => [route.hash, snapshot.value?.run.id, snapshot.value?.run.status],
   async () => {
