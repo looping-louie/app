@@ -7,7 +7,6 @@ import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import type { ActivityResponse, ActivityRunHumanDecision, PipelineRunReadinessResponse, PipelineRunResponse } from '~/types/api'
 import { apiErrorMessage } from '~/utils/api/errors'
-import { collectApiPages } from '~/utils/apiPagination'
 import { runPrompt, type PipelineRunSnapshot } from '~/utils/pipelineRuns'
 
 interface RunDetailData {
@@ -72,14 +71,12 @@ async function loadRunDetails(): Promise<RunDetailData> {
       statusMessage: 'Run details require project and pipeline context.',
     })
   }
-  const [run, pipelines] = await Promise.all([
-    api.pipelines.getRun(pipelineId.value, runId.value, projectId.value),
-    collectApiPages(offset => api.pipelines.list({ offset })),
-  ])
+  const run = await api.pipelines.getRun(pipelineId.value, runId.value, projectId.value)
+  const pipeline = await api.pipelines.get(run.pipeline_id)
   return {
     snapshot: await loadSnapshot(run, projectId.value),
-    pipelineName: pipelines.find(pipeline => pipeline.id === run.pipeline_id)?.name ?? run.pipeline_id,
-    activitiesById: new Map(pipelines.flatMap(pipeline => pipeline.steps.map(step => [step.id, step] as const))),
+    pipelineName: pipeline.name,
+    activitiesById: new Map(pipeline.steps.map(step => [step.id, step] as const)),
   }
 }
 
