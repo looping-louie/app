@@ -147,6 +147,7 @@ const navGroups = [
   ],
   [
     { to: '/observability', label: 'Observability', icon: iconObservability },
+    { to: '/workers', label: 'Workers', icon: iconRobot },
     { to: '/notifications', label: 'Notifications', icon: iconNotifications }
   ],
   [

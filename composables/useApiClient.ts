@@ -43,6 +43,7 @@ import type {
   ProjectCreateRequest,
   ProjectPatchRequest,
   ProjectResponse,
+  WorkerInstanceProjectResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
@@ -107,6 +108,9 @@ export function useApiClient() {
       get: (id: string) => $fetch<ProjectResponse>(resourcePath('projects', id)),
       create: (body: ProjectCreateRequest) => $fetch<ProjectResponse>('/api/v1/projects', { method: 'POST', body }),
       patch: (id: string, body: ProjectPatchRequest) => $fetch<ProjectResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
+    },
+    workers: {
+      list: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>('/api/v1/workers/instances', projectOptions(projectId)),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),
