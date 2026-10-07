@@ -63,7 +63,9 @@ function refreshWorkers() {
 function toTableRow(worker: WorkerInstanceProjectResponse): WorkerTableRow {
   return {
     id: worker.id,
-    state: worker.active ? 'Active' : 'Inactive',
+    state: worker.active
+      ? (worker.active_claims >= worker.capacity ? 'At capacity' : 'Active')
+      : 'Inactive',
     heartbeat: formatDateTime(worker.last_heartbeat_at),
     enabled: formatDateTime(worker.enabled_at),
     capacity: `${worker.active_claims} / ${worker.capacity}`,
@@ -109,7 +111,7 @@ useHead({ title: 'Workers · Looping Louie' })
       <UiTable :columns="tableColumns" :rows="rows" caption="Global Workers enabled for the selected Project">
         <template #cell-id="{ value }"><code class="worker-id">{{ value }}</code></template>
         <template #cell-state="{ row }">
-          <UiPill :tone="row.state === 'Active' ? 'success' : 'neutral'" :focusable="false">
+          <UiPill :focusable="false">
             {{ row.state }}
           </UiPill>
         </template>
