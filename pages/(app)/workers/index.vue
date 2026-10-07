@@ -11,6 +11,7 @@ interface WorkerTableRow extends Record<string, unknown> {
   state: string
   heartbeat: string
   enabled: string
+  capacity: string
   harnesses: string[]
 }
 
@@ -36,6 +37,7 @@ const tableColumns = [
   { key: 'id', label: 'Worker ID', width: '28%' },
   { key: 'state', label: 'State', type: 'option' as const },
   { key: 'harnesses', label: 'Harnesses', type: 'option' as const, width: '24%' },
+  { key: 'capacity', label: 'Used / capacity' },
   { key: 'heartbeat', label: 'Last heartbeat' },
   { key: 'enabled', label: 'Enabled' },
 ]
@@ -64,6 +66,7 @@ function toTableRow(worker: WorkerInstanceProjectResponse): WorkerTableRow {
     state: worker.active ? 'Active' : 'Inactive',
     heartbeat: formatDateTime(worker.last_heartbeat_at),
     enabled: formatDateTime(worker.enabled_at),
+    capacity: `${worker.active_claims} / ${worker.capacity}`,
     harnesses: worker.harnesses.map(harness => harness.kind),
   }
 }

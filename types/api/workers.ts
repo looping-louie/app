@@ -11,4 +11,6 @@ export interface WorkerInstanceProjectResponse {
   harnesses: WorkerHarnessCapabilityResponse[]
   enabled_at: string
   active: boolean
+  active_claims: number
+  capacity: number
 }
