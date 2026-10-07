@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PageShell from '~/components/layout/PageShell.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
+import UiButton from '~/components/ui/Button.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiTable from '~/components/ui/Table.vue'
 import type { WorkerInstanceProjectResponse } from '~/types/api'
@@ -53,6 +54,10 @@ function selectProject(value: string | string[]) {
   void router.replace({ query: { ...route.query, project: value } })
 }
 
+function refreshWorkers() {
+  return refresh()
+}
+
 function toTableRow(worker: WorkerInstanceProjectResponse): WorkerTableRow {
   return {
     id: worker.id,
@@ -73,6 +78,9 @@ useHead({ title: 'Workers · Looping Louie' })
     description="Inspect the global Workers enabled to claim work for the selected Project."
   >
     <template #actions>
+      <UiButton variant="stroke" size="sm" :loading="status === 'pending'" @click="refreshWorkers">
+        Refresh
+      </UiButton>
       <UiPill
         v-if="projectOptions.length"
         :model-value="selectedProjectId"
