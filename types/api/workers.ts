@@ -11,6 +11,12 @@ export interface WorkerResponse {
   harnesses: WorkerHarnessCapabilityResponse[]
 }
 
+export interface WorkerProjectEnablementResponse {
+  worker_id: string
+  project_id: string
+  enabled_at: string
+}
+
 export interface WorkerInstanceProjectResponse extends WorkerResponse {
   enabled_at: string
   active: boolean

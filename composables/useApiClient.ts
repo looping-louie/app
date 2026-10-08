@@ -43,6 +43,7 @@ import type {
   ProjectCreateRequest,
   ProjectPatchRequest,
   ProjectResponse,
+  WorkerProjectEnablementResponse,
   WorkerInstanceProjectResponse,
   WorkerResponse,
 } from '~/types/api'
@@ -113,6 +114,10 @@ export function useApiClient() {
     workers: {
       list: () => $fetch<WorkerResponse[]>('/api/v1/workers'),
       get: (id: string) => $fetch<WorkerResponse>(resourcePath('workers', id)),
+      enableForProject: (workerId: string, projectId: string) => $fetch<WorkerProjectEnablementResponse>(
+        `/api/v1/workers/${encodeURIComponent(workerId)}/projects/${encodeURIComponent(projectId)}`,
+        { method: 'POST' },
+      ),
       listForProject: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>(
         `/api/v1/projects/${encodeURIComponent(projectId)}/workers`,
       ),
