@@ -43,6 +43,9 @@ import type {
   ProjectCreateRequest,
   ProjectPatchRequest,
   ProjectResponse,
+  WorkerProjectEnablementResponse,
+  WorkerInstanceProjectResponse,
+  WorkerResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
@@ -107,6 +110,21 @@ export function useApiClient() {
       get: (id: string) => $fetch<ProjectResponse>(resourcePath('projects', id)),
       create: (body: ProjectCreateRequest) => $fetch<ProjectResponse>('/api/v1/projects', { method: 'POST', body }),
       patch: (id: string, body: ProjectPatchRequest) => $fetch<ProjectResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
+      enableWorker: (projectId: string, workerId: string) => $fetch<WorkerProjectEnablementResponse>(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/workers/${encodeURIComponent(workerId)}`,
+        { method: 'POST' },
+      ),
+      disableWorker: (projectId: string, workerId: string) => $fetch<ApiDeleteResponse>(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/workers/${encodeURIComponent(workerId)}`,
+        { method: 'DELETE' },
+      ),
+    },
+    workers: {
+      list: () => $fetch<WorkerResponse[]>('/api/v1/workers'),
+      get: (id: string) => $fetch<WorkerResponse>(resourcePath('workers', id)),
+      listForProject: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/workers`,
+      ),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),

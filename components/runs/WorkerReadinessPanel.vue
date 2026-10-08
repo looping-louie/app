@@ -26,18 +26,18 @@ const setupItems = computed(() => harness.value
   : [])
 const statusTitle = computed(() => {
   if (props.error) return 'Worker status unavailable'
-  if (!props.readiness) return 'Checking runtime workers…'
-  if (props.readiness.status === 'ready') return 'Compatible worker available'
-  if (props.readiness.status === 'no_registered_workers') return 'No runtime worker registered'
-  if (props.readiness.status === 'no_active_workers') return 'No active runtime worker'
-  if (props.readiness.status === 'no_compatible_workers') return 'No compatible runtime worker'
-  return 'The runtime has already claimed this run'
+  if (!props.readiness) return 'Checking Workers…'
+  if (props.readiness.status === 'ready') return 'Compatible Worker available'
+  if (props.readiness.status === 'no_registered_workers') return 'No Worker registered'
+  if (props.readiness.status === 'no_active_workers') return 'No active Worker'
+  if (props.readiness.status === 'no_compatible_workers') return 'No compatible Worker'
+  return 'A Worker has already claimed this run'
 })
 const statusDescription = computed(() => {
   if (props.error) return props.error
-  if (!props.readiness) return 'Reading worker heartbeats for this project.'
-  if (props.readiness.status === 'ready') return 'A matching worker is online. It will claim this run automatically; no retry is needed.'
-  if (props.readiness.status === 'no_registered_workers') return 'This project has no provisioned worker yet.'
+  if (!props.readiness) return 'Reading Worker heartbeats for this Project.'
+  if (props.readiness.status === 'ready') return 'A matching Worker is online. It will claim this run automatically; no retry is needed.'
+  if (props.readiness.status === 'no_registered_workers') return 'This Project has no provisioned Worker yet.'
   if (props.readiness.status === 'no_active_workers') return 'Workers are registered, but none has sent a heartbeat in the last two minutes.'
   if (props.readiness.status === 'no_compatible_workers') return 'Workers are online, but none currently advertises the required Harness.'
   return 'Queued diagnostics are no longer applicable.'
