@@ -2,73 +2,40 @@
 import PageShell from '~/components/layout/PageShell.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
-import UiPill from '~/components/ui/Pill.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { WorkerInstanceProjectResponse } from '~/types/api'
+import type { WorkerResponse } from '~/types/api'
 
 interface WorkerTableRow extends Record<string, unknown> {
   id: string
-  state: string
+  registered: string
   heartbeat: string
-  enabled: string
-  capacity: string
   harnesses: string[]
 }
 
-const route = useRoute()
-const router = useRouter()
 const api = useApiClient()
 const { formatDateTime } = useDateTime()
-const { projects } = useProjectContext()
-const selectedProjectId = computed(() => {
-  const requested = typeof route.query.project === 'string' ? route.query.project : ''
-  return projects.value.some(project => project.id === requested)
-    ? requested
-    : (projects.value[0]?.id ?? '')
-})
-const selectedProjectName = computed(() => (
-  projects.value.find(project => project.id === selectedProjectId.value)?.name ?? 'Project'
-))
-const projectOptions = computed(() => projects.value.map(project => ({
-  value: project.id,
-  label: project.name,
-})))
 const tableColumns = [
-  { key: 'id', label: 'Worker ID', width: '28%' },
-  { key: 'state', label: 'State', type: 'option' as const },
-  { key: 'harnesses', label: 'Harnesses', type: 'option' as const, width: '24%' },
-  { key: 'capacity', label: 'Used / capacity' },
+  { key: 'id', label: 'Worker ID', width: '32%' },
+  { key: 'harnesses', label: 'Harnesses', type: 'option' as const, width: '28%' },
+  { key: 'registered', label: 'Registered' },
   { key: 'heartbeat', label: 'Last heartbeat' },
-  { key: 'enabled', label: 'Enabled' },
 ]
 
-const { data: workers, status, refresh } = await useAsyncData('project-workers', loadWorkers)
-watch(selectedProjectId, () => void refresh())
+const { data: workers, status, refresh } = await useAsyncData(
+  'workers',
+  () => api.workers.list(),
+)
 const rows = computed(() => (workers.value ?? []).map(toTableRow))
-
-async function loadWorkers() {
-  if (!selectedProjectId.value) return []
-  return api.workers.listForProject(selectedProjectId.value)
-}
-
-function selectProject(value: string | string[]) {
-  if (typeof value !== 'string' || value === selectedProjectId.value) return
-  void router.replace({ query: { ...route.query, project: value } })
-}
 
 function refreshWorkers() {
   return refresh()
 }
 
-function toTableRow(worker: WorkerInstanceProjectResponse): WorkerTableRow {
+function toTableRow(worker: WorkerResponse): WorkerTableRow {
   return {
     id: worker.id,
-    state: worker.active
-      ? (worker.active_claims >= worker.capacity ? 'At capacity' : 'Active')
-      : 'Inactive',
+    registered: formatDateTime(worker.registered_at),
     heartbeat: formatDateTime(worker.last_heartbeat_at),
-    enabled: formatDateTime(worker.enabled_at),
-    capacity: `${worker.active_claims} / ${worker.capacity}`,
     harnesses: worker.harnesses.map(harness => harness.kind),
   }
 }
@@ -80,24 +47,12 @@ useHead({ title: 'Workers · Looping Louie' })
 <template>
   <PageShell
     title="Workers"
-    description="Inspect the Workers enabled to claim work for the selected Project."
+    description="Inspect Workers you own and their most recently observed Harness state."
   >
     <template #actions>
       <UiButton variant="stroke" size="sm" :loading="status === 'pending'" @click="refreshWorkers">
         Refresh
       </UiButton>
-      <UiPill
-        v-if="projectOptions.length"
-        :model-value="selectedProjectId"
-        :options="projectOptions"
-        clickable
-        aria-haspopup="listbox"
-        dropdown-label="Projects"
-        aria-label="Select Project workers"
-        @update:model-value="selectProject"
-      >
-        {{ selectedProjectName }}
-      </UiPill>
     </template>
 
     <UiAsyncStage
@@ -105,15 +60,14 @@ useHead({ title: 'Workers · Looping Louie' })
       :empty="status === 'success' && !rows.length"
       loading-label="Loading Workers…"
       error-label="Workers could not be loaded."
-      empty-label="No Workers are enabled for this Project."
+      empty-label="No Workers are registered for this User."
       @retry="refresh"
     >
-      <UiTable :columns="tableColumns" :rows="rows" caption="Workers enabled for the selected Project">
-        <template #cell-id="{ value }"><code class="worker-id">{{ value }}</code></template>
-        <template #cell-state="{ row }">
-          <UiPill :focusable="false">
-            {{ row.state }}
-          </UiPill>
+      <UiTable :columns="tableColumns" :rows="rows" caption="Workers owned by the current User">
+        <template #cell-id="{ value }">
+          <NuxtLink class="worker-link" :to="`/workers/${encodeURIComponent(String(value))}`">
+            {{ value }}
+          </NuxtLink>
         </template>
       </UiTable>
     </UiAsyncStage>
@@ -121,5 +75,6 @@ useHead({ title: 'Workers · Looping Louie' })
 </template>
 
 <style scoped>
-.worker-id { color: var(--ll-color-ink); font: 500 var(--ll-text-xs) / 1.4 var(--ll-font-mono); overflow-wrap: anywhere; }
+.worker-link { color: var(--ll-color-ink); font: 500 var(--ll-text-xs) / 1.4 var(--ll-font-mono); overflow-wrap: anywhere; }
+.worker-link:hover, .worker-link:focus-visible { color: var(--ll-color-primary); }
 </style>

@@ -26,7 +26,7 @@ const {
 )
 const workerRows = computed(() => (workers.value ?? []).map(toWorkerRow))
 const workerColumns = [
-  { key: 'id', label: 'Runtime ID', width: '30%' },
+  { key: 'id', label: 'Worker ID', width: '30%' },
   { key: 'state', label: 'State', type: 'option' as const },
   { key: 'harnesses', label: 'Harnesses', type: 'option' as const },
   { key: 'heartbeat', label: 'Last heartbeat' },
@@ -84,10 +84,10 @@ useHead(() => ({
         </div>
       </dl>
 
-      <section v-if="project" class="project-runtimes" aria-labelledby="project-runtimes-title">
-        <div class="project-runtimes__heading">
+      <section v-if="project" class="project-workers" aria-labelledby="project-workers-title">
+        <div class="project-workers__heading">
           <div>
-            <h2 id="project-runtimes-title">Enabled runtimes</h2>
+            <h2 id="project-workers-title">Enabled Workers</h2>
             <p>Workers authorized to claim work for this Project.</p>
           </div>
           <UiButton
@@ -98,23 +98,23 @@ useHead(() => ({
           >Refresh</UiButton>
         </div>
 
-        <div v-if="workersStatus === 'pending'" class="project-runtimes__state" role="status">
-          Loading enabled runtimes…
+        <div v-if="workersStatus === 'pending'" class="project-workers__state" role="status">
+          Loading enabled Workers…
         </div>
-        <div v-else-if="workersError" class="project-runtimes__state project-runtimes__state--error" role="alert">
-          <span>Enabled runtimes could not be loaded.</span>
+        <div v-else-if="workersError" class="project-workers__state project-workers__state--error" role="alert">
+          <span>Enabled Workers could not be loaded.</span>
           <UiButton variant="stroke" size="sm" @click="() => refreshWorkers()">Retry</UiButton>
         </div>
-        <div v-else-if="!workerRows.length" class="project-runtimes__state">
-          No runtimes are enabled for this Project.
+        <div v-else-if="!workerRows.length" class="project-workers__state">
+          No Workers are enabled for this Project.
         </div>
         <UiTable
           v-else
           :columns="workerColumns"
           :rows="workerRows"
-          caption="Runtimes enabled for this Project"
+          caption="Workers enabled for this Project"
         >
-          <template #cell-id="{ value }"><code class="runtime-id">{{ value }}</code></template>
+          <template #cell-id="{ value }"><code class="worker-id">{{ value }}</code></template>
           <template #cell-state="{ row }">
             <UiPill :focusable="false">{{ row.state }}</UiPill>
           </template>
@@ -150,50 +150,50 @@ useHead(() => ({
 }
 
 .project-details code,
-.runtime-id {
+.worker-id {
   color: var(--ll-color-ink);
   font: 500 var(--ll-text-xs) / 1.4 var(--ll-font-mono);
   overflow-wrap: anywhere;
 }
 
-.project-runtimes {
+.project-workers {
   display: grid;
   gap: var(--ll-space-5);
   padding: var(--ll-space-6);
   border-top: 1px solid var(--ll-color-divider);
 }
 
-.project-runtimes__heading {
+.project-workers__heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--ll-space-4);
 }
 
-.project-runtimes h2,
-.project-runtimes p {
+.project-workers h2,
+.project-workers p {
   margin: 0;
 }
 
-.project-runtimes h2 {
+.project-workers h2 {
   color: var(--ll-color-ink);
   font-size: 1.125rem;
   font-weight: 650;
   line-height: 1.2;
 }
 
-.project-runtimes p,
-.project-runtimes__state {
+.project-workers p,
+.project-workers__state {
   color: var(--ll-color-text-muted);
   font-size: var(--ll-text-sm);
   line-height: 1.5;
 }
 
-.project-runtimes p {
+.project-workers p {
   margin-top: var(--ll-space-1);
 }
 
-.project-runtimes__state {
+.project-workers__state {
   display: flex;
   min-height: 7rem;
   align-items: center;
@@ -204,12 +204,12 @@ useHead(() => ({
   text-align: center;
 }
 
-.project-runtimes__state--error {
+.project-workers__state--error {
   color: var(--ll-color-brand-ink);
 }
 
 @media (max-width: 36rem) {
-  .project-runtimes__heading {
+  .project-workers__heading {
     align-items: stretch;
     flex-direction: column;
   }

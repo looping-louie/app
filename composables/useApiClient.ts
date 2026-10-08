@@ -112,6 +112,7 @@ export function useApiClient() {
     },
     workers: {
       list: () => $fetch<WorkerResponse[]>('/api/v1/workers'),
+      get: (id: string) => $fetch<WorkerResponse>(resourcePath('workers', id)),
       listForProject: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>(
         `/api/v1/projects/${encodeURIComponent(projectId)}/workers`,
       ),
