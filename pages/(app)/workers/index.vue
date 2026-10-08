@@ -80,7 +80,7 @@ useHead({ title: 'Workers · Looping Louie' })
 <template>
   <PageShell
     title="Workers"
-    description="Inspect the global Workers enabled to claim work for the selected Project."
+    description="Inspect the Workers enabled to claim work for the selected Project."
   >
     <template #actions>
       <UiButton variant="stroke" size="sm" :loading="status === 'pending'" @click="refreshWorkers">
@@ -105,10 +105,10 @@ useHead({ title: 'Workers · Looping Louie' })
       :empty="status === 'success' && !rows.length"
       loading-label="Loading Workers…"
       error-label="Workers could not be loaded."
-      empty-label="No global Workers are enabled for this Project."
+      empty-label="No Workers are enabled for this Project."
       @retry="refresh"
     >
-      <UiTable :columns="tableColumns" :rows="rows" caption="Global Workers enabled for the selected Project">
+      <UiTable :columns="tableColumns" :rows="rows" caption="Workers enabled for the selected Project">
         <template #cell-id="{ value }"><code class="worker-id">{{ value }}</code></template>
         <template #cell-state="{ row }">
           <UiPill :focusable="false">
