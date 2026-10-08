@@ -75,7 +75,7 @@ async function enableSelectedWorker() {
   enablingWorker.value = true
   enablementError.value = ''
   try {
-    await api.workers.enableForProject(selectedWorkerId.value, projectId.value)
+    await api.projects.enableWorker(projectId.value, selectedWorkerId.value)
     enablementModalOpen.value = false
     await refreshWorkers()
   } catch (exception) {

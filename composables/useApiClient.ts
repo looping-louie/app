@@ -110,14 +110,14 @@ export function useApiClient() {
       get: (id: string) => $fetch<ProjectResponse>(resourcePath('projects', id)),
       create: (body: ProjectCreateRequest) => $fetch<ProjectResponse>('/api/v1/projects', { method: 'POST', body }),
       patch: (id: string, body: ProjectPatchRequest) => $fetch<ProjectResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
+      enableWorker: (projectId: string, workerId: string) => $fetch<WorkerProjectEnablementResponse>(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/workers/${encodeURIComponent(workerId)}`,
+        { method: 'POST' },
+      ),
     },
     workers: {
       list: () => $fetch<WorkerResponse[]>('/api/v1/workers'),
       get: (id: string) => $fetch<WorkerResponse>(resourcePath('workers', id)),
-      enableForProject: (workerId: string, projectId: string) => $fetch<WorkerProjectEnablementResponse>(
-        `/api/v1/workers/${encodeURIComponent(workerId)}/projects/${encodeURIComponent(projectId)}`,
-        { method: 'POST' },
-      ),
       listForProject: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>(
         `/api/v1/projects/${encodeURIComponent(projectId)}/workers`,
       ),
