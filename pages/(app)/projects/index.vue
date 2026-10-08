@@ -24,7 +24,13 @@ useHead({ title: 'Projects · Looping Louie' })
       @retry="initialize(true)"
     >
       <div class="project-list">
-        <UiCard v-for="project in projects" :key="project.id" variant="row">
+        <UiCard
+          v-for="project in projects"
+          :key="project.id"
+          :to="`/projects/${project.id}`"
+          accent-on-hover
+          variant="row"
+        >
           <template #title><h2>{{ project.name }}</h2></template>
           <template #meta><code>{{ project.id }}</code></template>
         </UiCard>
