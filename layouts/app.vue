@@ -43,19 +43,21 @@
 
     <div class="sidebar-backdrop" :class="{ visible: mobileOpen }" @click="closeMobile" />
 
-    <Teleport to="body">
-      <Transition name="nav-tooltip">
-        <div
-          v-if="navTooltip.visible"
-          class="nav-tooltip"
-          :class="{ 'nav-tooltip--active': navTooltip.active }"
-          :style="navTooltipStyle"
-          role="tooltip"
-        >
-          {{ navTooltip.label }}
-        </div>
-      </Transition>
-    </Teleport>
+      <ClientOnly>
+        <Teleport to="body">
+          <Transition name="nav-tooltip">
+            <div
+              v-if="navTooltip.visible"
+              class="nav-tooltip"
+              :class="{ 'nav-tooltip--active': navTooltip.active }"
+              :style="navTooltipStyle"
+              role="tooltip"
+            >
+              {{ navTooltip.label }}
+            </div>
+          </Transition>
+        </Teleport>
+      </ClientOnly>
 
     <div class="app-body">
       <header class="app-topbar">
