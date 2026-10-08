@@ -144,20 +144,18 @@ const iconSettings = phosphorIcon('M128,80a48,48,0,1,0,48,48A48.05,48.05,0,0,0,1
 
 const navGroups = [
   [
-    { to: '/runs', label: 'Runs', icon: iconRuns }
-  ],
-  [
+    { to: '/runs', label: 'Runs', icon: iconRuns },
     { to: '/observability', label: 'Observability', icon: iconObservability },
     { to: '/notifications', label: 'Notifications', icon: iconNotifications }
   ],
   [
     { to: '/workers', label: 'Workers', icon: iconCpu },
+    { to: '/projects', label: 'Projects', icon: iconProjects },
     { to: '/pipelines', label: 'Pipelines', icon: iconPipelines },
     { to: '/personas', label: 'Personas', icon: iconRobot },
     { to: '/skills', label: 'Skills', icon: iconSkills }
   ],
   [
-    { to: '/projects', label: 'Projects', icon: iconProjects },
     { to: '/settings', label: 'Settings', icon: iconSettings }
   ]
 ]
