@@ -45,7 +45,7 @@ describe('API project context', () => {
       headers: { 'X-Project-ID': 'project-1' },
       query: { offset: 10 },
     })
-    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/workers/instances', {
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/workers', {
       headers: { 'X-Project-ID': 'project-1' },
     })
   })

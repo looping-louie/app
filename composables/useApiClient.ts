@@ -110,7 +110,7 @@ export function useApiClient() {
       patch: (id: string, body: ProjectPatchRequest) => $fetch<ProjectResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
     },
     workers: {
-      list: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>('/api/v1/workers/instances', projectOptions(projectId)),
+      list: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>('/api/v1/workers', projectOptions(projectId)),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),
