@@ -114,6 +114,10 @@ export function useApiClient() {
         `/api/v1/projects/${encodeURIComponent(projectId)}/workers/${encodeURIComponent(workerId)}`,
         { method: 'POST' },
       ),
+      disableWorker: (projectId: string, workerId: string) => $fetch<ApiDeleteResponse>(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/workers/${encodeURIComponent(workerId)}`,
+        { method: 'DELETE' },
+      ),
     },
     workers: {
       list: () => $fetch<WorkerResponse[]>('/api/v1/workers'),

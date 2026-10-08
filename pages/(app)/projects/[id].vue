@@ -34,6 +34,10 @@ const enablementModalOpen = ref(false)
 const selectedWorkerId = ref('')
 const enablingWorker = ref(false)
 const enablementError = ref('')
+const disablementModalOpen = ref(false)
+const workerIdToDisable = ref('')
+const disablingWorkerId = ref('')
+const disablementError = ref('')
 const workerRows = computed(() => (workers.value ?? []).map(toWorkerRow))
 const eligibleWorkers = computed(() => {
   const enabledWorkerIds = new Set((workers.value ?? []).map(worker => worker.id))
@@ -45,6 +49,7 @@ const workerColumns = [
   { key: 'harnesses', label: 'Harnesses', type: 'option' as const },
   { key: 'heartbeat', label: 'Last heartbeat' },
   { key: 'enabled', label: 'Enabled' },
+  { key: 'actions', label: 'Actions', align: 'end' as const },
 ]
 
 function toWorkerRow(worker: WorkerInstanceProjectResponse) {
@@ -56,6 +61,7 @@ function toWorkerRow(worker: WorkerInstanceProjectResponse) {
     harnesses: worker.harnesses.map(harness => harness.kind),
     heartbeat: formatDateTime(worker.last_heartbeat_at),
     enabled: formatDateTime(worker.enabled_at),
+    actions: '',
   }
 }
 
@@ -84,6 +90,34 @@ async function enableSelectedWorker() {
       : 'The Worker could not be enabled for this Project.'
   } finally {
     enablingWorker.value = false
+  }
+}
+
+function openDisablementModal(workerId: string) {
+  workerIdToDisable.value = workerId
+  disablementError.value = ''
+  disablementModalOpen.value = true
+}
+
+function updateDisablementModalOpen(open: boolean) {
+  if (!disablingWorkerId.value) disablementModalOpen.value = open
+}
+
+async function disableSelectedWorker() {
+  if (!workerIdToDisable.value || disablingWorkerId.value) return
+
+  disablingWorkerId.value = workerIdToDisable.value
+  disablementError.value = ''
+  try {
+    await api.projects.disableWorker(projectId.value, workerIdToDisable.value)
+    disablementModalOpen.value = false
+    await refreshWorkers()
+  } catch (exception) {
+    disablementError.value = exception instanceof Error
+      ? exception.message
+      : 'The Worker could not be disabled for this Project.'
+  } finally {
+    disablingWorkerId.value = ''
   }
 }
 
@@ -163,6 +197,15 @@ useHead(() => ({
           <template #cell-state="{ row }">
             <UiPill :focusable="false">{{ row.state }}</UiPill>
           </template>
+          <template #cell-actions="{ row }">
+            <UiButton
+              variant="coral"
+              size="sm"
+              :disabled="Boolean(disablingWorkerId)"
+              :loading="disablingWorkerId === String(row.id)"
+              @click="openDisablementModal(String(row.id))"
+            >Disable</UiButton>
+          </template>
         </UiTable>
       </section>
     </UiAsyncStage>
@@ -199,6 +242,25 @@ useHead(() => ({
           :loading="enablingWorker"
           @click="enableSelectedWorker"
         >Enable Worker</UiButton>
+      </template>
+    </UiModal>
+
+    <UiModal
+      :open="disablementModalOpen"
+      title="Disable Worker"
+      description="This prevents future claims in this Project. Existing claimed Runs continue."
+      :close-on-backdrop="!disablingWorkerId"
+      :show-close="!disablingWorkerId"
+      @update:open="updateDisablementModalOpen"
+    >
+      <p class="worker-disablement-detail">Worker <code>{{ workerIdToDisable }}</code></p>
+      <p v-if="disablementError" class="worker-disablement-detail worker-enablement-form__error" role="alert">
+        {{ disablementError }}
+      </p>
+
+      <template #actions>
+        <UiButton variant="secondary" :disabled="Boolean(disablingWorkerId)" @click="updateDisablementModalOpen(false)">Cancel</UiButton>
+        <UiButton variant="coral" :loading="Boolean(disablingWorkerId)" @click="disableSelectedWorker">Disable Worker</UiButton>
       </template>
     </UiModal>
   </PageShell>
@@ -334,6 +396,23 @@ useHead(() => ({
 
 .worker-enablement-form__error {
   color: var(--ll-color-brand) !important;
+}
+
+.worker-disablement-detail {
+  margin: 0;
+  color: var(--ll-color-text-muted);
+  font-size: var(--ll-text-sm);
+  line-height: 1.5;
+}
+
+.worker-disablement-detail + .worker-disablement-detail {
+  margin-top: var(--ll-space-3);
+}
+
+.worker-disablement-detail code {
+  color: var(--ll-color-ink);
+  font: 500 var(--ll-text-xs) / 1.4 var(--ll-font-mono);
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 36rem) {

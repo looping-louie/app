@@ -32,6 +32,7 @@ describe('API project context', () => {
     await api.workers.list()
     await api.workers.get('worker-1')
     await api.projects.enableWorker('project-1', 'worker-1')
+    await api.projects.disableWorker('project-1', 'worker-1')
     await api.workers.listForProject('project-1')
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/projects')
@@ -53,7 +54,10 @@ describe('API project context', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(7, '/api/v1/projects/project-1/workers/worker-1', {
       method: 'POST',
     })
-    expect(fetchMock).toHaveBeenNthCalledWith(8, '/api/v1/projects/project-1/workers')
+    expect(fetchMock).toHaveBeenNthCalledWith(8, '/api/v1/projects/project-1/workers/worker-1', {
+      method: 'DELETE',
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(9, '/api/v1/projects/project-1/workers')
   })
 
   it('does not register the same user again when only Project loading fails', async () => {
