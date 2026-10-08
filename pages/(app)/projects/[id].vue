@@ -22,7 +22,7 @@ const {
   refresh: refreshWorkers,
 } = await useAsyncData(
   () => `project-workers-${projectId.value}`,
-  () => api.workers.list(projectId.value),
+  () => api.workers.listForProject(projectId.value),
 )
 const workerRows = computed(() => (workers.value ?? []).map(toWorkerRow))
 const workerColumns = [

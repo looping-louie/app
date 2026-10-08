@@ -29,7 +29,8 @@ describe('API project context', () => {
     await api.projects.create({ name: 'Looping Louie' })
     await api.pipelines.createRun('pipeline-1', 'project-1', { input: 'Ship it', commit_mode: 'allow' })
     await api.pipelineRuns.list('project-1', { offset: 10 })
-    await api.workers.list('project-1')
+    await api.workers.list()
+    await api.workers.listForProject('project-1')
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/projects')
     expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/projects', {
@@ -45,9 +46,8 @@ describe('API project context', () => {
       headers: { 'X-Project-ID': 'project-1' },
       query: { offset: 10 },
     })
-    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/workers', {
-      query: { project_id: 'project-1' },
-    })
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/workers')
+    expect(fetchMock).toHaveBeenNthCalledWith(6, '/api/v1/projects/project-1/workers')
   })
 
   it('does not register the same user again when only Project loading fails', async () => {

@@ -4,11 +4,14 @@ export interface WorkerHarnessCapabilityResponse {
   config: Record<string, never>
 }
 
-export interface WorkerInstanceProjectResponse {
+export interface WorkerResponse {
   id: string
   registered_at: string
   last_heartbeat_at: string
   harnesses: WorkerHarnessCapabilityResponse[]
+}
+
+export interface WorkerInstanceProjectResponse extends WorkerResponse {
   enabled_at: string
   active: boolean
   active_claims: number

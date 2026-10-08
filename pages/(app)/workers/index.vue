@@ -48,7 +48,7 @@ const rows = computed(() => (workers.value ?? []).map(toTableRow))
 
 async function loadWorkers() {
   if (!selectedProjectId.value) return []
-  return api.workers.list(selectedProjectId.value)
+  return api.workers.listForProject(selectedProjectId.value)
 }
 
 function selectProject(value: string | string[]) {

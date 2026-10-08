@@ -44,6 +44,7 @@ import type {
   ProjectPatchRequest,
   ProjectResponse,
   WorkerInstanceProjectResponse,
+  WorkerResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
@@ -110,7 +111,10 @@ export function useApiClient() {
       patch: (id: string, body: ProjectPatchRequest) => $fetch<ProjectResponse>(resourcePath('projects', id), { method: 'PATCH', body }),
     },
     workers: {
-      list: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>('/api/v1/workers', { query: { project_id: projectId } }),
+      list: () => $fetch<WorkerResponse[]>('/api/v1/workers'),
+      listForProject: (projectId: string) => $fetch<WorkerInstanceProjectResponse[]>(
+        `/api/v1/projects/${encodeURIComponent(projectId)}/workers`,
+      ),
     },
     linkedServices: {
       list: (signal?: AbortSignal) => $fetch<LinkedServiceResponse[]>('/api/v1/linked-services', { signal }),
