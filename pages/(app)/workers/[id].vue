@@ -4,7 +4,7 @@ import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiTable from '~/components/ui/Table.vue'
-import type { ProjectResponse } from '~/types/api'
+import type { ProjectResponse, WorkerInstanceProjectResponse } from '~/types/api'
 
 const route = useRoute()
 const api = useApiClient()
@@ -24,10 +24,11 @@ const {
   () => `worker-projects-${workerId.value}`,
   () => loadEnabledProjects(),
 )
-const enabledProjectRows = computed(() => (enabledProjects.value ?? []).map(({ project, enabledAt }) => ({
+const operationalState = computed(() => enabledProjects.value?.[0] ?? null)
+const enabledProjectRows = computed(() => (enabledProjects.value ?? []).map(({ project, worker }) => ({
   id: project.id,
   name: project.name,
-  enabled: formatDateTime(enabledAt),
+  enabled: formatDateTime(worker.enabled_at),
 })))
 const enabledProjectColumns = [
   { key: 'name', label: 'Project' },
@@ -35,7 +36,12 @@ const enabledProjectColumns = [
   { key: 'enabled', label: 'Enabled' },
 ]
 
-async function loadEnabledProjects(): Promise<Array<{ project: ProjectResponse, enabledAt: string }>> {
+interface EnabledProject {
+  project: ProjectResponse
+  worker: WorkerInstanceProjectResponse
+}
+
+async function loadEnabledProjects(): Promise<EnabledProject[]> {
   const projects = await api.projects.list()
   const projectWorkers = await Promise.all(projects.map(async project => ({
     project,
@@ -43,8 +49,8 @@ async function loadEnabledProjects(): Promise<Array<{ project: ProjectResponse, 
   })))
 
   return projectWorkers.flatMap(({ project, workers }) => {
-    const enablement = workers.find(candidate => candidate.id === workerId.value)
-    return enablement ? [{ project, enabledAt: enablement.enabled_at }] : []
+    const enabledWorker = workers.find(candidate => candidate.id === workerId.value)
+    return enabledWorker ? [{ project, worker: enabledWorker }] : []
   })
 }
 
@@ -80,6 +86,23 @@ useHead(() => ({
         <div>
           <dt>Last heartbeat</dt>
           <dd>{{ formatDateTime(worker.last_heartbeat_at) }}</dd>
+        </div>
+        <div>
+          <dt>State</dt>
+          <dd>
+            <UiPill v-if="operationalState" :focusable="false">
+              {{ operationalState.worker.active ? 'Active' : 'Inactive' }}
+            </UiPill>
+            <span v-else>Unavailable</span>
+          </dd>
+        </div>
+        <div>
+          <dt>Run capacity</dt>
+          <dd>
+            {{ operationalState
+              ? `${operationalState.worker.active_claims} / ${operationalState.worker.capacity} active claims`
+              : 'Unavailable' }}
+          </dd>
         </div>
         <div>
           <dt>Harnesses</dt>
