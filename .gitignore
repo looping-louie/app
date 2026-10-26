@@ -1,8 +1,14 @@
 node_modules
+
+runtime
+
 .nuxt
 .output
+
 .looping-louie
+
 public/images
 *.db
+
 .env*
 !.env.tpl

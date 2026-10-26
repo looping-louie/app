@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useApiClient } from '~/composables/useApiClient'
-import { useWorkspaceContext } from '~/composables/useWorkspaceContext'
+import { useProjectContext } from '~/composables/useProjectContext'
 
 describe('API project context', () => {
   const state = new Map<string, { value: unknown }>()
@@ -12,7 +12,6 @@ describe('API project context', () => {
     fetchMock.mockReset()
     vi.stubGlobal('$fetch', fetchMock)
     vi.stubGlobal('useApiClient', useApiClient)
-    vi.stubGlobal('useCookie', () => ({ value: 'project-1' }))
     vi.stubGlobal('useState', (key: string, factory: () => unknown) => {
       if (!state.has(key)) state.set(key, { value: factory() })
       return state.get(key)
@@ -26,14 +25,39 @@ describe('API project context', () => {
     fetchMock.mockResolvedValue({ items: [], total: 0 })
     const api = useApiClient()
 
-    await api.workspaces.list()
-    await api.pipelineRuns.list({ offset: 0 })
+    await api.projects.list()
+    await api.projects.create({ name: 'Looping Louie' })
+    await api.pipelines.createRun('pipeline-1', 'project-1', { input: 'Ship it', commit_mode: 'allow' })
+    await api.pipelineRuns.list('project-1', { offset: 10 })
+    await api.workers.list()
+    await api.workers.get('worker-1')
+    await api.projects.enableWorker('project-1', 'worker-1')
+    await api.projects.disableWorker('project-1', 'worker-1')
+    await api.workers.listForProject('project-1')
 
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/projects')
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/pipeline-runs', {
-      headers: { 'X-Project-ID': 'project-1' },
-      query: { offset: 0 },
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/projects', {
+      method: 'POST',
+      body: { name: 'Looping Louie' },
     })
+    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/v1/pipelines/pipeline-1/runs', {
+      headers: { 'X-Project-ID': 'project-1' },
+      method: 'POST',
+      body: { input: 'Ship it', commit_mode: 'allow' },
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/v1/pipeline-runs', {
+      headers: { 'X-Project-ID': 'project-1' },
+      query: { offset: 10 },
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(5, '/api/v1/workers')
+    expect(fetchMock).toHaveBeenNthCalledWith(6, '/api/v1/workers/worker-1')
+    expect(fetchMock).toHaveBeenNthCalledWith(7, '/api/v1/projects/project-1/workers/worker-1', {
+      method: 'POST',
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(8, '/api/v1/projects/project-1/workers/worker-1', {
+      method: 'DELETE',
+    })
+    expect(fetchMock).toHaveBeenNthCalledWith(9, '/api/v1/projects/project-1/workers')
   })
 
   it('does not register the same user again when only Project loading fails', async () => {
@@ -41,7 +65,7 @@ describe('API project context', () => {
       if (path === '/api/v1/users') return Promise.resolve({ id: 'user-1' })
       return Promise.reject(new Error('Projects unavailable'))
     })
-    const context = useWorkspaceContext()
+    const context = useProjectContext()
 
     await context.initialize()
     await context.initialize()

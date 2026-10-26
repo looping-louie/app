@@ -9,8 +9,10 @@ withDefaults(defineProps<{
   instanceId: string
   gate: HumanGateKind
   readonly?: boolean
+  variant?: 'default' | 'compact'
 }>(), {
   readonly: false,
+  variant: 'default',
 })
 
 const emit = defineEmits<{
@@ -19,7 +21,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <article class="pipeline-human-gate-card">
+  <article class="pipeline-human-gate-card" :class="`pipeline-human-gate-card--${variant}`">
     <UiButton
       v-if="!readonly"
       class="pipeline-human-gate-card__remove"
@@ -50,6 +52,11 @@ const emit = defineEmits<{
 .pipeline-human-gate-card { position: relative; display: flex; width: 100%; min-height: 7.5rem; align-items: stretch; justify-content: center; }
 .pipeline-human-gate-card__main { width: min(100%, 26rem); min-height: 7.5rem; transition: border-color var(--ll-duration-normal) var(--ll-ease-out), background var(--ll-duration-normal) var(--ll-ease-out), box-shadow var(--ll-duration-normal) var(--ll-ease-out); }
 .pipeline-human-gate-card__main :deep(.ui-card__content) { justify-content: center; padding: var(--ll-space-5) var(--ll-space-6); }
+.pipeline-human-gate-card--compact, .pipeline-human-gate-card--compact .pipeline-human-gate-card__main { min-height: 5rem; }
+.pipeline-human-gate-card--compact .pipeline-human-gate-card__main :deep(.ui-card__content) { padding: var(--ll-space-3) var(--ll-space-4); }
+.pipeline-human-gate-card--compact .pipeline-human-gate-card__main :deep(.ui-card__eyebrow) { margin-bottom: var(--ll-space-2); font-size: 0.625rem; }
+.pipeline-human-gate-card--compact .pipeline-human-gate-card__main :deep(.ui-card__title h3) { font-size: 1rem; line-height: 1.2; }
+.pipeline-human-gate-card--compact .pipeline-human-gate-card__main :deep(.ui-card__description) { margin-top: var(--ll-space-2); font-size: var(--ll-text-xs); line-height: 1.35; }
 .pipeline-human-gate-card__remove { position: absolute; z-index: 3; top: 50%; right: calc(50% + 14rem); opacity: 0; pointer-events: none; transform: translate(0.5rem, -50%); transition: opacity var(--ll-duration-normal) var(--ll-ease-out), transform var(--ll-duration-normal) var(--ll-ease-out); }
 .pipeline-human-gate-card:is(:hover, :focus-within) .pipeline-human-gate-card__main { background: var(--ll-color-card); border-color: var(--ll-color-divider); box-shadow: var(--ll-shadow-raised); }
 .pipeline-human-gate-card:is(:hover, :focus-within) .pipeline-human-gate-card__remove { opacity: 1; pointer-events: auto; transform: translate(0, -50%); }

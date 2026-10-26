@@ -7,8 +7,11 @@ import type {
 import { observabilityLogs, observabilityMetrics } from '~/utils/observability'
 import {
   eventLabel,
+  compactRunTimeline,
   harnessTurns,
   needsTerminalEventRefresh,
+  pipelineRunDisplayStatus,
+  pipelineRunPreviewMetrics,
   turnErrorMessages,
   turnUsage,
 } from '~/utils/pipelineRuns'
@@ -63,7 +66,7 @@ describe('Pipeline run transformations', () => {
       },
       created_at: '2026-08-31T10:00:01+00:00',
     }
-    const snapshot = { run: pipelineRun(), events: [completedEvent, failedEvent, schedulerEvent] }
+    const snapshot = { run: pipelineRun(), events: [completedEvent, failedEvent, schedulerEvent], projectId: 'project-1' }
     const metrics = observabilityMetrics([snapshot])
     const logs = observabilityLogs([snapshot])
 
@@ -88,7 +91,7 @@ describe('Pipeline run transformations', () => {
 
   it('recognizes the terminal scheduler event used by the timeline', () => {
     const run = pipelineRun()
-    const snapshot = { run, events: [failedEvent] }
+    const snapshot = { run, events: [failedEvent], projectId: 'project-1' }
 
     expect(needsTerminalEventRefresh(snapshot)).toBe(true)
     snapshot.events.push({
@@ -105,6 +108,110 @@ describe('Pipeline run transformations', () => {
       created_at: '2026-08-31T10:00:01+00:00',
     })
     expect(needsTerminalEventRefresh(snapshot)).toBe(false)
+  })
+
+  it('derives preview timing, usage, and harnesses from execution events', () => {
+    const run = pipelineRun()
+    const events: PipelineRunEventResponse[] = [
+      {
+        id: 'step-started',
+        event_type: 'pipeline_step_started',
+        activity_id: 'activity-1',
+        actor_id: 'worker-1',
+        payload: { activity_run_id: 'activity-run-1', position: 0, harness: completedObservation.harness },
+        created_at: '2026-08-31T10:00:00+00:00',
+      },
+      completedEvent,
+      {
+        id: 'step-failed',
+        event_type: 'pipeline_step_failed',
+        activity_id: 'activity-1',
+        actor_id: 'worker-1',
+        payload: {
+          activity_run_id: 'activity-run-1',
+          status: 'failed',
+          started_at: '2026-08-31T10:00:00+00:00',
+          completed_at: '2026-08-31T10:00:01+00:00',
+        },
+        created_at: '2026-08-31T10:00:01+00:00',
+      },
+    ]
+
+    expect(pipelineRunPreviewMetrics(run, events)).toEqual({
+      startedAt: '2026-08-31T10:00:00+00:00',
+      endedAt: '2026-08-31T10:00:01+00:00',
+      durationMs: 1000,
+      inputTokens: 2,
+      outputTokens: 3,
+      cacheTokens: 1,
+      harnesses: [completedObservation.harness],
+    })
+    expect(compactRunTimeline(run, events)).toEqual([{
+      activityId: 'activity-1',
+      activityRunId: 'activity-run-1',
+      timestamp: '2026-08-31T10:00:00+00:00',
+    }])
+  })
+
+  it('does not invent preview metrics when telemetry is not reported', () => {
+    const run = pipelineRun()
+    run.status = 'in_progress'
+
+    expect(pipelineRunPreviewMetrics(run, [])).toEqual({
+      startedAt: null,
+      endedAt: null,
+      durationMs: null,
+      inputTokens: null,
+      outputTokens: null,
+      cacheTokens: null,
+      harnesses: [],
+    })
+  })
+
+  it('shows a failed outcome when a terminal run contains a failed step', () => {
+    const run = pipelineRun()
+    run.status = 'completed'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Failed', outcome: 'failed', tone: 'negative' })
+  })
+
+  it('shows a successful outcome when a terminal run has no failed steps', () => {
+    const run = pipelineRun()
+    run.status = 'completed'
+    run.steps[0]!.status = 'completed'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Succeeded', outcome: 'succeeded', tone: 'positive' })
+  })
+
+  it('shows waiting human gates as requiring action', () => {
+    const run = pipelineRun()
+    run.status = 'waiting'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Action required', outcome: 'action-required', tone: 'emphasis' })
+  })
+
+  it('shows active executions as running', () => {
+    const run = pipelineRun()
+    run.status = 'in_progress'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Running', outcome: 'running', tone: 'strong' })
+  })
+
+  it.each([
+    ['queued', 'Queued', 'subtle'],
+    ['claimed', 'Claimed', 'neutral'],
+  ] as const)('keeps the %s lifecycle state visible', (status, label, tone) => {
+    const run = pipelineRun()
+    run.status = status
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label, outcome: 'running', tone })
+  })
+
+  it('does not describe a prepared run as already running', () => {
+    const run = pipelineRun()
+    run.status = 'prepared'
+
+    expect(pipelineRunDisplayStatus(run)).toEqual({ label: 'Prepared', outcome: 'prepared', tone: 'quiet' })
   })
 })
 

@@ -8,25 +8,39 @@ const props = withDefaults(defineProps<{
   highlighted?: Outcome | null
   failureMode?: FailureMode
   returnDepth?: number
+  variant?: 'default' | 'compact'
+  previousTargetOffset?: number
 }>(), {
   highlighted: null,
   failureMode: 'stop',
   returnDepth: 1,
+  variant: 'default',
 })
 
 const emit = defineEmits<{
   highlight: [outcome: Outcome | null]
 }>()
 
+const routeRoot = ref<HTMLElement | null>(null)
+const measuredStopEndX = ref<number | null>(null)
+let stopAnchorObserver: ResizeObserver | undefined
 const routeTurnY = 32
 const retryTargetY = -144
 const retryCrownY = retryTargetY - routeTurnY
 const retryViewMinY = retryCrownY - 2
 const retryViewHeight = 96 - retryViewMinY
-const previousTargetY = computed(() => -382 - (Math.max(1, props.returnDepth) - 1) * 240)
-const previousTargetX = computed(() => 452 - Math.min(3, Math.max(1, props.returnDepth) - 1) * 24)
+const axisX = computed(() => props.variant === 'compact' ? 360 : 500)
+const stopEndX = computed(() => measuredStopEndX.value ?? (props.variant === 'compact' ? 840 : 798))
+const loopLaneX = computed(() => props.variant === 'compact' ? 60 : 252)
+const previousTargetY = computed(() => {
+  if (props.previousTargetOffset !== undefined) return Math.round(props.previousTargetOffset * (6 / 5))
+  return -382 - (Math.max(1, props.returnDepth) - 1) * 240
+})
+const previousTargetX = computed(() => props.variant === 'compact'
+  ? 195
+  : 452 - Math.min(3, Math.max(1, props.returnDepth) - 1) * 24)
 const previousCrownY = computed(() => previousTargetY.value - 56)
-const previousMidY = computed(() => Math.round((routeTurnY + previousCrownY.value + 24) / 2))
+const previousMidY = computed(() => Math.round((4 + previousCrownY.value + 24) / 2))
 const previousViewMinY = computed(() => previousCrownY.value - 2)
 const previousViewHeight = computed(() => 96 - previousViewMinY.value)
 
@@ -43,13 +57,12 @@ const routeStyle = computed(() => {
   if (props.failureMode !== 'previous') return undefined
   return {
     '--pipeline-previous-map-height': `${previousViewHeight.value * (5 / 6)}px`,
-    '--pipeline-previous-signal-top': `${previousMidY.value * (5 / 6)}px`,
   }
 })
 
 const previousLinePath = computed(() => [
-  `M500 2V12Q500 ${routeTurnY} 484 ${routeTurnY}H276Q252 ${routeTurnY} 252 4`,
-  `V${previousCrownY.value + 24}Q252 ${previousCrownY.value} 276 ${previousCrownY.value}`,
+  `M${axisX.value} 2V12Q${axisX.value} ${routeTurnY} ${axisX.value - 16} ${routeTurnY}H${loopLaneX.value + 24}Q${loopLaneX.value} ${routeTurnY} ${loopLaneX.value} 4`,
+  `V${previousCrownY.value + 24}Q${loopLaneX.value} ${previousCrownY.value} ${loopLaneX.value + 24} ${previousCrownY.value}`,
   `H${previousTargetX.value - 24}Q${previousTargetX.value} ${previousCrownY.value} ${previousTargetX.value} ${previousCrownY.value + 24}`,
   `V${previousTargetY.value}`,
 ].join(''))
@@ -59,15 +72,68 @@ const previousTipPath = computed(() => {
   const targetX = previousTargetX.value
   return `M${targetX - 9} ${target - 12}L${targetX} ${target}L${targetX + 9} ${target - 12}`
 })
+
+const retryLinePath = computed(() => {
+  const laneX = props.variant === 'compact' ? 680 : 720
+  const targetX = props.variant === 'compact' ? 555 : 548
+  return `M${axisX.value} 2V12Q${axisX.value} 32 ${axisX.value + 16} 32H${laneX - 40}Q${laneX} 32 ${laneX}-8V-136Q${laneX}-176 ${laneX - 40}-176H${targetX + 24}Q${targetX}-176 ${targetX}-152V-144`
+})
+
+const retryTipPath = computed(() => {
+  const targetX = props.variant === 'compact' ? 555 : 548
+  return `M${targetX - 9}-156L${targetX}-144L${targetX + 9}-156`
+})
+
+const failureSignalStyle = computed(() => {
+  if (props.failureMode === 'stop') {
+    const branchStartX = axisX.value + 24
+    const branchMidX = (branchStartX + stopEndX.value) / 2
+    return {
+      left: `${branchMidX / 10}%`,
+      top: `${29 * (5 / 6)}px`,
+      transform: 'translate(-50%, calc(-100% - 0.25rem))',
+    }
+  }
+  if (props.failureMode === 'previous') {
+    return {
+      left: `${loopLaneX.value / 10}%`,
+      top: `${previousMidY.value * (5 / 6)}px`,
+      transform: 'translate(calc(-100% - 0.25rem), -50%)',
+    }
+  }
+  return undefined
+})
+
+function updateStopAnchor() {
+  const stopPill = routeRoot.value?.querySelector<HTMLElement>('.pipeline-outcome-route__stop')
+  if (!routeRoot.value || !stopPill) return
+  const routeRect = routeRoot.value.getBoundingClientRect()
+  const pillRect = stopPill.getBoundingClientRect()
+  if (!routeRect.width) return
+  const pillLeftX = ((pillRect.left - routeRect.left) / routeRect.width) * 1000
+  measuredStopEndX.value = Math.round(pillLeftX - 3)
+}
+
+onMounted(() => {
+  stopAnchorObserver = new ResizeObserver(updateStopAnchor)
+  if (routeRoot.value) stopAnchorObserver.observe(routeRoot.value)
+  const stopPill = routeRoot.value?.querySelector<HTMLElement>('.pipeline-outcome-route__stop')
+  if (stopPill) stopAnchorObserver.observe(stopPill)
+  nextTick(updateStopAnchor)
+})
+
+onBeforeUnmount(() => stopAnchorObserver?.disconnect())
 </script>
 
 <template>
   <div
+    ref="routeRoot"
     class="pipeline-outcome-route"
     draggable="false"
     :style="routeStyle"
     :class="[
       `pipeline-outcome-route--${failureMode}`,
+      `pipeline-outcome-route--${variant}`,
       {
         'is-success-highlighted': highlighted === 'success',
         'is-failure-highlighted': highlighted === 'failure',
@@ -84,36 +150,36 @@ const previousTipPath = computed(() => {
       fill="none"
       aria-hidden="true"
     >
-      <path class="pipeline-outcome-route__line pipeline-outcome-route__line--success" d="M500 2V84" />
-      <path class="pipeline-outcome-route__tip pipeline-outcome-route__tip--success" d="M491 73C494 77 497 81 500 86C503 81 506 77 509 73" />
+      <path class="pipeline-outcome-route__line pipeline-outcome-route__line--success" :d="`M${axisX} 2V84`" />
+      <path class="pipeline-outcome-route__tip pipeline-outcome-route__tip--success" :d="`M${axisX - 9} 73C${axisX - 6} 77 ${axisX - 3} 81 ${axisX} 86C${axisX + 3} 81 ${axisX + 6} 77 ${axisX + 9} 73`" />
 
       <template v-if="failureMode === 'stop'">
         <path
           class="pipeline-outcome-route__line pipeline-outcome-route__line--failure"
-          d="M500 2V12Q500 29 524 29H798"
+          :d="`M${axisX} 2V12Q${axisX} 29 ${axisX + 24} 29H${stopEndX}`"
           @pointerenter="emit('highlight', 'failure')"
           @pointerleave="emit('highlight', null)"
         />
         <path
           class="pipeline-outcome-route__tip pipeline-outcome-route__tip--failure"
-          d="M786 20C791 23 795 26 801 29C795 32 791 35 786 38"
+          :d="`M${stopEndX - 12} 20C${stopEndX - 7} 23 ${stopEndX - 3} 26 ${stopEndX + 3} 29C${stopEndX - 3} 32 ${stopEndX - 7} 35 ${stopEndX - 12} 38`"
           @pointerenter="emit('highlight', 'failure')"
           @pointerleave="emit('highlight', null)"
         />
         <path
           class="pipeline-outcome-route__hit"
-          d="M500 2V12Q500 29 524 29H798"
+          :d="`M${axisX} 2V12Q${axisX} 29 ${axisX + 24} 29H${stopEndX}`"
           @pointerenter="emit('highlight', 'failure')"
           @pointerleave="emit('highlight', null)"
         />
       </template>
 
       <template v-else-if="failureMode === 'retry'">
-        <path class="pipeline-outcome-route__line pipeline-outcome-route__line--failure" d="M500 2V12Q500 32 516 32H680Q720 32 720-8V-136Q720-176 680-176H572Q548-176 548-152V-144" />
-        <path class="pipeline-outcome-route__tip pipeline-outcome-route__tip--failure" d="M539-156L548-144L557-156" />
+        <path class="pipeline-outcome-route__line pipeline-outcome-route__line--failure" :d="retryLinePath" />
+        <path class="pipeline-outcome-route__tip pipeline-outcome-route__tip--failure" :d="retryTipPath" />
         <path
           class="pipeline-outcome-route__hit"
-          d="M500 2V12Q500 32 516 32H680Q720 32 720-8V-136Q720-176 680-176H572Q548-176 548-152V-144"
+          :d="retryLinePath"
           @mouseenter="emit('highlight', 'failure')"
           @mouseleave="emit('highlight', null)"
         />
@@ -132,7 +198,7 @@ const previousTipPath = computed(() => {
 
       <path
         class="pipeline-outcome-route__hit"
-        d="M500 2V84"
+        :d="`M${axisX} 2V84`"
         @mouseenter="emit('highlight', 'success')"
         @mouseleave="emit('highlight', null)"
       />
@@ -144,7 +210,12 @@ const previousTipPath = computed(() => {
       </svg>
     </span>
 
-    <span v-if="highlighted === 'failure'" class="pipeline-outcome-route__signal pipeline-outcome-route__signal--failure" aria-hidden="true">
+    <span
+      v-if="highlighted === 'failure'"
+      class="pipeline-outcome-route__signal pipeline-outcome-route__signal--failure"
+      :style="failureSignalStyle"
+      aria-hidden="true"
+    >
       <svg viewBox="0 0 256 256" fill="currentColor">
         <path d="M236.8,188.09,149.35,36.22h0a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8ZM120,144V104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm20,36a12,12,0,1,1-12-12A12,12,0,0,1,140,180Z" />
       </svg>
@@ -252,8 +323,6 @@ const previousTipPath = computed(() => {
 }
 
 .pipeline-outcome-route__signal--failure {
-  top: 0.25rem;
-  left: 64.5%;
   color: var(--ll-color-brand);
 }
 
@@ -262,17 +331,16 @@ const previousTipPath = computed(() => {
   left: 73.5%;
 }
 
-.pipeline-outcome-route--previous .pipeline-outcome-route__signal--failure {
-  top: var(--pipeline-previous-signal-top);
-  left: 22%;
-}
-
 .pipeline-outcome-route .pipeline-outcome-route__stop {
   position: absolute;
   z-index: 2;
   top: 0.5rem;
   right: clamp(0.25rem, 7vw, 7rem);
   transition: color var(--ll-duration-normal) var(--ll-ease-out);
+}
+
+.pipeline-outcome-route--stop.pipeline-outcome-route--compact .pipeline-outcome-route__stop {
+  right: 0;
 }
 
 .pipeline-outcome-route.is-failure-highlighted .pipeline-outcome-route__stop :deep(.ui-icon-pill__trigger) {

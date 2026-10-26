@@ -8,11 +8,13 @@ import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 import UiTable from '~/components/ui/Table.vue'
 import { collectApiPages } from '~/utils/apiPagination'
 import { observabilityDistributions, observabilityLogs, observabilityMetrics, type ObservabilityDistributionItem } from '~/utils/observability'
+import { pipelineRunDetailRoute } from '~/utils/pipelineRunRoutes'
 
 const activeView = ref('metrics')
 const dateRange = ref('7d')
 const api = useApiClient()
 const { load: loadSnapshot, merge: mergeSnapshots } = usePipelineRunSnapshots()
+const { projects } = useProjectContext()
 
 const viewOptions = [
   { value: 'metrics', label: 'Metrics' },
@@ -55,17 +57,21 @@ const {
 
 async function listRunsInRange() {
   const createdFrom = new Date(Date.now() - rangeDuration(dateRange.value)).toISOString()
-  return collectApiPages(offset => api.pipelineRuns.list({ offset, created_from: createdFrom }))
+  return Promise.all(projects.value.map(async project => ({
+    projectId: project.id,
+    runs: await collectApiPages(offset => api.pipelineRuns.list(project.id, { offset, created_from: createdFrom })),
+  })))
 }
 
 async function loadObservabilitySnapshots() {
-  const runs = await listRunsInRange()
-  return Promise.all(runs.map(loadSnapshot))
+  const projectRuns = await listRunsInRange()
+  return Promise.all(projectRuns.flatMap(({ projectId, runs }) => (
+    runs.map(run => loadSnapshot(run, projectId))
+  )))
 }
 
 async function refreshObservabilityCatalog() {
-  const runs = await listRunsInRange()
-  snapshots.value = await mergeSnapshots(snapshots.value ?? [], runs, true)
+  snapshots.value = await loadObservabilitySnapshots()
 }
 
 const metrics = computed(() => observabilityMetrics(snapshots.value ?? []))
@@ -85,10 +91,11 @@ function distributionMaximum(items: ObservabilityDistributionItem[]) {
 }
 
 function runLink(row: Record<string, unknown>) {
-  return {
-    path: '/runs',
-    query: { pipeline: String(row.pipelineId), run: String(row.runId) },
-  }
+  return pipelineRunDetailRoute({
+    projectId: String(row.projectId),
+    pipelineId: String(row.pipelineId),
+    runId: String(row.runId),
+  })
 }
 
 definePageMeta({ layout: 'app' })

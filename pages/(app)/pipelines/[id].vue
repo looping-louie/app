@@ -2,7 +2,6 @@
 import ExecutionHarnessSelector from '~/components/execution/HarnessSelector.vue'
 import PageShell from '~/components/layout/PageShell.vue'
 import PipelineCanvas from '~/components/pipelines/PipelineCanvas.vue'
-import type { PipelineCanvasActivity } from '~/components/pipelines/PipelineCanvas.vue'
 import PipelineDesignEditor from '~/components/pipelines/PipelineDesignEditor.vue'
 import PipelineRunModal from '~/components/pipelines/PipelineRunModal.vue'
 import UiButton from '~/components/ui/Button.vue'
@@ -11,7 +10,6 @@ import UiModal from '~/components/ui/Modal.vue'
 import UiPill from '~/components/ui/Pill.vue'
 import UiSectionStage from '~/components/ui/SectionStage.vue'
 import type {
-  ActivityLoopConfig,
   ExecutionHarness,
   PipelineActivityStepRequest,
   PipelinePatchRequest,
@@ -19,12 +17,13 @@ import type {
 import { apiErrorMessage } from '~/utils/api/errors'
 import { entityActionMenuOptions } from '~/utils/entityActionMenu'
 import { executionHarnessItem } from '~/utils/executionHarnesses'
+import { pipelineCanvasActivities } from '~/utils/pipelineCanvas'
 import { pipelineStepRequestsFromResponse } from '~/utils/pipelineSteps'
 
 interface DetailRow {
   id: string
   title: string
-  kind: 'status' | 'created' | 'execution' | 'design'
+  kind: 'status' | 'created' | 'execution'
   value?: string
   [key: string]: unknown
 }
@@ -90,8 +89,7 @@ const detailItems = computed<DetailRow[]>(() => {
   return [
     { id: 'status', title: 'Status', kind: 'status', value: statusValue.value },
     { id: 'execution', title: 'Harness', kind: 'execution' },
-    { id: 'design', title: 'Design', kind: 'design' },
-    ...(!editing.value ? [{ id: 'created', title: 'Created', kind: 'created' as const }] : []),
+    { id: 'created', title: 'Created', kind: 'created' },
   ]
 })
 const editInheritedModelId = computed(() => pipeline.value?.model_id ?? executionDefaults.value?.default_model_id ?? null)
@@ -106,36 +104,9 @@ const canSaveEditing = computed(() => (
 ))
 
 const createdBy = computed(() => 'user')
-const canvasActivities = computed<PipelineCanvasActivity[]>(() => {
-  const result: PipelineCanvasActivity[] = []
-  pipeline.value?.steps.forEach((activity, index) => {
-    const instanceId = `pipeline-detail-step-${index}`
-    if (activity.type.endsWith('_loop')) {
-      const config = activity.config as ActivityLoopConfig
-      result.push({
-        instanceId,
-        type: 'loop',
-        loop: {
-          id: activity.id,
-          title: activity.name,
-          flow: activity.type.replace('_loop', ''),
-          model_id: activity.model_id ?? pipeline.value?.model_id ?? executionDefaults.value?.default_model_id ?? null,
-          agents: config.agents,
-          stop_conditions: config.stop_conditions,
-        },
-      })
-      return
-    }
-
-    const isQuiz = activity.type === 'quiz'
-    result.push({
-      instanceId,
-      type: 'human-gate',
-      gate: isQuiz ? 'multiple-choice-quiz' : 'human-review',
-      title: activity.name,
-    })
-  })
-  return result
+const canvasActivities = computed(() => {
+  if (!pipeline.value) return []
+  return pipelineCanvasActivities(pipeline.value, executionDefaults.value?.default_model_id ?? null)
 })
 
 function editableText(element: HTMLElement | null) {
@@ -368,13 +339,15 @@ useHead(() => ({
       <p v-if="actionError" class="pipeline-action-error" role="alert">{{ actionError }}</p>
       <p v-if="editError" class="pipeline-edit-error" role="alert">{{ editError }}</p>
 
-      <section class="pipeline-details" aria-label="Pipeline configuration">
-        <UiSectionStage inverse="bottom" class="pipeline-details-stage">
+      <div class="pipeline-sections">
+        <section class="pipeline-section" aria-labelledby="pipeline-details-heading">
+          <UiSectionStage inverse="bottom" class="pipeline-section-stage">
+            <h2 id="pipeline-details-heading" class="pipeline-section-heading">Pipeline details</h2>
           <UiGridList
             :items="detailItems"
             variant="key-value"
-            aria-label="Pipeline configuration"
-            class="pipeline-details-grid"
+            aria-label="Pipeline details"
+            class="pipeline-details-grid pipeline-identification-grid"
           >
             <template #leading="{ item }"><h4>{{ item.title }}</h4></template>
 
@@ -427,26 +400,33 @@ useHead(() => ({
                 </UiPill>
               </div>
 
-              <div v-else-if="item.kind === 'design'" class="pipeline-design" :class="{ 'pipeline-design--editing': editing }">
-                <PipelineDesignEditor
-                  v-if="editing"
-                  :initial-steps="pipeline.steps"
-                  :inherited-model-id="editInheritedModelId"
-                  :inherited-harness="editInheritedHarness"
-                  :show-title="false"
-                  :use-stage="false"
-                  @update:steps="updateEditSteps"
-                  @validity-change="updateEditDesignValidity"
-                  @change="markEditDesignDirty"
-                />
-                <PipelineCanvas v-else :activities="canvasActivities" readonly aria-label="Pipeline design" />
-              </div>
             </template>
 
             <template #trailing><span aria-hidden="true" /></template>
           </UiGridList>
-        </UiSectionStage>
-      </section>
+          </UiSectionStage>
+        </section>
+
+        <section class="pipeline-section" aria-labelledby="pipeline-design-heading">
+          <UiSectionStage inverse="bottom" class="pipeline-section-stage">
+            <h2 id="pipeline-design-heading" class="pipeline-section-heading">Pipeline design</h2>
+            <div class="pipeline-design" :class="{ 'pipeline-design--editing': editing }">
+              <PipelineDesignEditor
+                v-if="editing"
+                :initial-steps="pipeline.steps"
+                :inherited-model-id="editInheritedModelId"
+                :inherited-harness="editInheritedHarness"
+                :show-title="false"
+                :use-stage="false"
+                @update:steps="updateEditSteps"
+                @validity-change="updateEditDesignValidity"
+                @change="markEditDesignDirty"
+              />
+              <PipelineCanvas v-else :activities="canvasActivities" readonly aria-label="Pipeline design" />
+            </div>
+          </UiSectionStage>
+        </section>
+      </div>
     </template>
 
     <UiModal
@@ -477,8 +457,10 @@ useHead(() => ({
 .pipeline-editable { border-radius: var(--ll-radius-sm); outline: 1px solid transparent; transition: outline-color var(--ll-duration-fast) var(--ll-ease-out), box-shadow var(--ll-duration-fast) var(--ll-ease-out); }
 .pipeline-editable:hover { outline-color: var(--ll-color-divider); }
 .pipeline-editable:focus { outline: 1px solid var(--ll-color-primary); box-shadow: 0 0 0 3px var(--ll-color-primary-highlight); }
-.pipeline-details { min-width: 0; }
-.pipeline-details-stage :deep(.ui-section-stage__shell) { width: 100%; margin-inline: 0; }
+.pipeline-sections { display: grid; gap: var(--ll-space-6); padding-bottom: var(--ll-space-10); }
+.pipeline-section { min-width: 0; }
+.pipeline-section-stage :deep(.ui-section-stage__shell) { width: 100%; margin-inline: 0; }
+.pipeline-section-heading { margin: 0 0 var(--ll-space-4); color: var(--ll-color-ink); font: 650 var(--ll-text-lg) / 1.2 var(--ll-font-display); }
 .pipeline-state { display: flex; min-height: 24rem; align-items: center; justify-content: center; gap: var(--ll-space-3); color: var(--ll-color-text-muted); }
 .pipeline-state--error { color: var(--ll-color-brand-ink); }
 .pipeline-delete-error,
@@ -490,11 +472,9 @@ useHead(() => ({
 .pipeline-created { display: flex; min-height: 2rem; flex-wrap: wrap; align-items: center; gap: 0.3em; margin: 0; color: var(--ll-color-text); }
 .pipeline-execution { display: grid; width: 100%; gap: var(--ll-space-7); }
 .pipeline-execution__pill { width: 100%; max-width: 32rem; }
-.pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-execution) .ui-grid-list__item) { align-items: center; }
+.pipeline-identification-grid :deep(.ui-grid-list__row:has(.pipeline-execution) .ui-grid-list__item) { align-items: center; }
 .pipeline-design { display: flex; width: 100%; min-width: 0; box-sizing: border-box; flex-direction: column; align-items: stretch; padding: var(--ll-space-2) 0 var(--ll-space-8); }
 .pipeline-design--editing { padding-top: 0; }
-.pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__item) { grid-template-columns: minmax(9rem, 0.36fr) minmax(0, 1fr) auto; }
-.pipeline-details-grid :deep(.ui-grid-list__row:has(.pipeline-design) .ui-grid-list__metadata) { display: block; width: 100%; grid-column: 1 / -1; grid-row: 2; }
 @media (max-width: 48rem) { .pipeline-actions { justify-content: flex-start; } }
 @media (max-width: 44rem) { .pipeline-design { padding-bottom: var(--ll-space-6); } }
 @media (prefers-reduced-motion: reduce) { .pipeline-editable { transition: none; } }

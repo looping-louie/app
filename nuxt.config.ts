@@ -1,7 +1,22 @@
+import type { NuxtPage } from '@nuxt/schema'
+
+const developmentOnlyPages = process.env.NODE_ENV === 'development'
+  ? {
+  'pages:extend': (pages: NuxtPage[]) => {
+        pages.push({
+          name: 'development-design-system',
+          path: '/dev/design-system',
+          file: '~/design-system/DesignSystem.vue',
+        })
+      },
+    }
+  : {}
+
 export default defineNuxtConfig({
   ssr: true,
   devtools: { enabled: true },
   modules: [],
+  hooks: developmentOnlyPages,
   runtimeConfig: {
     apiBaseUrl: 'http://127.0.0.1:2000'
   },

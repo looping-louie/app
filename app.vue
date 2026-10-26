@@ -3,7 +3,9 @@
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
-    <UiNotificationViewport />
+    <ClientOnly>
+      <UiNotificationViewport />
+    </ClientOnly>
   </div>
 </template>
 

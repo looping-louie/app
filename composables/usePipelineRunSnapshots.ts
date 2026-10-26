@@ -5,9 +5,9 @@ import { needsTerminalEventRefresh, type PipelineRunSnapshot } from '~/utils/pip
 export function usePipelineRunSnapshots() {
   const api = useApiClient()
 
-  async function load(run: PipelineRunResponse): Promise<PipelineRunSnapshot> {
-    const events = await collectApiPages(offset => api.pipelines.listRunEvents(run.pipeline_id, run.id, { offset }))
-    return { run, events }
+  async function load(run: PipelineRunResponse, projectId: string): Promise<PipelineRunSnapshot> {
+    const events = await collectApiPages(offset => api.pipelines.listRunEvents(run.pipeline_id, run.id, projectId, { offset }))
+    return { run, events, projectId }
   }
 
   function needsEvents(current: PipelineRunSnapshot | undefined, run: PipelineRunResponse) {
@@ -25,7 +25,7 @@ export function usePipelineRunSnapshots() {
     const currentById = new Map(current.map(snapshot => [snapshot.run.id, snapshot]))
     const refreshed = await Promise.all(runs.map((run) => {
       const snapshot = currentById.get(run.id)
-      return needsEvents(snapshot, run) ? load(run) : { ...snapshot!, run }
+      return needsEvents(snapshot, run) ? load(run, snapshot!.projectId) : { ...snapshot!, run }
     }))
     if (replace) return refreshed
     const refreshedById = new Map(refreshed.map(snapshot => [snapshot.run.id, snapshot]))

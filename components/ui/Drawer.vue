@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UiButton from '~/components/ui/Button.vue'
 const props = withDefaults(defineProps<{
   open: boolean
   title: string
@@ -112,11 +113,16 @@ onBeforeUnmount(() => {
               <h2 :id="titleId">{{ title }}</h2>
               <p v-if="description" :id="descriptionId">{{ description }}</p>
             </div>
-            <button v-if="showClose" type="button" class="ui-drawer__close" aria-label="Close drawer" @click="close">
-              <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
-              </svg>
-            </button>
+            <div class="ui-drawer__actions">
+              <slot name="actions" />
+              <UiButton v-if="showClose" variant="stroke" size="sm" icon-only aria-label="Close drawer" title="Close drawer" @click="close">
+                <template #leading>
+                  <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                    <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
+                  </svg>
+                </template>
+              </UiButton>
+            </div>
           </header>
 
           <div class="ui-drawer__body"><slot :close="close" /></div>
@@ -176,25 +182,8 @@ onBeforeUnmount(() => {
 .ui-drawer__heading--eyebrow { text-align: center; }
 .ui-drawer__heading--eyebrow h2 { color: var(--ll-color-primary); font: 600 var(--ll-text-xs) / 1 var(--ll-font-control); text-transform: uppercase; letter-spacing: 0.08em; }
 .ui-drawer__heading--eyebrow p { margin-top: var(--ll-space-3); }
-.ui-drawer__header--eyebrow .ui-drawer__close { position: absolute; top: var(--ll-space-6); right: var(--ll-space-6); }
-
-.ui-drawer__close {
-  display: grid;
-  width: 2.125rem;
-  height: 2.125rem;
-  flex: none;
-  padding: 0;
-  place-items: center;
-  color: var(--ll-color-text-muted);
-  background: var(--ll-color-metal-025);
-  border: 1px solid var(--ll-color-divider);
-  border-radius: var(--ll-radius-pill);
-  cursor: pointer;
-  transition: color var(--ll-duration-fast) var(--ll-ease-out), background var(--ll-duration-fast) var(--ll-ease-out);
-}
-.ui-drawer__close:hover { color: var(--ll-color-ink); background: var(--ll-color-highlight); }
-.ui-drawer__close:focus-visible { outline: 2px solid var(--ll-color-primary); outline-offset: 2px; }
-.ui-drawer__close svg { width: 1rem; height: 1rem; }
+.ui-drawer__actions { display: flex; flex: none; align-items: center; gap: var(--ll-space-2); }
+.ui-drawer__header--eyebrow .ui-drawer__actions { position: absolute; top: var(--ll-space-6); right: var(--ll-space-6); }
 
 .ui-drawer__body { min-height: 0; overflow-y: auto; padding: var(--ll-space-6); background: var(--ll-color-metal-025); }
 .ui-drawer__footer { padding: var(--ll-space-4) var(--ll-space-6) var(--ll-space-6); background: var(--ll-color-metal-025); border-top: 1px solid var(--ll-color-divider); }
@@ -221,7 +210,7 @@ onBeforeUnmount(() => {
   .ui-drawer__panel { width: 100%; border-radius: 0; }
   .ui-drawer__header, .ui-drawer__body { padding: var(--ll-space-5); }
   .ui-drawer__header--eyebrow { padding-inline: calc(var(--ll-space-5) + 2.125rem); }
-  .ui-drawer__header--eyebrow .ui-drawer__close { top: var(--ll-space-5); right: var(--ll-space-5); }
+  .ui-drawer__header--eyebrow .ui-drawer__actions { top: var(--ll-space-5); right: var(--ll-space-5); }
   .ui-drawer__footer { padding: var(--ll-space-4) var(--ll-space-5) var(--ll-space-5); }
 }
 

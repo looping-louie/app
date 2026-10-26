@@ -186,7 +186,6 @@ export interface PipelineRunContinueRequest {
 
 export interface PipelineRunListQuery extends ApiListQuery {
   pipeline_id?: string
-  status?: PipelineRunStatus
   created_from?: string
   created_to?: string
 }

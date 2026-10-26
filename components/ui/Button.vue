@@ -363,6 +363,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   min-width: 0;
   height: var(--ui-button-height);
+  box-sizing: border-box;
   align-items: center;
   justify-content: center;
   gap: 0.4375rem;

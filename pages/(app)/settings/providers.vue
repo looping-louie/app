@@ -4,6 +4,7 @@ import type { ProviderCatalogItem } from '~/composables/useProviders'
 import type { LinkedServicePatchRequest, LinkedServiceResponse } from '~/types/api'
 import LinkedServiceModal from '~/components/settings/LinkedServiceModal.vue'
 import ProviderAccordion from '~/components/settings/ProviderAccordion.vue'
+import SettingsPageShell from '~/components/settings/SettingsPageShell.vue'
 import UiAsyncStage from '~/components/ui/AsyncStage.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiModal from '~/components/ui/Modal.vue'
@@ -172,6 +173,7 @@ async function confirmDelete() {
 }
 
 definePageMeta({
+  layout: 'app',
   pageTransition: false,
 })
 
@@ -181,7 +183,8 @@ useHead({
 </script>
 
 <template>
-  <section aria-labelledby="providers-heading">
+  <SettingsPageShell>
+    <section aria-labelledby="providers-heading">
     <h2 id="providers-heading" class="visually-hidden">Providers</h2>
 
     <UiAsyncStage
@@ -236,7 +239,8 @@ useHead({
         <UiButton variant="coral" :loading="deleting" @click="confirmDelete">Delete connection</UiButton>
       </template>
     </UiModal>
-  </section>
+    </section>
+  </SettingsPageShell>
 </template>
 
 <style scoped>

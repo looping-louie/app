@@ -4,6 +4,7 @@ import { harnessTurns, runPrompt, turnErrorMessages, turnUsage, type PipelineRun
 
 interface ObservableTurn extends HarnessTurnRecord {
   run: PipelineRunResponse
+  projectId: string
 }
 
 export interface ObservabilityDistributionItem {
@@ -78,6 +79,7 @@ export function observabilityLogs(snapshots: PipelineRunSnapshot[]) {
       run: runPrompt(turn.run).split('\n')[0]!.slice(0, 70),
       runId: turn.run.id,
       pipelineId: turn.run.pipeline_id,
+      projectId: turn.projectId,
       activityRun: turn.activityRunId,
       phase: turn.observation.phase
         ? `${turn.observation.phase} · ${turn.observation.role ?? 'agent'} · iteration ${turn.observation.iteration ?? 1}`
@@ -91,7 +93,11 @@ export function observabilityLogs(snapshots: PipelineRunSnapshot[]) {
 }
 
 function observableTurns(snapshots: PipelineRunSnapshot[]): ObservableTurn[] {
-  return snapshots.flatMap(snapshot => harnessTurns(snapshot.events).map(turn => ({ ...turn, run: snapshot.run })))
+  return snapshots.flatMap(snapshot => harnessTurns(snapshot.events).map(turn => ({
+    ...turn,
+    run: snapshot.run,
+    projectId: snapshot.projectId,
+  })))
 }
 
 function commitOutcome(turn: ObservableTurn) {
