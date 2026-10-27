@@ -88,7 +88,7 @@ jobs:
         id: generate-image-metadata
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/looping-louie-app
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=sha,prefix=sha-
@@ -109,7 +109,7 @@ jobs:
         id: generate-platform-tags
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/looping-louie-app
+          images: ghcr.io/${{ github.repository }}
           flavor: suffix=-${{ matrix.suffix }},onlatest=true
           tags: |
             type=semver,pattern={{version}}
@@ -119,12 +119,12 @@ jobs:
       # example, for version 0.3.2 and AMD64/ARM64 platforms, it would push
       # images like:
       #
-      # ghcr.io/<owner>/looping-louie-app:0.3.2-amd64
-      # ghcr.io/<owner>/looping-louie-app:0.3.2-arm64
-      # ghcr.io/<owner>/looping-louie-app:sha-<commit>-amd64
-      # ghcr.io/<owner>/looping-louie-app:sha-<commit>-arm64
-      # ghcr.io/<owner>/looping-louie-app:latest-amd64
-      # ghcr.io/<owner>/looping-louie-app:latest-arm64
+      # ghcr.io/<owner>/app:0.3.2-amd64
+      # ghcr.io/<owner>/app:0.3.2-arm64
+      # ghcr.io/<owner>/app:sha-<commit>-amd64
+      # ghcr.io/<owner>/app:sha-<commit>-arm64
+      # ghcr.io/<owner>/app:latest-amd64
+      # ghcr.io/<owner>/app:latest-arm64
       - name: Build and publish image
         uses: docker/build-push-action@v7
         with:
@@ -137,9 +137,9 @@ jobs:
   # Combines the two architecture-specific images into one public multi-platform
   # tag. For example,
   #
-  # ghcr.io/looping-louie/looping-louie-app:0.3.2
-  # ghcr.io/looping-louie/looping-louie-app:latest
-  # ghcr.io/looping-louie/looping-louie-app:sha-<commit>
+  # ghcr.io/looping-louie/app:0.3.2
+  # ghcr.io/looping-louie/app:latest
+  # ghcr.io/looping-louie/app:sha-<commit>
   merge_images:
     needs: publish_platform_images
     runs-on: ubuntu-24.04
@@ -158,7 +158,7 @@ jobs:
         id: generate-image-metadata
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/looping-louie-app
+          images: ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern={{version}}
             type=sha,prefix=sha-
