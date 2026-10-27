@@ -1,0 +1,13 @@
+name: Probe ARM64 runner
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Confirm architecture
+        run: |
+          uname -m
+          cat /etc/os-release
