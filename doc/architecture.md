@@ -58,11 +58,9 @@ page.
 [`src/utils/pollingPolicy.ts`](../src/utils/pollingPolicy.ts) is the single
 source of truth for API polling cadence. It defines the current policy:
 
-- Active Pipeline runs poll every 2.5 seconds.
-- Prepared and waiting Pipeline runs back off exponentially from 5 seconds to
-  a 30-second maximum.
-- Pipeline catalogs refresh every 30 seconds.
-- Human-gate notifications refresh every 30 seconds because each refresh lists
+- Active, prepared, and waiting Pipeline runs poll every 60 seconds.
+- Pipeline catalogs refresh every 60 seconds.
+- Human-gate notifications refresh every 60 seconds because each refresh lists
   runs for every accessible Project and may require multiple paginated requests.
 
 Polling composables own their request scope, error state, and timer lifecycle.

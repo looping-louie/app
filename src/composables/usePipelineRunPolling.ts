@@ -17,7 +17,6 @@ export function usePipelineRunPolling(
   const isRefreshing = ref(false)
   let timer: ReturnType<typeof setTimeout> | undefined
   let polling = false
-  let passivePollCount = 0
   let lastCatalogRefreshAt = Date.now()
 
   const isStale = computed(() => Object.keys(staleFailures.value).length > 0)
@@ -35,18 +34,10 @@ export function usePipelineRunPolling(
       ['queued', 'claimed', 'in_progress'].includes(snapshot.run.status)
       || ('events' in snapshot && needsTerminalEventRefresh(snapshot))
     ))) {
-      passivePollCount = 0
-      runDelay = pollingPolicy.pipelineRuns.activeDelay
+      runDelay = pollingPolicy.pipelineRuns.refreshDelay
     }
     else if (snapshots.some(snapshot => snapshot.run.status === 'prepared' || snapshot.run.status === 'waiting')) {
-      runDelay = Math.min(
-        pollingPolicy.pipelineRuns.activeDelay * 2 ** passivePollCount,
-        pollingPolicy.pipelineRuns.passiveMaximumDelay,
-      )
-      passivePollCount += 1
-    }
-    else {
-      passivePollCount = 0
+      runDelay = pollingPolicy.pipelineRuns.refreshDelay
     }
 
     const catalogDelay = options.refreshCatalog
