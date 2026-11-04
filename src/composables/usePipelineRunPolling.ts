@@ -1,10 +1,7 @@
 import type { PipelineRunResponse } from '~/types/api'
 import { apiErrorSummary } from '~/utils/api/errors'
 import { needsTerminalEventRefresh, type PipelineRunSnapshot, type PipelineRunSummary } from '~/utils/pipelineRuns'
-
-const LIVE_POLL_DELAY = 2500
-const MAX_PASSIVE_POLL_DELAY = 30000
-const CATALOG_POLL_DELAY = 30000
+import { pollingPolicy } from '~/utils/pollingPolicy'
 
 interface PipelineRunPollingOptions {
   refreshCatalog?: () => Promise<void>
@@ -39,10 +36,13 @@ export function usePipelineRunPolling(
       || ('events' in snapshot && needsTerminalEventRefresh(snapshot))
     ))) {
       passivePollCount = 0
-      runDelay = LIVE_POLL_DELAY
+      runDelay = pollingPolicy.pipelineRuns.activeDelay
     }
     else if (snapshots.some(snapshot => snapshot.run.status === 'prepared' || snapshot.run.status === 'waiting')) {
-      runDelay = Math.min(LIVE_POLL_DELAY * 2 ** passivePollCount, MAX_PASSIVE_POLL_DELAY)
+      runDelay = Math.min(
+        pollingPolicy.pipelineRuns.activeDelay * 2 ** passivePollCount,
+        pollingPolicy.pipelineRuns.passiveMaximumDelay,
+      )
       passivePollCount += 1
     }
     else {
@@ -50,7 +50,7 @@ export function usePipelineRunPolling(
     }
 
     const catalogDelay = options.refreshCatalog
-      ? Math.max(CATALOG_POLL_DELAY - (Date.now() - lastCatalogRefreshAt), 0)
+      ? Math.max(pollingPolicy.pipelineRuns.catalogDelay - (Date.now() - lastCatalogRefreshAt), 0)
       : null
     if (runDelay === null) return catalogDelay
     if (catalogDelay === null) return runDelay
@@ -110,7 +110,9 @@ export function usePipelineRunPolling(
         failedRun?.status === 'rejected' ? refreshFailure('Run status refresh', failedRun.reason) : null,
       )
 
-      const catalogDue = forceCatalog || Date.now() - lastCatalogRefreshAt >= CATALOG_POLL_DELAY
+      const catalogDue = forceCatalog || (
+        Date.now() - lastCatalogRefreshAt >= pollingPolicy.pipelineRuns.catalogDelay
+      )
       if (options.refreshCatalog && catalogDue) {
         lastCatalogRefreshAt = Date.now()
         try {
@@ -147,7 +149,7 @@ export function usePipelineRunPolling(
 
   function handleVisibility() {
     if (document.hidden) clearTimer()
-    else void poll(Date.now() - lastCatalogRefreshAt >= CATALOG_POLL_DELAY)
+    else void poll(Date.now() - lastCatalogRefreshAt >= pollingPolicy.pipelineRuns.catalogDelay)
   }
 
   onMounted(() => {

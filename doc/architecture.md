@@ -52,3 +52,26 @@ Full execution investigation uses `/runs/:runId` with `project` and `pipeline`
 query parameters because the API requires that context to read a run. The
 catalog and preview both provide an explicit action to open the full detail
 page.
+
+## Client polling
+
+[`src/utils/pollingPolicy.ts`](../src/utils/pollingPolicy.ts) is the single
+source of truth for API polling cadence. It defines the current policy:
+
+- Active Pipeline runs poll every 2.5 seconds.
+- Prepared and waiting Pipeline runs back off exponentially from 5 seconds to
+  a 30-second maximum.
+- Pipeline catalogs refresh every 30 seconds.
+- Human-gate notifications refresh every 30 seconds because each refresh lists
+  runs for every accessible Project and may require multiple paginated requests.
+
+Polling composables own their request scope, error state, and timer lifecycle.
+They must prevent overlapping requests, pause while the document is hidden,
+resume with an immediate refresh when it becomes visible, and clear timers on
+unmount. Pages may provide manual refresh controls, but must not introduce
+independent periodic refreshes for resources already owned by a polling
+composable.
+
+Add a new polling cadence to `pollingPolicy.ts` only when it represents a
+distinct request cost and freshness requirement. Pair the addition with a unit
+test that protects any relationship between policy values.

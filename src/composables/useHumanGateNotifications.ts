@@ -1,8 +1,7 @@
 import { apiErrorMessage } from '~/utils/api/errors'
 import { humanGateNotifications } from '~/utils/humanGateNotifications'
 import { collectProjectPipelineRuns } from '~/utils/pipelineRunCatalog'
-
-const HUMAN_GATE_POLL_DELAY = 10000
+import { pollingPolicy } from '~/utils/pollingPolicy'
 
 type HumanGateNotificationStatus = 'idle' | 'pending' | 'success' | 'error'
 
@@ -42,7 +41,7 @@ export function useHumanGateNotifications() {
     timer = setTimeout(async () => {
       await refresh()
       schedule()
-    }, HUMAN_GATE_POLL_DELAY)
+    }, pollingPolicy.humanGateNotifications.refreshDelay)
   }
 
   function clearTimer() {
