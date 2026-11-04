@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const projectRoot = fileURLToPath(new URL('../..', import.meta.url))
-const pagesDirectory = join(projectRoot, 'pages')
+const pagesDirectory = join(projectRoot, 'src', 'pages')
 
 describe('Nuxt page route layout', () => {
   it('uses an index page when a route segment has descendants', () => {

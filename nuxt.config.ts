@@ -13,6 +13,7 @@ const developmentOnlyPages = process.env.NODE_ENV === 'development'
   : {}
 
 export default defineNuxtConfig({
+  srcDir: 'src/',
   ssr: true,
   devtools: { enabled: true },
   modules: [],
@@ -35,7 +36,7 @@ export default defineNuxtConfig({
     '@fontsource/commit-mono/400.css',
     '@fontsource/commit-mono/500.css',
     '@fontsource/commit-mono/600.css',
-    '~/assets/css/tokens.css'
+    '~~/assets/css/tokens.css'
   ],
 
   app: {

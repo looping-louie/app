@@ -2,36 +2,38 @@
 
 ## Repository Structure
 
-The Nuxt application keeps route pages under `pages/`, reusable visual units
-under `components/`, shared reactive behavior under `composables/`, and API
-contracts under `types/`. Utilities in `utils/` are framework-independent where
-possible and are covered by unit tests in `tests/unit/`.
+The Nuxt application source lives under `src/`. It keeps route pages under
+`src/pages/`, reusable visual units under `src/components/`, shared reactive
+behavior under `src/composables/`, and API contracts under `src/types/`.
+Utilities in `src/utils/` are framework-independent where possible and are
+covered by unit tests in `tests/unit/`.
 
 ## Routing
 
-Nuxt file-based routes use the structure under `pages/`. A collection route
+Nuxt file-based routes use the structure under `src/pages/`. A collection route
 that has descendants must use an `index.vue` file inside its directory:
 
 ```text
-pages/(app)/runs/
+src/pages/(app)/runs/
 |-- index.vue       /runs
 `-- [id].vue        /runs/:id
 ```
 
 The `(app)` directory is a Nuxt route group. Route groups organize related
 pages without adding their name to the URL, so
-`pages/(app)/runs/index.vue` maps to `/runs`, not `/app/runs`. This project
+`src/pages/(app)/runs/index.vue` maps to `/runs`, not `/app/runs`. This project
 uses the group for operational application pages that share the `app` layout.
 Nuxt also exposes the group as `route.meta.groups` when route-specific behavior
 needs it.
 
-The standalone visual showcase lives in `design-system/`, alongside application
-directories such as `layouts/` and `pages/`. It is development-only source, not
-a production Nuxt page. During `npm run dev`, `nuxt.config.ts` registers it at
-`/dev/design-system`; production builds exclude that route. It must not be moved
-under `pages/` unless a public product route is explicitly required.
+The standalone visual showcase lives in `src/design-system/`, alongside
+application directories such as `src/layouts/` and `src/pages/`. It is
+development-only source, not a production Nuxt page. During `npm run dev`,
+`nuxt.config.ts` registers it at `/dev/design-system`; production builds exclude
+that route. It must not be moved under `src/pages/` unless a public product route
+is explicitly required.
 
-Do not define both `pages/(app)/runs.vue` and `pages/(app)/runs/`. Nuxt treats
+Do not define both `src/pages/(app)/runs.vue` and `src/pages/(app)/runs/`. Nuxt treats
 that file-directory pairing as a route collision and can omit descendant routes
 without an application error. The `pageRouteLayout` unit test prevents this
 pattern across the application.
@@ -39,7 +41,7 @@ pattern across the application.
 Shared UI that must appear on independent child routes belongs in a reusable
 component or Nuxt layout, not a colliding parent route file. For example,
 `SettingsPageShell` supplies Settings navigation to each `/settings` page.
-Every page under `pages/(app)` must declare `layout: 'app'` so it retains the
+Every page under `src/pages/(app)` must declare `layout: 'app'` so it retains the
 global sidebar and application shell after route restructuring. The
 `pageRouteLayout` unit test enforces both requirements.
 
