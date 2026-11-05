@@ -52,6 +52,9 @@ import type {
   PersonalAccessTokenCreateRequest,
   PersonalAccessTokenCreatedResponse,
   PersonalAccessTokenResponse,
+  ServiceAccountCreateRequest,
+  ServiceAccountCreatedResponse,
+  ServiceAccountResponse,
   SessionStatusResponse,
   SetupStatusResponse,
 } from '~/types/api'
@@ -132,6 +135,17 @@ export function useApiClient() {
       ),
       revokePersonalAccessToken: (tokenId: string) => $fetch(
         `/api/v1/auth/personal-access-tokens/${encodeURIComponent(tokenId)}`,
+        { method: 'DELETE' },
+      ),
+      listServiceAccounts: () => $fetch<ServiceAccountResponse[]>(
+        '/api/v1/auth/service-accounts',
+      ),
+      createServiceAccount: (body: ServiceAccountCreateRequest) => $fetch<ServiceAccountCreatedResponse>(
+        '/api/v1/auth/service-accounts',
+        { method: 'POST', body },
+      ),
+      revokeServiceAccount: (accountId: string) => $fetch(
+        `/api/v1/auth/service-accounts/${encodeURIComponent(accountId)}`,
         { method: 'DELETE' },
       ),
     },

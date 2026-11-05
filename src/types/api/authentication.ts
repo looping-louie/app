@@ -45,3 +45,23 @@ export interface PersonalAccessTokenResponse {
 export interface PersonalAccessTokenCreatedResponse extends PersonalAccessTokenResponse {
   token: string
 }
+
+export interface ServiceAccountCreateRequest {
+  name: string
+  project_ids: string[]
+  expires_at?: string | null
+}
+
+export interface ServiceAccountResponse {
+  id: string
+  name: string
+  project_ids: string[]
+  created_at: string
+  last_used_at: string | null
+  expires_at: string | null
+  revoked_at: string | null
+}
+
+export interface ServiceAccountCreatedResponse extends ServiceAccountResponse {
+  token: string
+}
