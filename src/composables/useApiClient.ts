@@ -47,6 +47,8 @@ import type {
   WorkerInstanceProjectResponse,
   WorkerResponse,
   AccountCredentialsRequest,
+  LocalAccountResponse,
+  MemberAccountActivationRequest,
   SessionStatusResponse,
   SetupStatusResponse,
 } from '~/types/api'
@@ -108,6 +110,16 @@ export function useApiClient() {
       setup: (body: AccountCredentialsRequest) => $fetch<SessionStatusResponse>('/api/v1/auth/setup', { method: 'POST', body }),
       login: (body: AccountCredentialsRequest) => $fetch<SessionStatusResponse>('/api/v1/auth/login', { method: 'POST', body }),
       logout: () => $fetch('/api/v1/auth/logout', { method: 'POST' }),
+      listAccounts: () => $fetch<LocalAccountResponse[]>('/api/v1/auth/accounts'),
+      createMember: (body: AccountCredentialsRequest) => $fetch<LocalAccountResponse>('/api/v1/auth/accounts', { method: 'POST', body }),
+      resetMemberPassword: (userId: string, password: string) => $fetch<LocalAccountResponse>(
+        `/api/v1/auth/accounts/${encodeURIComponent(userId)}/password`,
+        { method: 'PATCH', body: { password } },
+      ),
+      setMemberActive: (userId: string, body: MemberAccountActivationRequest) => $fetch<LocalAccountResponse>(
+        `/api/v1/auth/accounts/${encodeURIComponent(userId)}/activation`,
+        { method: 'PATCH', body },
+      ),
     },
     catalog: {
       listProviders: (signal?: AbortSignal) => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers', { signal }),

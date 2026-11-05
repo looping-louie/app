@@ -19,3 +19,11 @@ export interface AccountCredentialsRequest {
   username: string
   password: string
 }
+
+export interface LocalAccountResponse extends SessionUserResponse {
+  is_active: boolean
+}
+
+export interface MemberAccountActivationRequest {
+  is_active: boolean
+}
