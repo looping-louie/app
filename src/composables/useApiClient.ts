@@ -49,6 +49,9 @@ import type {
   AccountCredentialsRequest,
   LocalAccountResponse,
   MemberAccountActivationRequest,
+  PersonalAccessTokenCreateRequest,
+  PersonalAccessTokenCreatedResponse,
+  PersonalAccessTokenResponse,
   SessionStatusResponse,
   SetupStatusResponse,
 } from '~/types/api'
@@ -119,6 +122,17 @@ export function useApiClient() {
       setMemberActive: (userId: string, body: MemberAccountActivationRequest) => $fetch<LocalAccountResponse>(
         `/api/v1/auth/accounts/${encodeURIComponent(userId)}/activation`,
         { method: 'PATCH', body },
+      ),
+      listPersonalAccessTokens: () => $fetch<PersonalAccessTokenResponse[]>(
+        '/api/v1/auth/personal-access-tokens',
+      ),
+      createPersonalAccessToken: (body: PersonalAccessTokenCreateRequest) => $fetch<PersonalAccessTokenCreatedResponse>(
+        '/api/v1/auth/personal-access-tokens',
+        { method: 'POST', body },
+      ),
+      revokePersonalAccessToken: (tokenId: string) => $fetch(
+        `/api/v1/auth/personal-access-tokens/${encodeURIComponent(tokenId)}`,
+        { method: 'DELETE' },
       ),
     },
     catalog: {

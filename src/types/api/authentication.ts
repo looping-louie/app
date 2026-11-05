@@ -27,3 +27,21 @@ export interface LocalAccountResponse extends SessionUserResponse {
 export interface MemberAccountActivationRequest {
   is_active: boolean
 }
+
+export interface PersonalAccessTokenCreateRequest {
+  name: string
+  expires_at?: string | null
+}
+
+export interface PersonalAccessTokenResponse {
+  id: string
+  name: string
+  created_at: string
+  last_used_at: string | null
+  expires_at: string | null
+  revoked_at: string | null
+}
+
+export interface PersonalAccessTokenCreatedResponse extends PersonalAccessTokenResponse {
+  token: string
+}
