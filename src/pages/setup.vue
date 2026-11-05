@@ -33,8 +33,8 @@ async function setup(credentials: { username: string, password: string }) {
       <template #title><h1>Create the administrator account</h1></template>
       <template #description>
         <p>
-          This first local account manages the instance and keeps ownership of
-          the existing local project.
+          This first local account manages the instance and can create and
+          manage member accounts.
         </p>
       </template>
       <AccountCredentialsForm
