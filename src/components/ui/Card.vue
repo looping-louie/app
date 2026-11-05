@@ -45,6 +45,7 @@ const linkBindings = computed(() => {
       <div v-if="$slots.eyebrow" class="ui-card__eyebrow"><slot name="eyebrow" /></div>
       <div v-if="$slots.title" class="ui-card__title"><slot name="title" /></div>
       <div v-if="$slots.description" class="ui-card__description"><slot name="description" /></div>
+      <slot />
       <div v-if="$slots.meta || $slots.trailing" class="ui-card__footer">
         <div v-if="$slots.meta" class="ui-card__meta"><slot name="meta" /></div>
         <div v-if="$slots.trailing" class="ui-card__trailing"><slot name="trailing" /></div>

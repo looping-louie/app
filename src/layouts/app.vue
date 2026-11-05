@@ -37,7 +37,13 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div class="user-avatar" title="Usuario" aria-label="Usuario">U</div>
+        <button
+          class="user-avatar"
+          type="button"
+          :title="auth.user.value?.username ?? 'Account'"
+          :aria-label="`Sign out ${auth.user.value?.username ?? ''}`"
+          @click="logout"
+        >{{ avatarInitial }}</button>
       </div>
     </aside>
 
@@ -86,7 +92,11 @@
 </template>
 
 <script setup lang="ts">
+import { apiErrorMessage } from '~/utils/api/errors'
+
 const route = useRoute()
+const auth = useAuthSession()
+const notifications = useNotifications()
 const {
   notifications: humanGateNotifications,
   startPolling: startHumanGatePolling,
@@ -94,6 +104,7 @@ const {
 } = useHumanGateNotifications()
 
 const mobileOpen = ref(false)
+const avatarInitial = computed(() => auth.user.value?.username.charAt(0).toUpperCase() ?? 'U')
 const sidebarRef = ref<HTMLElement | null>(null)
 const navTooltip = reactive({
   visible: false,
@@ -189,6 +200,18 @@ function openMobile() {
 function closeMobile() {
   hideNavTooltip()
   mobileOpen.value = false
+}
+
+async function logout() {
+  try {
+    await auth.logout()
+    await navigateTo('/login')
+  } catch (cause) {
+    notifications.error(
+      'Sign out failed',
+      apiErrorMessage(cause, 'Your session could not be ended.'),
+    )
+  }
 }
 
 onMounted(startHumanGatePolling)

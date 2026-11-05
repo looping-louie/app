@@ -46,6 +46,17 @@ import type {
   WorkerProjectEnablementResponse,
   WorkerInstanceProjectResponse,
   WorkerResponse,
+  AccountCredentialsRequest,
+  LocalAccountResponse,
+  MemberAccountActivationRequest,
+  PersonalAccessTokenCreateRequest,
+  PersonalAccessTokenCreatedResponse,
+  PersonalAccessTokenResponse,
+  ServiceAccountCreateRequest,
+  ServiceAccountCreatedResponse,
+  ServiceAccountResponse,
+  SessionStatusResponse,
+  SetupStatusResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
@@ -96,9 +107,47 @@ export function useApiClient() {
       get: (id: string) => $fetch<ModelResponse>(`/api/v1/users/me/models/${encodeURIComponent(id)}`),
     },
     users: {
-      registerCurrent: () => $fetch<UserResponse>('/api/v1/users', { method: 'POST' }),
       getCurrent: () => $fetch<UserResponse>('/api/v1/users/me'),
       replaceSettings: (body: UserSettingsRequest) => $fetch<UserResponse>('/api/v1/users/me', { method: 'PATCH', body }),
+    },
+    authentication: {
+      getSetupStatus: () => $fetch<SetupStatusResponse>('/api/v1/auth/setup-status'),
+      getSession: () => $fetch<SessionStatusResponse>('/api/v1/auth/session'),
+      setup: (body: AccountCredentialsRequest) => $fetch<SessionStatusResponse>('/api/v1/auth/setup', { method: 'POST', body }),
+      login: (body: AccountCredentialsRequest) => $fetch<SessionStatusResponse>('/api/v1/auth/login', { method: 'POST', body }),
+      logout: () => $fetch('/api/v1/auth/logout', { method: 'POST' }),
+      listAccounts: () => $fetch<LocalAccountResponse[]>('/api/v1/auth/accounts'),
+      createMember: (body: AccountCredentialsRequest) => $fetch<LocalAccountResponse>('/api/v1/auth/accounts', { method: 'POST', body }),
+      resetMemberPassword: (userId: string, password: string) => $fetch<LocalAccountResponse>(
+        `/api/v1/auth/accounts/${encodeURIComponent(userId)}/password`,
+        { method: 'PATCH', body: { password } },
+      ),
+      setMemberActive: (userId: string, body: MemberAccountActivationRequest) => $fetch<LocalAccountResponse>(
+        `/api/v1/auth/accounts/${encodeURIComponent(userId)}/activation`,
+        { method: 'PATCH', body },
+      ),
+      listPersonalAccessTokens: () => $fetch<PersonalAccessTokenResponse[]>(
+        '/api/v1/auth/personal-access-tokens',
+      ),
+      createPersonalAccessToken: (body: PersonalAccessTokenCreateRequest) => $fetch<PersonalAccessTokenCreatedResponse>(
+        '/api/v1/auth/personal-access-tokens',
+        { method: 'POST', body },
+      ),
+      revokePersonalAccessToken: (tokenId: string) => $fetch(
+        `/api/v1/auth/personal-access-tokens/${encodeURIComponent(tokenId)}`,
+        { method: 'DELETE' },
+      ),
+      listServiceAccounts: () => $fetch<ServiceAccountResponse[]>(
+        '/api/v1/auth/service-accounts',
+      ),
+      createServiceAccount: (body: ServiceAccountCreateRequest) => $fetch<ServiceAccountCreatedResponse>(
+        '/api/v1/auth/service-accounts',
+        { method: 'POST', body },
+      ),
+      revokeServiceAccount: (accountId: string) => $fetch(
+        `/api/v1/auth/service-accounts/${encodeURIComponent(accountId)}`,
+        { method: 'DELETE' },
+      ),
     },
     catalog: {
       listProviders: (signal?: AbortSignal) => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers', { signal }),

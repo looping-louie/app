@@ -3,7 +3,7 @@ import PageShell from '~/components/layout/PageShell.vue'
 import UiButton from '~/components/ui/Button.vue'
 import UiSegmentedControl from '~/components/ui/SegmentedControl.vue'
 
-type SettingsSection = 'global' | 'providers' | 'models' | 'mcps'
+type SettingsSection = 'global' | 'providers' | 'models' | 'mcps' | 'accounts' | 'tokens' | 'service-accounts'
 
 const props = withDefaults(defineProps<{
   showSave?: boolean
@@ -17,25 +17,39 @@ const emit = defineEmits<{ save: [] }>()
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthSession()
 
 const sectionRoutes: Record<SettingsSection, string> = {
   global: '/settings',
   providers: '/settings/providers',
   models: '/settings/models',
   mcps: '/settings/mcps',
+  accounts: '/settings/accounts',
+  tokens: '/settings/tokens',
+  'service-accounts': '/settings/service-accounts',
 }
 
-const sectionOptions = [
+const sectionOptions = computed(() => [
   { value: 'global', label: 'Global configuration' },
   { value: 'providers', label: 'Providers' },
   { value: 'models', label: 'Models' },
   { value: 'mcps', label: 'MCPs' },
-]
+  { value: 'tokens', label: 'Personal tokens' },
+  ...(auth.user.value?.role === 'admin'
+    ? [{ value: 'accounts' as const, label: 'Accounts' }]
+    : []),
+  ...(auth.user.value?.role === 'admin'
+    ? [{ value: 'service-accounts' as const, label: 'Service accounts' }]
+    : []),
+])
 
 function sectionFromPath(path: string): SettingsSection {
   if (path.startsWith(sectionRoutes.providers)) return 'providers'
   if (path.startsWith(sectionRoutes.models)) return 'models'
   if (path.startsWith(sectionRoutes.mcps)) return 'mcps'
+  if (path.startsWith(sectionRoutes.accounts)) return 'accounts'
+  if (path.startsWith(sectionRoutes['service-accounts'])) return 'service-accounts'
+  if (path.startsWith(sectionRoutes.tokens)) return 'tokens'
   return 'global'
 }
 
@@ -57,6 +71,11 @@ onMounted(() => {
   void preloadRouteComponents(sectionRoutes.providers)
   void preloadRouteComponents(sectionRoutes.models)
   void preloadRouteComponents(sectionRoutes.mcps)
+  void preloadRouteComponents(sectionRoutes.tokens)
+  if (auth.user.value?.role === 'admin') {
+    void preloadRouteComponents(sectionRoutes.accounts)
+    void preloadRouteComponents(sectionRoutes['service-accounts'])
+  }
 })
 </script>
 

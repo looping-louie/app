@@ -21,6 +21,16 @@ API_BASE_URL=http://host.docker.internal:9000 docker compose up --build
 `NUXT_API_BASE_URL` runtime configuration. The image does not need to be
 rebuilt when the API target changes.
 
+## Release images
+
+Pushing a `vMAJOR.MINOR.PATCH` tag that matches the version in `package.json`
+runs the release workflow. It type-checks and tests the app, publishes
+`ghcr.io/looping-louie/app:<version>`, and creates a GitHub Release.
+
+Published images support `linux/amd64` and `linux/arm64`; Docker selects the
+matching image automatically. A Raspberry Pi 4 needs a 64-bit operating system
+because 32-bit `linux/arm/v7` is not published.
+
 ## Check the service
 
 Show the container status and health state:
