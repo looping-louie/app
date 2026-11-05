@@ -46,6 +46,9 @@ import type {
   WorkerProjectEnablementResponse,
   WorkerInstanceProjectResponse,
   WorkerResponse,
+  AccountCredentialsRequest,
+  SessionStatusResponse,
+  SetupStatusResponse,
 } from '~/types/api'
 
 const resourcePath = (collection: string, id: string) => `/api/v1/${collection}/${encodeURIComponent(id)}`
@@ -96,9 +99,15 @@ export function useApiClient() {
       get: (id: string) => $fetch<ModelResponse>(`/api/v1/users/me/models/${encodeURIComponent(id)}`),
     },
     users: {
-      registerCurrent: () => $fetch<UserResponse>('/api/v1/users', { method: 'POST' }),
       getCurrent: () => $fetch<UserResponse>('/api/v1/users/me'),
       replaceSettings: (body: UserSettingsRequest) => $fetch<UserResponse>('/api/v1/users/me', { method: 'PATCH', body }),
+    },
+    authentication: {
+      getSetupStatus: () => $fetch<SetupStatusResponse>('/api/v1/auth/setup-status'),
+      getSession: () => $fetch<SessionStatusResponse>('/api/v1/auth/session'),
+      setup: (body: AccountCredentialsRequest) => $fetch<SessionStatusResponse>('/api/v1/auth/setup', { method: 'POST', body }),
+      login: (body: AccountCredentialsRequest) => $fetch<SessionStatusResponse>('/api/v1/auth/login', { method: 'POST', body }),
+      logout: () => $fetch('/api/v1/auth/logout', { method: 'POST' }),
     },
     catalog: {
       listProviders: (signal?: AbortSignal) => $fetch<CatalogProviderResponse[]>('/api/v1/catalog/providers', { signal }),

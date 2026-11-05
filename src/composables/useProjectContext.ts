@@ -8,17 +8,12 @@ export function useProjectContext() {
   const projects = useState<ProjectResponse[]>('project-context-items', () => [])
   const status = useState<ProjectContextStatus>('project-context-status', () => 'idle')
   const error = useState<string>('project-context-error', () => '')
-  const userRegistered = useState('project-context-user-registered', () => false)
 
   async function initialize(force = false) {
     if (!force && (status.value === 'pending' || status.value === 'success')) return
     status.value = 'pending'
     error.value = ''
     try {
-      if (!userRegistered.value) {
-        await api.users.registerCurrent()
-        userRegistered.value = true
-      }
       projects.value = await api.projects.list()
       status.value = 'success'
     } catch (cause) {
